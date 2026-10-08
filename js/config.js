@@ -13,7 +13,7 @@ export const CONFIG = {
   couple: { a: 'Saumy', b: 'Manorika', joined: 'Saumy & Manorika', weds: 'Saumy weds Manorika' },
   city: 'Bhilwara', cityHi: 'भीलवाड़ा', station: 'BHL', state: 'Rajasthan',
   train: { name: 'Shaadi Express', number: '1011' },
-  apiUrl: '',          // Apps Script /exec URL; '' => mock mode
+  apiUrl: 'https://script.google.com/macros/s/AKfycbyt2BKKaEqmeKVXoLSY1FBmw0g-DDQGhG2r91qJYL27YqdToyClS7T9ntgkk4qGdKnr/exec', // Apps Script /exec URL; '' => mock mode
   hostWhatsApp: '919414087162', // Saumy's WhatsApp, digits only with country code
   siteUrl: 'https://saumy-weds-manorika.github.io/', // GitHub Pages address of this repo; keep in step with the og: tags in index.html
   lists: ['Primary', 'Secondary'], // the two guest-list tabs ("First List", "Second List"); for display only
