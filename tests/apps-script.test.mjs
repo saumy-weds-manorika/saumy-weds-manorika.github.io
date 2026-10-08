@@ -292,8 +292,8 @@ test('bookedFrom_: {filled_by, updated_at, payload} from a Responses row, browse
 
 /* ---------- v4 §O3: travel.via, People hub/onward, Arrivals by hub ---------- */
 
-test('API_VERSION is v4', () => {
-  assert.equal(gsConst('API_VERSION'), 'v4');
+test('API_VERSION is v5 (Other date ranges, personal links, keep-warm)', () => {
+  assert.equal(gsConst('API_VERSION'), 'v5');
 });
 
 const withVia = (via, mode = 'train') => ({ ...one({}), travel: { ...travel, mode, ...(via === undefined ? {} : { via }) } });

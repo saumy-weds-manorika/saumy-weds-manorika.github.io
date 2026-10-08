@@ -45,7 +45,7 @@ const SITE_URL = 'https://saumy-weds-manorika.github.io/';
  */
 const SPREADSHEET_ID = '';
 /** Shown by ?action=ping, so you can tell that the newest version of this script is the one that's live. */
-const API_VERSION = 'v4';
+const API_VERSION = 'v5';
 
 const SHEET = { responses: 'Responses', people: 'People', summary: 'Summary' };
 const HEADERS = {
