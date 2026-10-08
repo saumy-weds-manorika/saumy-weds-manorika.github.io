@@ -42,6 +42,11 @@ const validPayload = () => ({
 });
 const NETWORK_MSG = "Couldn't reach the ticket counter. Check your connection and try again.";
 
+test('CONFIG.modes: chip order local, train, bus, car, flight (v4 §O1), with the short labels', () => {
+  assert.deepEqual(CONFIG.modes.map((m) => m.id), ['local', 'train', 'bus', 'car', 'flight']);
+  assert.deepEqual(CONFIG.modes.map((m) => m.label), ['Local', 'Train', 'Bus', 'Car', 'Flight']);
+});
+
 test('isMock: on when apiUrl is empty or ?mock=1', () => {
   assert.equal(api.isMock(), true);
   CONFIG.apiUrl = 'https://script.google.com/macros/s/abc/exec';
@@ -50,20 +55,75 @@ test('isMock: on when apiUrl is empty or ?mock=1', () => {
   assert.equal(api.isMock(), true);
 });
 
+const RS = { id: 'k7m2', label: 'Rahul Sharma & Priya Sharma' };
+
 test('findGuests (mock): word-prefix search over label and names, min 3 chars', async () => {
-  assert.deepEqual(await api.findGuests('rah'), [{ id: 'k7m2', label: 'Rahul Sharma' }]);
-  assert.deepEqual(await api.findGuests('  priya '), [{ id: 'k7m2', label: 'Rahul Sharma' }]);
-  assert.deepEqual(await api.findGuests('agar'), [{ id: 'p3x9', label: 'Mr & Mrs Agarwal' }]);
+  assert.deepEqual(await api.findGuests('rah'), [RS]);
+  assert.deepEqual(await api.findGuests('  priya '), [RS]);
+  assert.deepEqual(await api.findGuests('agar'), [{ id: 'p3x9', label: 'Isha Agarwal' }]);
   assert.deepEqual(await api.findGuests('ra'), []);
   assert.deepEqual(await api.findGuests(''), []);
   assert.deepEqual(await api.findGuests('zzzz'), []);
 });
 
-test('getGuest (mock): returns the entry or null', async () => {
-  assert.deepEqual(await api.getGuest('k7m2'), { id: 'k7m2', label: 'Rahul Sharma', names: ['Rahul Sharma', 'Priya Sharma'], max_guests: 2 });
-  assert.equal((await api.getGuest(' A1B2 ')).max_guests, 1);
+test('findGuests (mock): forgiving search (typos, middle names, nicknames, partners), best first, max 5', async () => {
+  assert.deepEqual(await api.findGuests('agrawal'), [{ id: 'p3x9', label: 'Isha Agarwal' }]);
+  assert.deepEqual(await api.findGuests('Rohan Kumar Mehta'), [{ id: 'r0m1', label: 'Rohan Mehta' }]);
+  assert.deepEqual(await api.findGuests('annu'), [{ id: 'a1b2', label: 'Ananya Iyer' }]);
+  assert.deepEqual(await api.findGuests('tara'), [{ id: 'm4t8', label: 'Arjun Mehra & Tara' }]);
+  assert.deepEqual(await api.findGuests('kabir'), [{ id: 'z8q4', label: 'Mr & Mrs Kabir Khan' }]);
+  assert.deepEqual(await api.findGuests('rahulsharma'), [RS]);
+  const mehta = await api.findGuests('mehta');
+  assert.deepEqual(mehta.map((m) => m.id), ['r0m1', 'm4t8'], 'exact surname first, then the one-letter-off "Mehra"');
+  for (const m of mehta) assert.deepEqual(Object.keys(m).sort(), ['id', 'label']);
+  assert.ok((await api.findGuests('ana')).length <= 5);
+});
+
+test('getGuest (mock): returns the §A lookup record or null', async () => {
+  assert.deepEqual(await api.getGuest('k7m2'), {
+    id: 'k7m2', label: 'Rahul Sharma & Priya Sharma', names: ['Rahul Sharma', 'Priya Sharma'], genders: ['M', 'F'],
+    partner: null, max_guests: 4, couple: true, list: 'Primary', booked: null,
+  });
+  assert.deepEqual(await api.getGuest('z8q4'), {
+    id: 'z8q4', label: 'Mr & Mrs Kabir Khan', names: ['Kabir Khan'], genders: ['M'],
+    partner: { title: 'Mrs', gender: 'F' }, max_guests: 4, couple: false, list: 'Secondary', booked: null,
+  });
+  const ai = await api.getGuest(' A1B2 ');
+  assert.equal(ai.max_guests, 4);
+  assert.equal('aliases' in ai, false, 'nicknames stay private');
   assert.equal(await api.getGuest('nope'), null);
   assert.equal(await api.getGuest(''), null);
+});
+
+test('getGuest (mock): booked is the latest saved answer for that ticket, without browser details', async () => {
+  const first = { ...validPayload(), filled_by: 'Rahul Sharma' };
+  await api.submitRsvp(first);
+  const second = { ...validPayload(), filled_by: 'Priya Sharma', note: 'Changed my mind about the date' };
+  const saved = await api.submitRsvp(second);
+  const g = await api.getGuest('k7m2');
+  assert.equal(g.booked.filled_by, 'Priya Sharma');
+  assert.equal(g.booked.updated_at, saved.updated_at);
+  // The note to the couple stays private (anyone can search a name): only has_note is shared
+  assert.equal('note' in g.booked.payload, false);
+  assert.equal(g.booked.has_note, true);
+  assert.equal(g.booked.payload.label, 'Rahul Sharma & Priya Sharma', "the list's label wins, as on the server");
+  assert.deepEqual(g.booked.payload.guests, second.guests);
+  assert.equal('client' in g.booked.payload, false);
+  assert.equal((await api.getGuest('a1b2')).booked, null, 'other tickets stay unbooked');
+});
+
+test('submitRsvp (mock): keep_note with an empty note keeps the earlier note; a new note replaces it', async () => {
+  const lastNote = () => JSON.parse(localStorage.getItem('stt.mock.responses')).at(-1).payload;
+  await api.submitRsvp({ ...validPayload(), note: 'Saving a seat for the dhol' });
+  await api.submitRsvp({ ...validPayload(), note: '', keep_note: true });
+  assert.equal(lastNote().note, 'Saving a seat for the dhol');
+  assert.equal('keep_note' in lastNote(), false);
+  assert.equal((await api.getGuest('k7m2')).booked.has_note, true);
+  await api.submitRsvp({ ...validPayload(), note: 'New plan', keep_note: true });
+  assert.equal(lastNote().note, 'New plan');
+  await api.submitRsvp({ ...validPayload(), note: '' });
+  assert.equal(lastNote().note, '');
+  assert.equal('has_note' in (await api.getGuest('k7m2')).booked, false);
 });
 
 test('submitRsvp (mock): validates, waits ~600ms, stores in stt.mock.responses', async () => {
@@ -84,10 +144,39 @@ test('submitRsvp (mock): rejects invalid payloads with a readable Error', async 
   await assert.rejects(api.submitRsvp(null), (err) => err.code === 'invalid');
 });
 
-test('submitRsvp (mock): mirrors server guest checks', async () => {
+test('submitRsvp (mock): travel.via (v4) passes through to the log and to booked; a bad via is rejected', async () => {
+  const via = { hub: 'COR', onward: 'car' };
+  await api.submitRsvp({ ...validPayload(), travel: { ...travel, via } });
+  const log = JSON.parse(memory.get('stt.mock.responses'));
+  assert.deepEqual(log.at(-1).payload.travel.via, via);
+  assert.deepEqual((await api.getGuest('k7m2')).booked.payload.travel.via, via);
+  await api.submitRsvp({ ...validPayload(), travel: { ...travel, mode: 'flight', via: { hub: 'unsure', onward: '' } } });
+  assert.deepEqual((await api.getGuest('k7m2')).booked.payload.travel.via, { hub: 'unsure', onward: '' });
+  await api.submitRsvp(validPayload()); // an older page sends no via at all
+  assert.equal('via' in (await api.getGuest('k7m2')).booked.payload.travel, false);
+  await assert.rejects(api.submitRsvp({ ...validPayload(), travel: { ...travel, via: { hub: 'cor', onward: '' } } }), (err) => err.code === 'invalid');
+  await assert.rejects(api.submitRsvp({ ...validPayload(), travel: { ...travel, via: { hub: 'COR', onward: 'rocket' } } }), (err) => err.code === 'invalid');
+});
+
+test('submitRsvp (live): travel.via is in the POST body as built', async () => {
+  CONFIG.apiUrl = 'https://script.google.com/macros/s/abc/exec';
+  let body = null;
+  globalThis.fetch = async (url, init = {}) => {
+    body = JSON.parse(init.body);
+    return { ok: true, status: 200, text: async () => JSON.stringify({ ok: true, id: 'k7m2', updated_at: '2026-10-09T12:00:01.000Z' }) };
+  };
+  const via = { hub: 'KQH', onward: 'unsure' };
+  await api.submitRsvp({ ...validPayload(), travel: { ...travel, mode: 'flight', via } });
+  assert.deepEqual(body.travel.via, via);
+});
+
+test('submitRsvp (mock): mirrors server guest checks (max 4 people per ticket)', async () => {
   await assert.rejects(api.submitRsvp({ ...validPayload(), id: 'zzzz' }), (err) => err.code === 'unknown_guest');
-  const three = { ...validPayload(), guests: [...validPayload().guests, { name: 'Extra', status: 'confirmed' }] };
-  await assert.rejects(api.submitRsvp(three), (err) => err.code === 'too_many');
+  const extra = (n) => Array.from({ length: n }, (_, i) => ({ name: `Extra ${i + 1}`, status: 'confirmed', gender: '', added: true }));
+  const five = { ...validPayload(), guests: [...validPayload().guests, ...extra(3)] };
+  await assert.rejects(api.submitRsvp(five), (err) => err.code === 'too_many');
+  const four = { ...validPayload(), guests: [...validPayload().guests, ...extra(2)] };
+  assert.equal((await api.submitRsvp(four)).ok, true);
   const unlisted = { ...validPayload(), id: api.newUnlistedId(), unlisted: true, label: 'Meera Joshi', guests: [{ name: 'Meera Joshi', status: 'confirmed' }] };
   assert.equal((await api.submitRsvp(unlisted)).ok, true);
   await assert.rejects(api.submitRsvp({ ...unlisted, id: 'u-bad' }), (err) => err.code === 'invalid');
@@ -180,8 +269,21 @@ test('live mode: GET/POST shapes and error mapping', async () => {
 
   reply = { ok: true, guest: { id: 'k7m2', label: 'Rahul Sharma', names: ['Rahul Sharma', 'Priya Sharma'], max_guests: '2' } };
   assert.equal((await api.getGuest('k7m2')).max_guests, 2);
+  assert.equal(new URL(calls.at(-1).url).searchParams.get('action'), 'guest');
   reply = { ok: false, error: 'unknown guest', code: 'unknown_guest' };
   assert.equal(await api.getGuest('k7m2'), null);
+
+  // The v2/v3 lookup record is normalised: genders aligned to names, partner title, booked, defaults.
+  const booked = { filled_by: 'Kabir Khan', updated_at: '2026-10-09T12:00:01.000Z', payload: { id: 'z8q4', guests: [] } };
+  reply = { ok: true, guest: { id: 'z8q4', label: 'Mr & Mrs Kabir Khan', names: ['Kabir Khan', ''], genders: ['M', 'F'],
+    partner: { title: 'Mrs.', gender: 'X' }, couple: 'yes', list: 'Secondary', aliases: ['KK'], booked } };
+  assert.deepEqual(await api.getGuest('z8q4'), {
+    id: 'z8q4', label: 'Mr & Mrs Kabir Khan', names: ['Kabir Khan'], genders: ['M'], partner: { title: 'Mrs', gender: '' },
+    max_guests: 4, couple: false, list: 'Secondary', booked,
+  });
+  reply = { ok: true, guest: { id: 'a1b2', label: 'Ananya Iyer', names: ['Ananya Iyer'], partner: { title: 'Sir' }, booked: { payload: 'x' } } };
+  const plain = await api.getGuest('a1b2');
+  assert.deepEqual([plain.genders, plain.partner, plain.booked, plain.list], [[''], null, null, '']);
 
   reply = { ok: true, id: 'k7m2', updated_at: '2026-10-09T12:00:01.000Z' };
   assert.deepEqual(await api.submitRsvp(validPayload()), { ok: true, id: 'k7m2', updated_at: '2026-10-09T12:00:01.000Z' });

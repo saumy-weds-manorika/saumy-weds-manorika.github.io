@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#10164A">
   <meta name="color-scheme" content="dark">
   <title>Saumy &amp; Manorika · Shaadi Express to Bhilwara</title>
-  <meta name="description" content="Your ticket to Saumy &amp; Manorika's wedding in Bhilwara, 10–12 Dec 2026. RSVP for everyone on your ticket and share your rough travel plan.">
+  <meta name="description" content="Your ticket to Saumy &amp; Manorika's wedding in Bhilwara, 10–11 Dec 2026. RSVP for everyone on your ticket and share your rough travel plan.">
 
   <!-- Link previews (WhatsApp, etc.) need ABSOLUTE URLs. If the site moves, update og:url,
        og:image and twitter:image together (docs/SETUP.md, Part 5). -->
@@ -14,7 +14,7 @@
   <meta property="og:url" content="https://saumy-weds-manorika.github.io/">
   <meta property="og:site_name" content="Shaadi Express">
   <meta property="og:title" content="Your ticket to Saumy &amp; Manorika's wedding 🚂">
-  <meta property="og:description" content="10–12 Dec 2026 · Bhilwara. RSVP and plan your journey.">
+  <meta property="og:description" content="10–11 Dec 2026 · Bhilwara. RSVP and plan your journey.">
   <meta property="og:image" content="https://saumy-weds-manorika.github.io/assets/og.png">
   <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1200">
@@ -22,7 +22,7 @@
   <meta property="og:image:alt" content="A Shaadi Express ticket to Saumy and Manorika's wedding in Bhilwara">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Your ticket to Saumy &amp; Manorika's wedding 🚂">
-  <meta name="twitter:description" content="10–12 Dec 2026 · Bhilwara. RSVP and plan your journey.">
+  <meta name="twitter:description" content="10–11 Dec 2026 · Bhilwara. RSVP and plan your journey.">
   <meta name="twitter:image" content="https://saumy-weds-manorika.github.io/assets/og.png">
 
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23E07B00'/%3E%3Cg fill='%23F6A609'%3E%3Ccircle cx='16' cy='7' r='6'/%3E%3Ccircle cx='25' cy='16' r='6'/%3E%3Ccircle cx='16' cy='25' r='6'/%3E%3Ccircle cx='7' cy='16' r='6'/%3E%3C/g%3E%3Ccircle cx='16' cy='16' r='5' fill='%23D6246E'/%3E%3C/svg%3E">
@@ -31,6 +31,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&amp;family=Mukta:wght@400;600&amp;family=Yatra+One&amp;display=swap">
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/trip.css">
   <!-- Fetch app.js's imports in parallel instead of after app.js has been parsed -->
   <link rel="modulepreload" href="js/config.js">
   <link rel="modulepreload" href="js/logic.js">
@@ -38,12 +39,18 @@
   <link rel="modulepreload" href="js/regret.js">
   <link rel="modulepreload" href="js/audio.js">
   <link rel="modulepreload" href="js/pass.js">
+  <link rel="modulepreload" href="js/trip.js">
+  <link rel="modulepreload" href="js/trip-data.js">
+  <link rel="modulepreload" href="js/rajasthan-outline.js">
+  <!-- The couple's busts: the cover, the BHILWARA board and the boarding pass all use them -->
+  <link rel="preload" as="image" href="assets/bobble/saumy-bust.webp" type="image/webp">
+  <link rel="preload" as="image" href="assets/bobble/manorika-bust.webp" type="image/webp">
   <script type="module" src="js/app.js"></script>
 </head>
-<body data-stop="platform" data-mode="train" data-party="confirmed" data-heads="svg">
+<body data-stop="platform" data-mode="train" data-party="confirmed">
 
 <!-- ================================================================
-     SVG sprite: vehicles, icons, diya, bobblehead bodies.
+     SVG sprite: vehicles, icons, diya.
      Referenced with <use href="#id">. Never displayed directly.
      ================================================================ -->
 <svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
@@ -83,6 +90,21 @@
     <circle cx="44.6" cy="19" r="1.2" fill="#FFD23F"/>
     <circle cx="12" cy="22.5" r="4" fill="#1B1B2F" stroke="#FCE9D6" stroke-width="1.4"/>
     <circle cx="36" cy="22.5" r="4" fill="#1B1B2F" stroke="#FCE9D6" stroke-width="1.4"/>
+  </symbol>
+  <!-- Auto-rickshaw for locals ("Bhilwara is home"): haldi canopy, open side, rani body -->
+  <symbol id="v-local" viewBox="0 0 48 28">
+    <rect x="10.5" y="7.5" width="17" height="9" rx="1.6" fill="#10164A"/>
+    <rect x="11.5" y="13.4" width="9" height="2" rx=".6" fill="#FCE9D6"/>
+    <path d="M6.5 16V7.2C6.5 4.4 8.3 2.6 11 2.6h22.2c1.5 0 2.4.9 2.4 2.4v2.5H10.5L10 16z" fill="#FFD23F"/>
+    <path d="M27.2 16.4 31 7.5h4.6l-1.2 9.2z" fill="#FCE9D6" opacity=".8"/>
+    <path d="M27.2 16.4 31 7.5" stroke="#1B1B2F" stroke-width="1" stroke-linecap="round"/>
+    <path d="M5.5 22v-6h21.7l4 .9c6.6.3 10.6 1.9 12.6 5.1z" fill="#D6246E"/>
+    <rect x="5.5" y="18.3" width="35" height="1.6" fill="#FFD23F"/>
+    <circle cx="42" cy="19.6" r="1.2" fill="#FFD23F"/>
+    <g fill="#F6A609"><circle cx="12.5" cy="8.2" r="1.15"/><circle cx="19" cy="8.2" r="1.15"/><circle cx="25.5" cy="8.2" r="1.15"/></g>
+    <g fill="#E07B00"><circle cx="15.8" cy="8.4" r="1"/><circle cx="22.3" cy="8.4" r="1"/></g>
+    <circle cx="12.5" cy="22.6" r="3.9" fill="#1B1B2F" stroke="#FCE9D6" stroke-width="1.4"/>
+    <circle cx="37.5" cy="22.8" r="3.5" fill="#1B1B2F" stroke="#FCE9D6" stroke-width="1.4"/>
   </symbol>
   <symbol id="v-car" viewBox="0 0 48 28">
     <path d="M12 13c1.5-5 5-7.5 11-7.5h6.5c4.5 0 7.5 2.5 9.5 7.5z" fill="#FCE9D6"/>
@@ -131,61 +153,6 @@
     <path d="M20 11.5c2.2 3.2 3.2 5.2 3.2 7.2a3.2 3.2 0 0 1-6.4 0c0-2 1-4 3.2-7.2z" fill="#FFD23F"/>
   </symbol>
 
-  <!-- Bobblehead bodies, viewBox 0 0 100 124. Arms are separate symbols so they can wave. -->
-  <symbol id="body-saumy" viewBox="0 0 100 124">
-    <path d="M74 18c6 10 10 24 10 40" fill="none" stroke="#EAD3BB" stroke-width="10" stroke-linecap="round"/>
-    <circle cx="84" cy="62" r="5" fill="#C98B5E"/>
-    <path d="M36 102h11v16H36zM53 102h11v16H53z" fill="#EAD3BB"/>
-    <path d="M31 118c0-3 2-4.5 6-4.5h9v6H34c-2 0-3-.5-3-1.5zM69 118c0-3-2-4.5-6-4.5h-9v6h12c2 0 3-.5 3-1.5z" fill="#E07B00"/>
-    <path d="M27 14c8-5 38-5 46 0l8 90c-16 4-46 4-62 0z" fill="#FCE9D6"/>
-    <path d="M27 14l-8 90c4 1 8 1.6 12 2l4-88z" fill="#EAD3BB"/>
-    <path d="M19 100c16 4 46 4 62 0l.4 4c-16 4-46 4-62.8 0z" fill="#F6A609"/>
-    <path d="M50 16v88" stroke="#F6A609" stroke-width="2"/>
-    <g fill="#F6A609"><circle cx="50" cy="40" r="1.8"/><circle cx="50" cy="52" r="1.8"/><circle cx="50" cy="64" r="1.8"/><circle cx="50" cy="76" r="1.8"/></g>
-    <path d="M38 11c5 3.6 19 3.6 24 0v6c-5 3.6-19 3.6-24 0z" fill="#F6A609"/>
-    <path d="M30 14l9-2 44 58-6 8z" fill="#D6246E"/>
-    <g fill="#FFD23F"><circle cx="40" cy="20" r="1.1"/><circle cx="50" cy="33" r="1.1"/><circle cx="60" cy="46" r="1.1"/><circle cx="70" cy="59" r="1.1"/></g>
-    <g fill="#F6A609"><circle cx="36" cy="18" r="3.4"/><circle cx="38" cy="25" r="3.4"/><circle cx="41" cy="32" r="3.4"/><circle cx="45" cy="38" r="3.4"/><circle cx="55" cy="38" r="3.4"/><circle cx="59" cy="32" r="3.4"/><circle cx="62" cy="25" r="3.4"/><circle cx="64" cy="18" r="3.4"/></g>
-    <g fill="#E07B00"><circle cx="37" cy="21.5" r="2.2"/><circle cx="39.5" cy="28.5" r="2.2"/><circle cx="43" cy="35" r="2.2"/><circle cx="57" cy="35" r="2.2"/><circle cx="60.5" cy="28.5" r="2.2"/><circle cx="63" cy="21.5" r="2.2"/></g>
-    <circle cx="50" cy="41.5" r="3.8" fill="#D6246E"/>
-  </symbol>
-  <symbol id="arm-saumy" viewBox="0 0 100 124">
-    <path d="M28 18 13 30l-4-15" fill="none" stroke="#FCE9D6" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M6.5 17.5l5.5-1.6" stroke="#F6A609" stroke-width="3" stroke-linecap="round"/>
-    <circle cx="8.5" cy="11" r="5.2" fill="#C98B5E"/>
-  </symbol>
-  <symbol id="arm-saumy-down" viewBox="0 0 100 124">
-    <path d="M27 18c-5 12-8 26-9 40" fill="none" stroke="#FCE9D6" stroke-width="10" stroke-linecap="round"/>
-    <path d="M14.6 56.5l6.4.8" stroke="#F6A609" stroke-width="3" stroke-linecap="round"/>
-    <circle cx="17.5" cy="62" r="5" fill="#C98B5E"/>
-  </symbol>
-  <symbol id="body-manorika" viewBox="0 0 100 124">
-    <path d="M28 16c-5 10-8 22-9 36" fill="none" stroke="#D79A6E" stroke-width="8" stroke-linecap="round"/>
-    <path d="M28 16c-2.4 4-4 8-5 12" fill="none" stroke="#E07B00" stroke-width="10" stroke-linecap="round"/>
-    <g stroke-width="2.4" stroke-linecap="round"><path d="M16.5 44l6.2 1.4" stroke="#C62828"/><path d="M16.2 47l6.2 1.4" stroke="#FCE9D6"/><path d="M16 50l6.2 1.4" stroke="#C62828"/></g>
-    <circle cx="19" cy="55" r="4.6" fill="#D79A6E"/>
-    <path d="M30 13c8-5 32-5 40 0l-2 24H32z" fill="#E07B00"/>
-    <path d="M32 36h36l24 80c-28 6-56 6-84 0z" fill="#D6246E"/>
-    <path d="M42 37 28 115M50 37v80M58 37l14 78" stroke="#A8174F" stroke-width="1.4"/>
-    <path d="M8 110c28 6 56 6 84 0l1.6 5.6c-28 6-59 6-87.2 0z" fill="#F6A609"/>
-    <g fill="#FFD23F"><circle cx="24" cy="70" r="1.2"/><circle cx="40" cy="62" r="1.2"/><circle cx="62" cy="64" r="1.2"/><circle cx="76" cy="74" r="1.2"/><circle cx="32" cy="92" r="1.2"/><circle cx="52" cy="86" r="1.2"/><circle cx="70" cy="96" r="1.2"/><circle cx="20" cy="102" r="1.2"/><circle cx="84" cy="104" r="1.2"/></g>
-    <path d="M64 12l10 4-42 68-12-4z" fill="#F6A609" opacity=".88"/>
-    <path d="M74 16 32 84" stroke="#FFD23F" stroke-width="1.6" stroke-dasharray="0 3.4" stroke-linecap="round"/>
-    <g fill="#F6A609"><circle cx="40" cy="15" r="2.4"/><circle cx="43" cy="20.5" r="2.4"/><circle cx="50" cy="23" r="2.6"/><circle cx="57" cy="20.5" r="2.4"/><circle cx="60" cy="15" r="2.4"/></g>
-    <circle cx="50" cy="23" r="1.2" fill="#2F7D32"/>
-  </symbol>
-  <symbol id="arm-manorika" viewBox="0 0 100 124">
-    <path d="M71 16l15 11 5-14" fill="none" stroke="#D79A6E" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M71 16l6 4.4" stroke="#E07B00" stroke-width="10" stroke-linecap="round"/>
-    <g stroke-width="2.4" stroke-linecap="round"><path d="M86.6 20.6l5.6 1.8" stroke="#C62828"/><path d="M87.6 17.8l5.6 1.8" stroke="#FCE9D6"/></g>
-    <circle cx="91.5" cy="10" r="4.8" fill="#D79A6E"/>
-  </symbol>
-  <symbol id="arm-manorika-down" viewBox="0 0 100 124">
-    <path d="M72 16c5 10 8 22 9 36" fill="none" stroke="#D79A6E" stroke-width="8" stroke-linecap="round"/>
-    <path d="M72 16c2.4 4 4 8 5 12" fill="none" stroke="#E07B00" stroke-width="10" stroke-linecap="round"/>
-    <g stroke-width="2.4" stroke-linecap="round"><path d="M77.3 45.4l6.2-1.4" stroke="#C62828"/><path d="M77.6 48.4l6.2-1.4" stroke="#FCE9D6"/></g>
-    <circle cx="81" cy="55" r="4.6" fill="#D79A6E"/>
-  </symbol>
 </svg>
 
 <!-- ================================================================
@@ -226,18 +193,21 @@
       <span class="journey__runner">
         <span class="vehicle">
           <span class="vehicle__puffs"><i></i><i></i><i></i></span>
+          <!-- Up to two passengers ride along (app.js: ridersFor). Never more than these two slots. -->
+          <span class="riders"><img class="rider" data-rider="0" alt="" width="360" height="540" hidden><img class="rider" data-rider="1" alt="" width="360" height="495" hidden></span>
           <svg class="vehicle__svg" data-mode="train" viewBox="0 0 48 28" focusable="false"><use href="#v-train"/></svg>
           <svg class="vehicle__svg" data-mode="flight" viewBox="0 0 48 28" focusable="false"><use href="#v-flight"/></svg>
           <svg class="vehicle__svg" data-mode="bus" viewBox="0 0 48 28" focusable="false"><use href="#v-bus"/></svg>
           <svg class="vehicle__svg" data-mode="car" viewBox="0 0 48 28" focusable="false"><use href="#v-car"/></svg>
+          <svg class="vehicle__svg" data-mode="local" viewBox="0 0 48 28" focusable="false"><use href="#v-local"/></svg>
         </span>
       </span>
     </div>
 
     <div class="mini-board" aria-hidden="true">
       <span class="mini-board__heads">
-        <img class="mini-board__head" data-head="a" src="assets/couple/saumy-head.svg" data-png="assets/couple/saumy-head.png" alt="" width="26" height="26">
-        <img class="mini-board__head" data-head="b" src="assets/couple/manorika-head.svg" data-png="assets/couple/manorika-head.png" alt="" width="26" height="26">
+        <img class="mini-board__head" data-head="a" src="assets/bobble/saumy-bust.webp" alt="" width="360" height="548">
+        <img class="mini-board__head" data-head="b" src="assets/bobble/manorika-bust.webp" alt="" width="360" height="461">
       </span>
       <span class="mini-board__plate"><span class="mini-board__hi" lang="hi">भीलवाड़ा</span><span class="mini-board__en">BHILWARA</span></span>
     </div>
@@ -284,15 +254,19 @@
         </g>
       </svg>
 
-      <p class="cover__blessing" lang="hi">॥ शुभ विवाह ॥</p>
+      <div class="cover__peek" aria-hidden="true">
+        <img class="cover__bust cover__bust--a" src="assets/bobble/saumy-bust.webp" alt="" width="360" height="548">
+        <img class="cover__bust cover__bust--b" src="assets/bobble/manorika-bust.webp" alt="" width="360" height="461">
+      </div>
       <div class="ticket__part ticket__part--top cover__top">
-        <p class="dm cover__train">Shaadi Express · 1012</p>
+        <p class="cover__blessing" lang="hi">॥ शुभ विवाह ॥</p>
+        <p class="dm cover__train">Shaadi Express · 1011</p>
         <h1 class="cover__names stop__title" id="t-platform" tabindex="-1">
           <span class="cover__name">Saumy</span>
           <span class="cover__weds">weds</span>
           <span class="cover__name">Manorika</span>
         </h1>
-        <p class="cover__when">10–12 Dec 2026 · Bhilwara, Rajasthan</p>
+        <p class="cover__when">10–11 Dec 2026 · Bhilwara, Rajasthan</p>
       </div>
       <div class="ticket__part ticket__part--stub cover__stub">
         <h2 class="dm cover__tt-label">Timetable</h2>
@@ -321,16 +295,17 @@
     <!-- Who's boarding? -->
     <div class="boarding" id="search-block">
       <label class="boarding__label" for="guest-search">Who's boarding?</label>
-      <p class="boarding__hint" id="search-hint">Type at least 3 letters of your name, then pick it.</p>
+      <p class="boarding__hint" id="search-hint">First name is enough. Spelling slips are okay.</p>
       <div class="search">
         <svg class="search__icon" aria-hidden="true" focusable="false"><use href="#i-search"/></svg>
-        <input class="input search__input" id="guest-search" type="search" inputmode="search" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Start typing your name" aria-describedby="search-hint" aria-controls="search-results">
+        <input class="input search__input" id="guest-search" type="search" inputmode="search" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Type your first or full name" aria-describedby="search-hint" aria-controls="search-results">
       </div>
       <ul class="results" id="search-results" aria-label="Matching names">
         <li data-sample><button class="result" type="button" data-id="k7m2"><span class="result__label">Rahul Sharma</span><span class="result__go" aria-hidden="true">Board<svg><use href="#i-arrow-right"/></svg></span></button></li>
-        <li data-sample><button class="result" type="button" data-id="p3x9"><span class="result__label">Mr &amp; Mrs Agarwal</span><span class="result__go" aria-hidden="true">Board<svg><use href="#i-arrow-right"/></svg></span></button></li>
+        <li data-sample><button class="result" type="button" data-id="z8q4"><span class="result__label">Mr &amp; Mrs Kabir Khan</span><span class="result__go" aria-hidden="true">Board<svg><use href="#i-arrow-right"/></svg></span></button></li>
       </ul>
       <p class="boarding__empty" id="search-empty" hidden data-preview>No match. Check spelling or board anyway.</p>
+      <p class="boarding__empty" id="search-short" hidden>Keep going: type at least 3 letters, or add your surname.</p>
       <p class="field__error field__error--dark" id="search-error" hidden data-preview>Pick your name from the list first, or board anyway.</p>
 
       <!-- Selected guest confirmation -->
@@ -356,10 +331,17 @@
        ============================================================== -->
   <section class="stop" id="stop-passengers" data-stop="passengers" aria-labelledby="t-passengers">
     <div class="ticket form-card">
-      <div class="ticket__strip"><span>Shaadi Express · 1012</span><span>Stop 1 of 4</span></div>
+      <div class="ticket__strip"><span>Shaadi Express · 1011</span><span><span class="v-away">Stop 1 of 4</span><span class="v-home">Stop 1 of 2</span></span></div>
       <div class="form-card__body">
         <h2 class="stop__title" id="t-passengers" tabindex="-1">Passenger chart</h2>
         <p class="stop__lede">Mark everyone on your ticket. <strong>Waitlisted</strong> means you'll confirm later, like a waitlisted ticket that clears at chart preparation.</p>
+
+        <!-- This ticket was already saved (from any phone): app.js pre-fills it and shows this -->
+        <div class="booked" id="booked" hidden data-preview>
+          <p class="booked__kicker dm">Already booked</p>
+          <p class="booked__text" id="booked-text">Priya already booked seats for you both on Fri 9 Oct. Check the details or make changes.</p>
+          <button class="btn btn--small btn--secondary booked__pass" id="booked-view-pass" type="button"><svg class="btn__icon" aria-hidden="true"><use href="#i-ticket"/></svg>View my pass</button>
+        </div>
 
         <ol class="guest-list" id="guest-list" aria-label="Passengers">
           <li class="guest-card" data-sample data-index="0" data-status="confirmed">
@@ -378,9 +360,15 @@
               <span class="guest-card__no dm">Passenger 2</span>
               <button class="icon-btn guest-card__remove" type="button" aria-label="Remove passenger 2"><svg aria-hidden="true"><use href="#i-x"/></svg></button>
             </div>
-            <div class="field guest-card__name-field">
-              <label class="field__label" for="sample-guest-name-1">Name</label>
-              <input class="input" id="sample-guest-name-1" type="text" autocomplete="off" autocapitalize="words" maxlength="60" placeholder="Their name" aria-invalid="true">
+            <div class="guest-card__who">
+              <div class="field guest-card__name-field">
+                <label class="field__label" for="sample-guest-name-1">Name</label>
+                <input class="input" id="sample-guest-name-1" type="text" autocomplete="off" autocapitalize="words" maxlength="60" placeholder="Their name" aria-invalid="true">
+              </div>
+              <div class="gender" role="radiogroup" aria-label="Passenger 2's gender" data-group="gender">
+                <button class="gender__opt" type="button" role="radio" aria-checked="false" data-value="M" aria-label="Male">M</button>
+                <button class="gender__opt" type="button" role="radio" aria-checked="true" data-value="F" aria-label="Female">F</button>
+              </div>
             </div>
             <div class="chips chips--status" role="radiogroup" aria-label="Passenger 2's status" data-group="status">
               <button class="chip chip--status chip--confirmed" type="button" role="radio" aria-checked="false" data-value="confirmed"><span class="chip__label">Confirmed</span><span class="chip__code">CNF</span></button>
@@ -403,7 +391,7 @@
        ============================================================== -->
   <section class="stop" id="stop-route" data-stop="route" aria-labelledby="t-route">
     <div class="ticket form-card">
-      <div class="ticket__strip"><span>Shaadi Express · 1012</span><span>Stop 2 of 4</span></div>
+      <div class="ticket__strip"><span>Shaadi Express · 1011</span><span><span class="v-away">Stop 2 of 4</span><span class="v-home">Last stop</span></span></div>
       <div class="form-card__body">
         <h2 class="stop__title" id="t-route" tabindex="-1"><span class="v-cnf">How are you travelling?</span><span class="v-wl">If your ticket confirms, how would you travel?</span></h2>
         <p class="stop__lede">Your best guess is perfect. You can change this anytime.</p>
@@ -411,20 +399,45 @@
         <div class="group">
           <p class="group__label" id="mode-label">Mode</p>
           <div class="chips chips--mode" id="mode-chips" role="radiogroup" aria-labelledby="mode-label" data-group="mode">
+            <button class="chip chip--mode chip--home" type="button" role="radio" aria-checked="false" data-value="local" aria-labelledby="home-label" aria-describedby="home-sub">
+              <svg class="chip__icon" viewBox="0 0 48 28" aria-hidden="true"><use href="#v-local"/></svg>
+              <span class="chip__text">
+                <span class="chip__label" id="home-label">Bhilwara is home</span>
+                <span class="chip__sub" id="home-sub">Local platform. Skip the travel bits and just bring your dancing shoes.</span>
+              </span>
+            </button>
+            <p class="chips__or" aria-hidden="true">or coming in by</p>
             <button class="chip chip--mode" type="button" role="radio" aria-checked="false" data-value="train" data-preview-check><svg class="chip__icon" viewBox="0 0 48 28" aria-hidden="true"><use href="#v-train"/></svg><span class="chip__label">Train</span></button>
-            <button class="chip chip--mode" type="button" role="radio" aria-checked="false" data-value="flight"><svg class="chip__icon" viewBox="0 0 48 28" aria-hidden="true"><use href="#v-flight"/></svg><span class="chip__label">Flight</span></button>
             <button class="chip chip--mode" type="button" role="radio" aria-checked="false" data-value="bus"><svg class="chip__icon" viewBox="0 0 48 28" aria-hidden="true"><use href="#v-bus"/></svg><span class="chip__label">Bus</span></button>
             <button class="chip chip--mode" type="button" role="radio" aria-checked="false" data-value="car"><svg class="chip__icon" viewBox="0 0 48 28" aria-hidden="true"><use href="#v-car"/></svg><span class="chip__label">Car</span></button>
+            <button class="chip chip--mode" type="button" role="radio" aria-checked="false" data-value="flight"><svg class="chip__icon" viewBox="0 0 48 28" aria-hidden="true"><use href="#v-flight"/></svg><span class="chip__label">Flight</span></button>
           </div>
           <p class="field__error" id="mode-error" hidden data-preview>Pick how you'll roughly travel.</p>
         </div>
 
-        <div class="field">
+        <div class="field" id="from-field">
           <label class="field__label" for="from-city">Travelling from</label>
           <input class="input" id="from-city" type="text" list="city-list" autocomplete="address-level2" autocapitalize="words" maxlength="60" placeholder="Your city" aria-describedby="from-hint from-error">
           <datalist id="city-list"></datalist>
           <p class="field__hint" id="from-hint">Pick from the list or type your own.</p>
           <p class="field__error" id="from-error" hidden data-preview>Tell us roughly where you're coming from.</p>
+        </div>
+
+        <!-- Locals only: they skip the arrival and departure stops, so their stops and note live here -->
+        <div class="local-extras" id="local-extras" hidden data-preview>
+          <div class="your-stops your-stops--home">
+            <h3 class="your-stops__title">Your stops</h3>
+            <p class="your-stops__lede">Home advantage: you'll make every function.</p>
+            <ol class="catches" id="local-catches" aria-label="Functions you'll catch">
+              <li class="tt-row" data-sample data-caught="true"><svg class="diya diya--sm" viewBox="0 0 40 40" aria-hidden="true"><use href="#diya-bowl"/><use class="diya__flame" href="#diya-flame"/></svg><span class="tt-row__main"><span class="tt-row__name">Carnival</span><span class="tt-row__when">Thu 10 Dec · Afternoon</span></span><span class="sr-only">You'll be there.</span></li>
+            </ol>
+          </div>
+          <div class="field">
+            <label class="field__label" for="local-note">A note for Saumy &amp; Manorika <span class="field__optional">(optional)</span></label>
+            <textarea class="input input--area" id="local-note" maxlength="500" rows="3" placeholder="Song requests, dietary needs, anything." aria-describedby="local-note-count"></textarea>
+            <p class="field__count" id="local-note-count" aria-live="off">0 / 500</p>
+            <p class="field__hint" data-note-kept hidden>Your earlier note is saved. Write a new one here to replace it.</p>
+          </div>
         </div>
       </div>
     </div>
@@ -435,7 +448,7 @@
        ============================================================== -->
   <section class="stop" id="stop-arrival" data-stop="arrival" aria-labelledby="t-arrival">
     <div class="ticket form-card">
-      <div class="ticket__strip"><span>Shaadi Express · 1012</span><span>Stop 3 of 4</span></div>
+      <div class="ticket__strip"><span>Shaadi Express · 1011</span><span>Stop 3 of 4</span></div>
       <div class="form-card__body">
         <h2 class="stop__title" id="t-arrival" tabindex="-1"><span class="v-cnf">Roughly when do you arrive?</span><span class="v-wl">If your ticket confirms, roughly when would you arrive?</span></h2>
         <p class="stop__lede">A rough guess helps us plan your pickup. You can change this anytime.</p>
@@ -472,7 +485,7 @@
        ============================================================== -->
   <section class="stop" id="stop-departure" data-stop="departure" aria-labelledby="t-departure">
     <div class="ticket form-card">
-      <div class="ticket__strip"><span>Shaadi Express · 1012</span><span>Stop 4 of 4</span></div>
+      <div class="ticket__strip"><span>Shaadi Express · 1011</span><span>Stop 4 of 4</span></div>
       <div class="form-card__body">
         <h2 class="stop__title" id="t-departure" tabindex="-1"><span class="v-cnf">Roughly when do you leave?</span><span class="v-wl">If your ticket confirms, roughly when would you leave?</span></h2>
         <p class="stop__lede">So we can plan your drop-off. You can change this anytime.</p>
@@ -486,6 +499,7 @@
             <button class="chip chip--date" type="button" role="radio" aria-checked="false" data-value="2026-12-14"><span class="chip__kicker">Mon</span><span class="chip__label">14 Dec</span></button>
             <button class="chip chip--date chip--unsure" type="button" role="radio" aria-checked="false" data-value="unsure"><span class="chip__label">Not sure yet</span></button>
           </div>
+          <p class="teaser" id="trip-teaser"><svg class="teaser__pin" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><g fill="#F6A609"><circle cx="8" cy="4.6" r="2.6"/><circle cx="11.4" cy="8" r="2.6"/><circle cx="8" cy="11.4" r="2.6"/><circle cx="4.6" cy="8" r="2.6"/></g><circle cx="8" cy="8" r="2.4" fill="#E07B00"/></svg><span id="trip-teaser-text">Staying on for the weekend? We've mapped some escapes for you. They're waiting at the end of your journey.</span></p>
         </div>
 
         <div class="group">
@@ -515,6 +529,7 @@
           <label class="field__label" for="note">A note for Saumy &amp; Manorika <span class="field__optional">(optional)</span></label>
           <textarea class="input input--area" id="note" maxlength="500" rows="3" placeholder="Song requests, dietary needs, anything." aria-describedby="note-count"></textarea>
           <p class="field__count" id="note-count" aria-live="off">0 / 500</p>
+          <p class="field__hint" data-note-kept hidden>Your earlier note is saved. Write a new one here to replace it.</p>
         </div>
       </div>
     </div>
@@ -535,15 +550,10 @@
         <span class="board__post board__post--l"></span>
         <span class="board__post board__post--r"></span>
       </div>
+      <!-- The couple as bobbleheads: body then head, the head wobbling on its neck pivot -->
       <div class="couple" aria-hidden="true">
-        <div class="bobble bobble--a">
-          <div class="bobble__head"><img data-head="a" src="assets/couple/saumy-head.svg" data-png="assets/couple/saumy-head.png" alt="" width="256" height="256"></div>
-          <svg class="bobble__body" viewBox="0 0 100 124" focusable="false"><use href="#body-saumy"/><use class="bobble__arm" href="#arm-saumy"/></svg>
-        </div>
-        <div class="bobble bobble--b">
-          <div class="bobble__head"><img data-head="b" src="assets/couple/manorika-head.svg" data-png="assets/couple/manorika-head.png" alt="" width="256" height="256"></div>
-          <svg class="bobble__body" viewBox="0 0 100 124" focusable="false"><use href="#body-manorika"/><use class="bobble__arm" href="#arm-manorika"/></svg>
-        </div>
+        <div class="figure figure--a"><img class="figure__body" src="assets/bobble/saumy-body.webp" alt="" width="309" height="900" loading="lazy" decoding="async"><img class="figure__head" src="assets/bobble/saumy-head.webp" alt="" width="309" height="900" loading="lazy" decoding="async"></div>
+        <div class="figure figure--b"><img class="figure__body" src="assets/bobble/manorika-body.webp" alt="" width="418" height="900" loading="lazy" decoding="async"><img class="figure__head" src="assets/bobble/manorika-head.webp" alt="" width="418" height="900" loading="lazy" decoding="async"></div>
       </div>
       <button class="instrument instrument--dhol" id="tap-dhol" type="button" aria-label="Play the dhol">
         <svg viewBox="0 0 80 64" aria-hidden="true" focusable="false">
@@ -576,8 +586,9 @@
     </div>
 
     <div class="junction__intro">
-      <h2 class="stop__title stop__title--hero" id="t-junction" tabindex="-1"><span class="v-cnf">See you in Bhilwara!</span><span class="v-wl">You're on the waitlist</span></h2>
+      <h2 class="stop__title stop__title--hero" id="t-junction" tabindex="-1"><span class="v-cnf"><span class="v-away">See you in Bhilwara!</span><span class="v-home">See you at the shaadi!</span></span><span class="v-wl">You're on the waitlist</span></h2>
       <p class="stop__lede stop__lede--dark"><span class="v-cnf">Your ticket is saved. Edit it anytime from this phone, or search your name again on another.</span><span class="v-wl">We'll keep a seat warm. Come back and confirm when you know.</span></p>
+      <p class="travel-line" id="travel-line" hidden data-preview>🎟️ Trains for Wed 9 Dec open for booking Sat 10 Oct, 8 AM. Grab yours early!</p>
     </div>
 
     <!-- Boarding pass -->
@@ -601,60 +612,23 @@
       <p class="field__error field__error--dark" id="pass-error" hidden>Couldn't print the pass. Try again in a moment.</p>
     </section>
 
-    <!-- Booking-open reminders (train only) -->
-    <section class="ticket info-card" id="booking" aria-labelledby="booking-title" hidden data-preview>
-      <div class="ticket__strip"><span>IRCTC</span><span>Booking opens 8:00 AM</span></div>
-      <div class="info-card__body">
-        <h3 class="section-title" id="booking-title">Book your train the morning it opens</h3>
-        <p class="info-card__text">Booking opens 60 days before the journey, at 8:00 AM. Long-distance trains count from the day the train leaves its first station, so it can open a day earlier.</p>
-        <ul class="booking-list" id="booking-list">
-          <li class="booking-card" data-sample data-state="upcoming">
-            <p class="booking-card__leg dm">Onward · boards ~Tue 8 Dec</p>
-            <p class="booking-card__opens">Opens <strong>Fri 9 Oct, 8:00 AM</strong></p>
-            <p class="booking-card__countdown dm">in 23 h 50 min</p>
-            <p class="booking-card__note">Arriving early on Wed 9 Dec usually means an overnight train that leaves the day before. If yours leaves on Wed 9 Dec itself, booking opens Sat 10 Oct instead.</p>
-            <div class="booking-card__actions">
-              <a class="btn btn--small btn--secondary" href="#" target="_blank" rel="noopener"><svg class="btn__icon" aria-hidden="true"><use href="#i-calendar"/></svg>Add 7:50 AM reminder</a>
-              <a class="btn btn--link" href="#" download="booking-reminder.ics">Other calendar app (.ics)</a>
-            </div>
-          </li>
-          <li class="booking-card" data-sample data-state="upcoming">
-            <p class="booking-card__leg dm">Return · date not fixed yet</p>
-            <p class="booking-card__opens">Next window opens <strong>Mon 12 Oct, 8:00 AM</strong></p>
-            <p class="booking-card__countdown dm">in 3 days 23 h</p>
-            <ul class="booking-card__dates"><li><span>Fri 11 Dec</span><span>opens Mon 12 Oct</span></li><li><span>Sat 12 Dec</span><span>opens Tue 13 Oct</span></li><li><span>Sun 13 Dec</span><span>opens Wed 14 Oct</span></li><li><span>Mon 14 Dec</span><span>opens Thu 15 Oct</span></li></ul>
-            <p class="booking-card__note">Pick your date and book on the morning its window opens.</p>
-            <div class="booking-card__actions">
-              <a class="btn btn--small btn--secondary" href="#" target="_blank" rel="noopener"><svg class="btn__icon" aria-hidden="true"><use href="#i-calendar"/></svg>Add 7:50 AM reminder</a>
-              <a class="btn btn--link" href="#" download="booking-reminder.ics">Other calendar app (.ics)</a>
-            </div>
-          </li>
-          <li class="booking-card" data-sample data-state="open">
-            <p class="booking-card__leg dm">Return · Sat 12 Dec</p>
-            <p class="booking-card__opens">Opened <strong>Tue 13 Oct, 8:00 AM</strong></p>
-            <div class="booking-card__open-now"><p>Booking is open now. Book today.</p><a class="btn btn--small btn--secondary" href="https://www.irctc.co.in/nget/train-search" target="_blank" rel="noopener">Open IRCTC</a></div>
-          </li>
-        </ul>
-      </div>
-    </section>
-
     <!-- Leave kit -->
     <section class="ticket info-card" id="leave-kit" aria-labelledby="leave-title">
       <div class="ticket__strip"><span>Leave kit</span><span>Office-ready</span></div>
       <div class="info-card__body">
         <h3 class="section-title" id="leave-title">Get the days off</h3>
-        <p class="info-card__text">You'll need about <strong class="leave__days" id="leave-days">3</strong> working days off.</p>
+        <p class="info-card__text">You'll need about <strong class="leave__days" id="leave-days">2</strong> working days off.</p>
         <div class="chips chips--leave" id="leave-kind-chips" role="radiogroup" aria-label="Email tone" data-group="leave-kind">
           <button class="chip" type="button" role="radio" aria-checked="true" data-value="formal"><span class="chip__label">Formal</span></button>
           <button class="chip" type="button" role="radio" aria-checked="false" data-value="honest"><span class="chip__label">Honest</span></button>
         </div>
         <div class="leave__preview">
-          <p class="leave__subject"><span class="dm leave__subject-label">Subject</span> <span id="leave-subject">Leave request: 9–12 Dec</span></p>
-          <p class="leave__body" id="leave-body">Hi,
+          <p class="leave__subject"><span class="dm leave__subject-label">Subject</span> <span id="leave-subject">Leave request: Thu 10 Dec to Fri 11 Dec</span></p>
+          <p class="leave__body" id="leave-body">Dear Sir/Madam,
 
-I'd like to request leave from Wed 9 Dec to Sat 12 Dec to attend a close friend's wedding in Bhilwara, Rajasthan.
+I would like to request leave from Thu 10 Dec to Fri 11 Dec 2026 (2 working days) to attend the wedding of my close friends, Saumy &amp; Manorika, in Bhilwara, Rajasthan.
 
-Thanks,
+Kind regards,
 Rahul</p>
         </div>
         <div class="leave__actions">
@@ -662,6 +636,13 @@ Rahul</p>
           <a class="btn btn--secondary" id="leave-mail" href="#"><svg class="btn__icon" aria-hidden="true"><use href="#i-mail"/></svg>Open in mail</a>
         </div>
       </div>
+    </section>
+
+    <!-- Make it a Rajasthan long weekend: js/trip.js mounts the map into #trip -->
+    <section class="trip-block" id="trip-block" aria-labelledby="trip-title">
+      <h3 class="section-title section-title--dark" id="trip-title">Make it a Rajasthan long weekend</h3>
+      <p class="trip-block__intro" id="trip-intro">The shaadi takes Thursday and Friday. Give the weekend that follows to Rajasthan: lakes, forts and temples, all within a day's drive.</p>
+      <div class="trip-block__map" id="trip"></div>
     </section>
 
     <button class="btn btn--ghost btn--block" id="junction-edit" type="button"><svg class="btn__icon" aria-hidden="true"><use href="#i-edit"/></svg>Edit my ticket</button>
@@ -689,14 +670,8 @@ Rahul</p>
         <span class="board__post board__post--r"></span>
       </div>
       <div class="couple">
-        <div class="bobble bobble--a is-sad">
-          <div class="bobble__head"><img data-head="a" src="assets/couple/saumy-head-sad.svg" data-png="assets/couple/saumy-head.png" alt="" width="256" height="256"><span class="bobble__tear"></span></div>
-          <svg class="bobble__body" viewBox="0 0 100 124" focusable="false"><use href="#body-saumy"/><use class="bobble__arm" href="#arm-saumy-down"/></svg>
-        </div>
-        <div class="bobble bobble--b is-sad">
-          <div class="bobble__head"><img data-head="b" src="assets/couple/manorika-head-sad.svg" data-png="assets/couple/manorika-head.png" alt="" width="256" height="256"><span class="bobble__tear"></span></div>
-          <svg class="bobble__body" viewBox="0 0 100 124" focusable="false"><use href="#body-manorika"/><use class="bobble__arm" href="#arm-manorika-down"/></svg>
-        </div>
+        <div class="figure figure--a is-sad"><img class="figure__body" src="assets/bobble/saumy-body.webp" alt="" width="309" height="900" loading="lazy" decoding="async"><img class="figure__head" src="assets/bobble/saumy-head.webp" alt="" width="309" height="900" loading="lazy" decoding="async"></div>
+        <div class="figure figure--b is-sad"><img class="figure__body" src="assets/bobble/manorika-body.webp" alt="" width="418" height="900" loading="lazy" decoding="async"><img class="figure__head" src="assets/bobble/manorika-head.webp" alt="" width="418" height="900" loading="lazy" decoding="async"></div>
       </div>
       <div class="platform-edge"></div>
     </div>
@@ -712,6 +687,7 @@ Rahul</p>
           <label class="field__label" for="regret-note">A note for Saumy &amp; Manorika <span class="field__optional">(optional)</span></label>
           <textarea class="input input--area" id="regret-note" maxlength="500" rows="3" placeholder="Blessings, excuses, a dance you'd have done…" aria-describedby="regret-note-count"></textarea>
           <p class="field__count" id="regret-note-count" aria-live="off">0 / 500</p>
+          <p class="field__hint" data-note-kept hidden>Your earlier note is saved. Write a new one here to replace it.</p>
           <p class="field__error" id="regret-note-error" role="alert" hidden></p>
         </div>
         <button class="btn btn--primary btn--block" id="regret-note-save" type="button">Send note</button>
@@ -766,10 +742,16 @@ Rahul</p>
       <span class="guest-card__no dm">Passenger <span data-slot="no"></span></span>
       <button class="icon-btn guest-card__remove" type="button" data-action="remove" aria-label="Remove this passenger" hidden><svg aria-hidden="true"><use href="#i-x"/></svg></button>
     </div>
-    <p class="guest-card__name" data-slot="name"></p>
-    <div class="field guest-card__name-field" hidden>
-      <label class="field__label" data-slot="name-label">Name</label>
-      <input class="input" data-slot="name-input" type="text" autocomplete="off" autocapitalize="words" maxlength="60" placeholder="Their name">
+    <div class="guest-card__who">
+      <p class="guest-card__name" data-slot="name"></p>
+      <div class="field guest-card__name-field" hidden>
+        <label class="field__label" data-slot="name-label">Name</label>
+        <input class="input" data-slot="name-input" type="text" autocomplete="off" autocapitalize="words" maxlength="60" placeholder="Their name">
+      </div>
+      <div class="gender" role="radiogroup" data-group="gender" data-slot="gender" hidden>
+        <button class="gender__opt" type="button" role="radio" aria-checked="false" data-value="M" aria-label="Male">M</button>
+        <button class="gender__opt" type="button" role="radio" aria-checked="false" data-value="F" aria-label="Female">F</button>
+      </div>
     </div>
     <div class="chips chips--status" role="radiogroup" data-group="status">
       <button class="chip chip--status chip--confirmed" type="button" role="radio" aria-checked="false" data-value="confirmed"><span class="chip__label">Confirmed</span><span class="chip__code">CNF</span></button>
@@ -782,21 +764,6 @@ Rahul</p>
 
 <template id="tpl-chip">
   <button class="chip" type="button" role="radio" aria-checked="false" data-value=""><span class="chip__kicker" data-slot="kicker" hidden></span><span class="chip__label" data-slot="label"></span><span class="chip__hint" data-slot="hint" hidden></span></button>
-</template>
-
-<template id="tpl-booking">
-  <li class="booking-card" data-state="upcoming">
-    <p class="booking-card__leg dm" data-slot="leg"></p>
-    <p class="booking-card__opens"><span data-slot="opens-verb">Opens</span> <strong data-slot="opens"></strong></p>
-    <p class="booking-card__countdown dm" data-slot="countdown"></p>
-    <ul class="booking-card__dates" data-slot="dates" aria-label="Booking windows by travel date" hidden></ul>
-    <p class="booking-card__note" data-slot="note" hidden></p>
-    <div class="booking-card__open-now" data-slot="open-now"><p>Booking is open now. Book today.</p><a class="btn btn--small btn--secondary" data-slot="irctc" href="https://www.irctc.co.in/nget/train-search" target="_blank" rel="noopener">Open IRCTC</a></div>
-    <div class="booking-card__actions">
-      <a class="btn btn--small btn--secondary" data-slot="gcal" href="#" target="_blank" rel="noopener"><svg class="btn__icon" aria-hidden="true"><use href="#i-calendar"/></svg>Add 7:50 AM reminder</a>
-      <a class="btn btn--link" data-slot="ics" href="#" download="booking-reminder.ics">Other calendar app (.ics)</a>
-    </div>
-  </li>
 </template>
 
 <template id="tpl-catch-row">

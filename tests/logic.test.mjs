@@ -120,9 +120,10 @@ test('buildPayload: trims names, drops travel when everyone regrets', () => {
   const p = buildPayload(state, { ts: '2026-10-09T12:00:00.000Z', ua: 'test' });
   assert.deepEqual(p, {
     action: 'rsvp', id: 'k7m2', unlisted: false, label: 'Rahul Sharma',
-    guests: [{ name: 'Rahul Sharma', status: 'confirmed' }, { name: 'Priya', status: 'waitlisted' }],
-    travel: { mode: 'flight', from: 'Pune', arrive: { date: '2026-12-09', slot: 'night' }, depart: { date: '2026-12-12', slot: 'afternoon' } },
+    guests: [{ name: 'Rahul Sharma', status: 'confirmed', gender: '' }, { name: 'Priya', status: 'waitlisted', gender: '' }],
+    travel: { mode: 'flight', from: 'Pune', arrive: { date: '2026-12-09', slot: 'night' }, depart: { date: '2026-12-12', slot: 'afternoon' }, via: { hub: '', onward: '' } }, // v4 §O3: via always emitted
     note: 'See you!',
+    filled_by: '',
     client: { ts: '2026-10-09T12:00:00.000Z', ua: 'test' },
   });
   const regret = buildPayload({ ...state, guests: [{ name: 'Rahul', status: 'regret' }] }, { ts: 't', ua: 'u' });
@@ -165,5 +166,5 @@ test('matchesQuery: word-prefix, case-insensitive, min 3 chars', () => {
   assert.equal(matchesQuery('agar', 'Mr & Mrs Agarwal', []), true);
   assert.equal(matchesQuery('priya', 'Rahul Sharma', ['Rahul Sharma', 'Priya Sharma']), true);
   assert.equal(matchesQuery('hul', 'Rahul Sharma', []), false);
-  assert.equal(matchesQuery('rahul kumar', 'Rahul Sharma', []), false);
+  assert.equal(matchesQuery('rahul kumar', 'Rahul Sharma', []), true); // v2: unexpected middle/extra names are tolerated
 });

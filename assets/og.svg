@@ -29,7 +29,7 @@
   </g>
   <g clip-path="url(#card)">
     <rect x="70" y="150" width="660" height="58" fill="#D6246E"/>
-    <text x="104" y="189" class="dm" font-size="24" fill="#FFFFFF">SHAADI EXPRESS · 1012</text>
+    <text x="104" y="189" class="dm" font-size="24" fill="#FFFFFF">SHAADI EXPRESS · 1011</text>
     <text x="696" y="189" class="dm" font-size="24" fill="#FFFFFF" text-anchor="end">TO BHL</text>
   </g>
   <text x="104" y="250" class="body" font-size="22" fill="#A8174F" font-family="Yatra One">॥ शुभ विवाह ॥</text>
@@ -37,129 +37,15 @@
   <text x="100" y="430" class="disp" font-size="88" fill="#D6246E">Manorika</text>
   <line x1="104" y1="470" x2="696" y2="470" stroke="#1B1B2F" stroke-opacity=".3" stroke-width="2.5" stroke-dasharray="9 7"/>
   <circle cx="70" cy="470" r="15" fill="#1A2260"/><circle cx="730" cy="470" r="15" fill="#1A2260"/>
-  <text x="104" y="518" class="body" font-size="28" fill="#1B1B2F">Shaadi Express to Bhilwara · 10–12 Dec 2026</text>
+  <text x="104" y="518" class="body" font-size="28" fill="#1B1B2F">Shaadi Express to Bhilwara · 10–11 Dec 2026</text>
 
   <!-- station board with the couple -->
   <ellipse cx="960" cy="330" rx="230" ry="150" fill="url(#boardglow)"/>
   <rect x="826" y="380" width="13" height="260" fill="#262B58"/>
   <rect x="1081" y="380" width="13" height="260" fill="#262B58"/>
-  <svg x="808" y="150" width="150" height="150" viewBox="0 0 256 256">
-  
-  <!-- neck (hidden behind the body collar when used as a bobblehead) -->
-  <path d="M106 206h44v50h-44z" fill="#B87A4E"/>
-  <!-- ears -->
-  <ellipse cx="60" cy="156" rx="15" ry="19" fill="#C98B5E"/>
-  <ellipse cx="196" cy="156" rx="15" ry="19" fill="#C98B5E"/>
-  <ellipse cx="62" cy="157" rx="7" ry="10" fill="#A9704A"/>
-  <ellipse cx="194" cy="157" rx="7" ry="10" fill="#A9704A"/>
-  <!-- face -->
-  <path d="M128 76c44 0 72 30 72 80c0 46-30 76-72 76s-72-30-72-76c0-50 28-80 72-80z" fill="#C98B5E"/>
-  <path d="M66 176c8 34 32 56 62 56s54-22 62-56c-10 22-32 38-62 38s-52-16-62-38z" fill="#B07448" opacity=".55"/>
-  <!-- sideburns -->
-  <path d="M60 118c2 14 4 26 10 36l6-30z" fill="#1B1B2F"/>
-  <path d="M196 118c-2 14-4 26-10 36l-6-30z" fill="#1B1B2F"/>
-  <!-- safa (turban) -->
-  <path d="M42 120c-4-46 34-84 86-84s92 36 86 84c-14-14-46-22-86-22s-72 8-86 22z" fill="#D6246E"/>
-  <path d="M48 104c22-18 52-26 80-26s58 8 80 26" fill="none" stroke="#A8174F" stroke-width="7" stroke-linecap="round"/>
-  <path d="M56 82c22-16 46-22 72-22s50 6 72 22" fill="none" stroke="#E8508C" stroke-width="6" stroke-linecap="round"/>
-  <path d="M74 58c16-9 34-13 54-13s38 4 54 13" fill="none" stroke="#A8174F" stroke-width="5" stroke-linecap="round"/>
-  <!-- bandhani dots on the safa -->
-  <g fill="#FFD23F">
-    <circle cx="70" cy="96" r="2.4"/><circle cx="92" cy="88" r="2.4"/><circle cx="164" cy="88" r="2.4"/><circle cx="186" cy="96" r="2.4"/>
-    <circle cx="84" cy="70" r="2.2"/><circle cx="106" cy="64" r="2.2"/><circle cx="150" cy="64" r="2.2"/><circle cx="172" cy="70" r="2.2"/>
-    <circle cx="120" cy="50" r="2"/><circle cx="138" cy="50" r="2"/><circle cx="60" cy="110" r="2.2"/><circle cx="196" cy="110" r="2.2"/>
-  </g>
-  <!-- kalgi (plume) and sarpech (brooch) -->
-  <path d="M136 84c6-26 18-48 38-64c-4 22-12 44-28 66z" fill="#FCE9D6"/>
-  <path d="M140 82c6-20 16-38 30-52" fill="none" stroke="#F6A609" stroke-width="2.4" stroke-linecap="round"/>
-  <circle cx="171" cy="22" r="5" fill="#F6A609"/>
-  <path d="M116 92l12-14l12 14l-12 14z" fill="#F6A609"/>
-  <circle cx="128" cy="92" r="5.5" fill="#2F7D32"/>
-  <circle cx="128" cy="92" r="2.2" fill="#FFD23F"/>
-  <g fill="#FCE9D6"><circle cx="112" cy="104" r="2.6"/><circle cx="120" cy="108" r="2.6"/><circle cx="128" cy="110" r="2.6"/><circle cx="136" cy="108" r="2.6"/><circle cx="144" cy="104" r="2.6"/></g>
-  <!-- tilak -->
-  <path d="M128 118c3 6 3 14 0 20c-3-6-3-14 0-20z" fill="#C62828"/>
-  <!-- eyebrows -->
-  <path d="M84 132c8-7 20-8 30-3" fill="none" stroke="#1B1B2F" stroke-width="6" stroke-linecap="round"/>
-  <path d="M172 132c-8-7-20-8-30-3" fill="none" stroke="#1B1B2F" stroke-width="6" stroke-linecap="round"/>
-  <!-- eyes -->
-  <ellipse cx="100" cy="154" rx="15" ry="17" fill="#fff"/>
-  <ellipse cx="156" cy="154" rx="15" ry="17" fill="#fff"/>
-  <circle cx="102" cy="157" r="9.5" fill="#1B1B2F"/>
-  <circle cx="154" cy="157" r="9.5" fill="#1B1B2F"/>
-  <circle cx="105" cy="153" r="3.4" fill="#fff"/>
-  <circle cx="157" cy="153" r="3.4" fill="#fff"/>
-  <!-- cheeks -->
-  <ellipse cx="80" cy="186" rx="13" ry="8" fill="#D6246E" opacity=".22"/>
-  <ellipse cx="176" cy="186" rx="13" ry="8" fill="#D6246E" opacity=".22"/>
-  <!-- nose -->
-  <path d="M124 166c-4 8-4 13 4 15" fill="none" stroke="#8E5A36" stroke-width="3.5" stroke-linecap="round"/>
-  <!-- big smile -->
-  <path d="M96 190c10 22 54 22 64 0c-20 6-44 6-64 0z" fill="#7A1636"/>
-  <path d="M100 192c18 5 38 5 56 0l-2 7c-16 4-36 4-52 0z" fill="#fff"/>
-</svg>
-  <svg x="962" y="150" width="150" height="150" viewBox="0 0 256 256">
-  
-  <!-- back hair -->
-  <path d="M50 150c-6-62 30-104 78-104s84 42 78 104c-4 34-14 52-26 62h-104c-12-10-22-28-26-62z" fill="#1B1B2F"/>
-  <!-- bun with gajra -->
-  <circle cx="128" cy="40" r="30" fill="#1B1B2F"/>
-  <g fill="#FCE9D6">
-    <circle cx="100" cy="52" r="4"/><circle cx="104" cy="40" r="4"/><circle cx="110" cy="29" r="4"/><circle cx="120" cy="22" r="4"/>
-    <circle cx="132" cy="20" r="4"/><circle cx="143" cy="24" r="4"/><circle cx="151" cy="33" r="4"/><circle cx="155" cy="45" r="4"/>
-  </g>
-  <!-- neck -->
-  <path d="M108 206h40v50h-40z" fill="#C5875C"/>
-  <!-- face -->
-  <path d="M128 80c42 0 68 30 68 76c0 44-28 74-68 74s-68-30-68-74c0-46 26-76 68-76z" fill="#D79A6E"/>
-  <path d="M68 176c8 32 30 52 60 52s52-20 60-52c-10 20-30 34-60 34s-50-14-60-34z" fill="#C5875C" opacity=".55"/>
-  <!-- front hair with centre parting -->
-  <path d="M60 140c0-40 26-66 66-68c-14 10-26 26-30 50c-12 4-24 10-36 18z" fill="#1B1B2F"/>
-  <path d="M196 140c0-40-26-66-66-68c14 10 26 26 30 50c12 4 24 10 36 18z" fill="#1B1B2F"/>
-  <!-- sindoor in parting -->
-  <path d="M128 66v22" stroke="#C62828" stroke-width="4" stroke-linecap="round"/>
-  <!-- maang tikka -->
-  <path d="M128 70v34" stroke="#F6A609" stroke-width="2.4"/>
-  <circle cx="128" cy="76" r="2.6" fill="#FCE9D6"/><circle cx="128" cy="86" r="2.6" fill="#FCE9D6"/>
-  <path d="M128 100l9 9l-9 11l-9-11z" fill="#F6A609"/>
-  <circle cx="128" cy="109" r="4" fill="#D6246E"/>
-  <circle cx="128" cy="124" r="2.4" fill="#FCE9D6"/>
-  <!-- bindi -->
-  <circle cx="128" cy="134" r="3.6" fill="#C62828"/>
-  <!-- eyebrows -->
-  <path d="M86 134c8-6 18-7 26-3" fill="none" stroke="#1B1B2F" stroke-width="4.5" stroke-linecap="round"/>
-  <path d="M170 134c-8-6-18-7-26-3" fill="none" stroke="#1B1B2F" stroke-width="4.5" stroke-linecap="round"/>
-  <!-- eyes with kajal and lashes -->
-  <ellipse cx="102" cy="156" rx="15" ry="16" fill="#fff" stroke="#1B1B2F" stroke-width="2.6"/>
-  <ellipse cx="154" cy="156" rx="15" ry="16" fill="#fff" stroke="#1B1B2F" stroke-width="2.6"/>
-  <circle cx="104" cy="159" r="9" fill="#1B1B2F"/>
-  <circle cx="152" cy="159" r="9" fill="#1B1B2F"/>
-  <circle cx="107" cy="155" r="3.2" fill="#fff"/>
-  <circle cx="155" cy="155" r="3.2" fill="#fff"/>
-  <path d="M88 146l-7-5M91 141l-5-7M168 146l7-5M165 141l5-7" stroke="#1B1B2F" stroke-width="2.6" stroke-linecap="round"/>
-  <!-- cheeks -->
-  <ellipse cx="82" cy="186" rx="12" ry="7.5" fill="#D6246E" opacity=".25"/>
-  <ellipse cx="174" cy="186" rx="12" ry="7.5" fill="#D6246E" opacity=".25"/>
-  <!-- nose -->
-  <path d="M125 166c-3 7-3 11 4 13" fill="none" stroke="#A86C45" stroke-width="3.2" stroke-linecap="round"/>
-  <!-- nath (nose ring) with chain to the hair -->
-  <path d="M184 128c-8 18-22 34-38 46" fill="none" stroke="#F6A609" stroke-width="1.8" stroke-dasharray="3 2.5"/>
-  <circle cx="144" cy="186" r="15" fill="none" stroke="#F6A609" stroke-width="3.2"/>
-  <circle cx="144" cy="201" r="3.2" fill="#D6246E"/>
-  <circle cx="131" cy="194" r="2.2" fill="#FCE9D6"/><circle cx="157" cy="194" r="2.2" fill="#FCE9D6"/>
-  <!-- smile -->
-  <path d="M106 196c10 16 34 16 44 0c-14 5-30 5-44 0z" fill="#B0174F"/>
-  <path d="M110 197c12 3 24 3 36 0l-2 5c-10 3-22 3-32 0z" fill="#fff"/>
-  <!-- jhumkas -->
-  <g>
-    <circle cx="62" cy="176" r="4" fill="#F6A609"/>
-    <path d="M52 196c0-10 4-16 10-16s10 6 10 16z" fill="#F6A609"/>
-    <g fill="#FCE9D6"><circle cx="54" cy="199" r="2"/><circle cx="62" cy="200" r="2"/><circle cx="70" cy="199" r="2"/></g>
-    <circle cx="194" cy="176" r="4" fill="#F6A609"/>
-    <path d="M184 196c0-10 4-16 10-16s10 6 10 16z" fill="#F6A609"/>
-    <g fill="#FCE9D6"><circle cx="186" cy="199" r="2"/><circle cx="194" cy="200" r="2"/><circle cx="202" cy="199" r="2"/></g>
-  </g>
-</svg>
+  <!-- the couple's bobblehead busts, peeking over the station board -->
+  <image href="bobble/saumy-bust.webp" x="808" y="84" width="150" height="228" transform="rotate(-4 883 312)"/>
+  <image href="bobble/manorika-bust.webp" x="950" y="104" width="168" height="215" transform="rotate(4 1034 319)"/>
   <rect x="786" y="268" width="348" height="132" rx="14" fill="#FFD23F"/>
   <rect x="796" y="278" width="328" height="112" rx="9" fill="#FFD23F" stroke="#1B1B2F" stroke-width="5"/>
   <text x="960" y="330" class="disp" font-size="44" fill="#1B1B2F" text-anchor="middle">भीलवाड़ा</text>

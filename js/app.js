@@ -10,13 +10,16 @@
  */
 import { CONFIG } from './config.js';
 import {
-  formatDate, isValidISODate, slotHour, bookingOpens, bookingStatus, catches, workingDays,
-  overallStatus, validatePayload, buildPayload, calendarUrl, icsText, leaveEmail,
+  formatDate, isValidISODate, slotHour, catches, workingDays, arrivalLine,
+  overallStatus, validatePayload, buildPayload, leaveEmail, matchScore, normalizeName, ridersFor,
 } from './logic.js';
 import { findGuests, getGuest, submitRsvp, newUnlistedId, local } from './api.js';
 import { createRegretController } from './regret.js';
 import { createBaaja } from './audio.js';
 import { renderPass, passFilename, downloadPass, sharePass, passBlob } from './pass.js';
+import { mountTrip } from './trip.js';
+import { ORIGIN, DESTINATIONS, TRIP_COPY } from './trip-data.js';
+import { AIRPORTS, HIGHWAYS, BUS_FACTS } from './travel-data.js';
 
 /* ------------------------------------------------------------------ */
 /* Constants                                                           */
@@ -25,23 +28,43 @@ import { renderPass, passFilename, downloadPass, sharePass, passBlob } from './p
 const STATUS_IDS = CONFIG.statuses.map((s) => s.id);
 const MODE_IDS = CONFIG.modes.map((m) => m.id);
 const SLOT_IDS = CONFIG.slots.map((s) => s.id);
+const GENDER_IDS = ['M', 'F'];
 const FORM_STOPS = ['platform', 'passengers', 'route', 'arrival', 'departure'];
 const STOP_ORDER = [...FORM_STOPS, 'junction', 'regret-end'];
 const GO_COOLDOWN_MS = 400;      // taps this soon after a stop change are the tail of a double-tap
-const OVERNIGHT_SLOTS = ['early', 'morning']; // arriving then usually means a train that left the day before
-const IRCTC_URL = 'https://www.irctc.co.in/nget/train-search';
 const NUDGE_KEY = 'stt.baaja.nudged';
 const NAME_MAX = 60;
 const NOTE_MAX = 500;
-const UNLISTED_MAX_GUESTS = 2;   // someone we forgot to list may still bring a plus-one; Saumy reviews unlisted tickets
+const MAX_GUESTS = 4;            // every ticket may bring guests up to 4 people (amendments §A)
+const UNLISTED_MAX_GUESTS = MAX_GUESTS; // Saumy reviews unlisted tickets in the Sheet
 const UNLISTED_RE = /^u-[a-z0-9]{8}$/;
 const SEARCH_DEBOUNCE_MS = 250;
+const IST_MS = 5.5 * 3600000;
+const LOCAL = 'local';           // "Bhilwara is home" (amendments §L)
+const RIDER_OUT_MS = 300;        // matches .rider.is-out in styles.css
 
-/** Per stop: track progress, heading to focus, and what the live region says. */
+/** Bobblehead art (amendments §E): the couple's busts for the pass, guest busts for the riders. */
+const BUSTS = { a: 'assets/bobble/saumy-bust.webp', b: 'assets/bobble/manorika-bust.webp' };
+const RIDER_SRC = { M: 'assets/bobble/guest-m-bust.webp', F: 'assets/bobble/guest-f-bust.webp' };
+
+/**
+ * The wedding days, e.g. {first:'2026-12-10', last:'2026-12-11'}: the function dates, with a
+ * small-hours function (the 3 AM Phera) counted as the night before. Locals' leave covers these.
+ */
+const WEDDING = (() => {
+  const days = CONFIG.functions.map((f) => {
+    const [date, time = ''] = String(f.at || f.date).split('T');
+    const hour = Number(time.split(':')[0]);
+    return time && hour < 6 ? addDays(date, -1) : date;
+  }).filter(isValidISODate).sort();
+  return { first: days[0], last: days[days.length - 1] };
+})();
+
+/** Per stop: track progress, heading to focus, and what the live region says (sayHome: for locals). */
 const STOPS = {
   platform: { progress: 0, title: 't-platform', say: "Platform. Who's boarding?" },
-  passengers: { progress: 0.2, title: 't-passengers', say: 'Stop 1 of 4: Passenger chart' },
-  route: { progress: 0.4, title: 't-route', say: 'Stop 2 of 4: How you are travelling' },
+  passengers: { progress: 0.2, title: 't-passengers', say: 'Stop 1 of 4: Passenger chart', sayHome: 'Stop 1 of 2: Passenger chart' },
+  route: { progress: 0.4, title: 't-route', say: 'Stop 2 of 4: How you are travelling', sayHome: 'Last stop: How you are travelling' },
   arrival: { progress: 0.6, title: 't-arrival', say: 'Stop 3 of 4: Arrival' },
   departure: { progress: 0.8, title: 't-departure', say: 'Stop 4 of 4: Departure' },
   junction: { progress: 1, title: 't-junction', say: 'Bhilwara Junction. Your ticket is saved.' },
@@ -85,6 +108,12 @@ function addDays(iso, n) {
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
 }
+/** 'Fri 9 Oct' for a saved timestamp, in Indian time; '' when it can't be read. */
+function savedOn(ts) {
+  const ms = Date.parse(String(ts || ''));
+  return Number.isFinite(ms) ? formatDate(new Date(ms + IST_MS).toISOString().slice(0, 10)) : '';
+}
+const firstWord = (s) => String(s || '').trim().split(/\s+/)[0] || '';
 /** Bottom edge of the sticky bar and its hanging toran (px from the top of the viewport). */
 const topInset = () => ($('.toran') || el('journey-bar')).getBoundingClientRect().bottom;
 
@@ -93,25 +122,59 @@ const topInset = () => ($('.toran') || el('journey-bar')).getBoundingClientRect(
 /* ------------------------------------------------------------------ */
 
 const blankTravel = () => ({ mode: '', from: '', arrive: { date: '', slot: '' }, depart: { date: '', slot: '' } });
+/** A local guest's travel: home is Bhilwara, so there is nothing to plan (amendments §L). */
+const localTravel = () => ({ mode: LOCAL, from: CONFIG.city, arrive: { date: 'unsure', slot: 'unsure' }, depart: { date: 'unsure', slot: 'unsure' } });
+const isLocal = () => state.travel.mode === LOCAL;
+
+let keySeq = 0;
+/** A stable per-guest key for this visit (regret joke counters, render bookkeeping). Never saved. */
+const newKey = () => `p${++keySeq}`;
+const genderOf = (v) => (GENDER_IDS.includes(v) ? v : '');
+const otherGender = (v) => (v === 'M' ? 'F' : v === 'F' ? 'M' : '');
 
 /**
- * guest:  {id, label, unlisted, max_guests} | null  (whose ticket this is)
- * guests: [{name, status, added}]                   (added = typed on this page, so editable/removable)
+ * guest:  {id, label, unlisted, max_guests, couple} | null   (whose ticket this is)
+ * guests: [{name, status, gender, added, partner, key}]
+ *         added   = typed on this page (Add guest), so editable and removable
+ *         partner = the invited partner whose name the list doesn't know (editable, not removable)
+ * filledBy: who is filling this in (the best-matching list name for the search, amendments §C)
+ * booked:   {filled_by, updated_at, payload, has_note?, updated?} when this ticket was already saved
+ *           (from any phone); updated = the saved copy on this phone was older (another phone changed it)
+ * keepNote: the saved answer has a note this page can't see (the server never shares it), so an empty
+ *           note is sent with keep_note and the server keeps the earlier one
  */
 const state = {
   guest: null,
   guests: [],
   travel: blankTravel(),
   note: '',
+  keepNote: false,
   stop: 'platform',
   unlistedId: '',   // remembered so re-boarding as an unlisted guest keeps the same ticket id
+  filledBy: '',
+  booked: null,
 };
 let dirty = false;  // true once the guest changed something since the last save/restore
 let busy = false;   // a submission is in flight
 let lastGoAt = 0;   // performance.now() of the last stop change (double-tap guard)
 let changedFrom = ''; // id of the ticket holder before "Change", so a different pick starts fresh
+let awayTravel = null; // the non-local plan, kept while "Bhilwara is home" is picked, so switching back restores it
 
-/* Sanitisers for anything read back from localStorage. */
+/**
+ * A reloaded chart (Back to the saved ticket, Edit my ticket, a newer saved copy) keeps each card's
+ * per-visit key when it is the same person in the same seat, so the Regret joke neither restarts
+ * nor carries over (v4 §P). Listed and added guests match by name; the unnamed-partner seat by seat.
+ */
+function carryKeys(next) {
+  next.forEach((g, i) => {
+    const p = state.guests[i];
+    if (!p || !!p.added !== !!g.added || !!p.partner !== !!g.partner) return;
+    if (g.partner || normalizeName(p.name) === normalizeName(g.name)) g.key = p.key;
+  });
+  return next;
+}
+
+/* Sanitisers for anything read back from localStorage (or a saved ticket from the server). */
 function cleanIdentity(g) {
   const v = obj(g);
   if (typeof v.id !== 'string' || !v.id.trim() || v.id.length > 40) return null;
@@ -120,12 +183,22 @@ function cleanIdentity(g) {
   const label = clip(String(v.label ?? ''), 100).trim();
   if (!label) return null;
   const max = Math.trunc(Number(v.max_guests));
-  return { id: v.id, label, unlisted, max_guests: Number.isFinite(max) ? Math.min(10, Math.max(1, max)) : 1 };
+  return {
+    id: v.id, label, unlisted, couple: v.couple === true,
+    max_guests: Number.isFinite(max) ? Math.min(10, Math.max(1, max)) : 1,
+  };
 }
 function cleanGuests(list) {
   return (Array.isArray(list) ? list : []).slice(0, 10).map((g) => {
     const v = obj(g);
-    return { name: clip(String(v.name ?? ''), NAME_MAX), status: STATUS_IDS.includes(v.status) ? v.status : '', added: v.added === true };
+    return {
+      name: clip(String(v.name ?? ''), NAME_MAX),
+      status: STATUS_IDS.includes(v.status) ? v.status : '',
+      gender: genderOf(v.gender),
+      added: v.added === true,
+      partner: v.partner === true && v.added !== true,
+      key: newKey(),
+    };
   });
 }
 function cleanSide(s, dates) {
@@ -154,17 +227,26 @@ function party() {
 /* Drafts and the saved ticket                                         */
 /* ------------------------------------------------------------------ */
 
+/** Guests as stored on this phone (no per-visit keys). */
+const storedGuests = () => state.guests.map(({ name, status, gender, added, partner }) => ({
+  name, status, gender: genderOf(gender), added: !!added, partner: !!partner,
+}));
+
 function saveDraft() {
   if (!dirty || !state.guest || !FORM_STOPS.includes(state.stop)) return;
   local.saveDraft({
-    v: 1,
+    v: 2,
     ts: Date.now(),
     guest: state.guest,
-    guests: state.guests,
+    guests: storedGuests(),
     travel: state.travel,
+    // The plan set aside while "Bhilwara is home" is picked, so switching back after a reload restores it
+    awayTravel: isLocal() && awayTravel ? cleanTravel({ ...awayTravel, mode: '' }) : null,
     note: state.note,
+    keepNote: state.keepNote,
     stop: state.stop,
     unlistedId: state.unlistedId,
+    filledBy: state.filledBy,
   });
 }
 function markDirty() {
@@ -177,40 +259,55 @@ function readDraft() {
   const guest = cleanIdentity(d.guest);
   if (!guest) return null;
   const guests = cleanGuests(d.guests);
+  const travel = cleanTravel(d.travel);
+  const stop = FORM_STOPS.includes(d.stop) && guests.length ? d.stop : 'platform';
   return {
     guest,
     guests,
-    travel: cleanTravel(d.travel),
+    travel,
+    awayTravel: travel.mode === LOCAL && d.awayTravel ? cleanTravel(d.awayTravel) : null,
     note: clip(String(d.note ?? ''), NOTE_MAX),
-    stop: FORM_STOPS.includes(d.stop) && guests.length ? d.stop : 'platform',
+    keepNote: d.keepNote === true,
+    // Locals never visit the arrival and departure stops
+    stop: travel.mode === LOCAL && (stop === 'arrival' || stop === 'departure') ? 'route' : stop,
     unlistedId: typeof d.unlistedId === 'string' && UNLISTED_RE.test(d.unlistedId) ? d.unlistedId : '',
+    filledBy: clip(String(d.filledBy ?? ''), 100),
   };
 }
-function saveRecord(payload, res) {
+function saveRecord(payload, updatedAt) {
   local.save({
     id: payload.id,
     label: payload.label,
     unlisted: payload.unlisted,
     max_guests: maxGuests(),
-    guests: state.guests.map(({ name, status, added }) => ({ name, status, added: !!added })),
+    couple: !!(state.guest && state.guest.couple),
+    guests: storedGuests(),
     payload,
-    updated_at: res.updated_at,
+    updated_at: updatedAt,
   });
 }
 /** Load a saved ticket (local.load()) into state. Returns false if it's unusable. */
 function loadRecord(r) {
   const p = obj(r && r.payload);
   const pGuests = Array.isArray(p.guests) ? p.guests : [];
-  const guest = cleanIdentity({ id: r && r.id, label: r && r.label, unlisted: r && r.unlisted, max_guests: (r && r.max_guests) || pGuests.length });
+  const guest = cleanIdentity({
+    id: r && r.id, label: r && r.label, unlisted: r && r.unlisted, couple: r && r.couple,
+    max_guests: (r && r.max_guests) || pGuests.length,
+  });
   const guests = cleanGuests(Array.isArray(r && r.guests) && r.guests.length ? r.guests : pGuests);
   if (!guest || !guests.length) return false;
   state.guest = guest;
-  state.guests = guests;
+  state.guests = carryKeys(guests);
   state.travel = cleanTravel(p.travel);
   state.note = clip(String(p.note ?? ''), NOTE_MAX);
+  state.keepNote = p.keep_note === true && !state.note;
+  state.filledBy = clip(String(p.filled_by ?? ''), 100);
+  state.booked = null;
+  awayTravel = null;
   if (guest.unlisted) state.unlistedId = guest.id;
   dirty = false;
   syncForm();
+  renderRiders();
   return true;
 }
 
@@ -249,6 +346,39 @@ function setProgress(n) {
 
 function updateParty() {
   document.body.dataset.party = party();
+}
+
+/*
+ * Riders (amendments §D): up to two guest busts ride in the vehicle on the journey track. They
+ * follow ridersFor(): the first two guests who haven't regretted. A new rider hops in with a
+ * small bounce; one who regrets hops out. There are only two slots, so never more than two.
+ */
+let riding = ['', ''];
+const riderTimers = [0, 0];
+
+function renderRiders() {
+  const next = ridersFor(state.guest ? state.guests : []);
+  const still = prefersReducedMotion();
+  $$('.rider').forEach((img, i) => {
+    const want = next[i] || '';
+    if (want === riding[i]) return;
+    clearTimeout(riderTimers[i]);
+    img.classList.remove('is-in', 'is-out');
+    if (!want) {
+      if (still) { img.hidden = true; return; }
+      void img.offsetWidth; // restart the animation
+      img.classList.add('is-out');
+      riderTimers[i] = setTimeout(() => { img.hidden = true; img.classList.remove('is-out'); }, RIDER_OUT_MS);
+      return;
+    }
+    img.src = RIDER_SRC[want];
+    img.hidden = false;
+    if (!still) {
+      void img.offsetWidth;
+      img.classList.add('is-in');
+    }
+  });
+  riding = [next[0] || '', next[1] || ''];
 }
 
 /** Jump to the top. html has scroll-behavior:smooth, which would make a stop change glide from the bottom. */
@@ -316,7 +446,9 @@ function onPopState(e) {
     try { history.replaceState({ stt: stop, i: 0, prev: '' }, ''); } catch { /* ignore */ }
     return;
   }
-  const target = e.state && typeof e.state.stt === 'string' && STOPS[e.state.stt] ? e.state.stt : 'platform';
+  let target = e.state && typeof e.state.stt === 'string' && STOPS[e.state.stt] ? e.state.stt : 'platform';
+  // Locals skip the travel stops, even if an older history entry points at one
+  if (isLocal() && (target === 'arrival' || target === 'departure')) target = 'route';
   if (busy) {
     // Mid-submit: stay put and put our entry back.
     writeHistory('push', state.stop, target);
@@ -328,7 +460,10 @@ function onPopState(e) {
     go('platform', { dir, nav: 'none' });
     // Back from "View my pass": show the welcome panel again rather than "Boarding as".
     const r = local.load();
-    if (r && !dirty && state.guest && state.guest.id === r.id) showWelcome(r);
+    if (r && !dirty && state.guest && state.guest.id === r.id) {
+      showWelcome(r);
+      savedSync = checkNewer(r);
+    }
     return;
   }
   if (target === 'junction' || target === 'regret-end') {
@@ -371,30 +506,36 @@ function go(stop, { dir = 'forward', focus = true, say = true, nav } = {}) {
   const meta = STOPS[stop];
   if (meta.progress !== null) setProgress(meta.progress);
   el('cta-error').hidden = true;
-  if (leaving === 'junction' && stop !== 'junction') stopTicking();
 
   if (stop === 'platform') renderPlatform();
   else if (stop === 'passengers') renderGuests();
+  else if (stop === 'route') renderLocalExtras();
   else if (stop === 'departure') renderCatches();
   else if (stop === 'junction') enterJunction();
   else if (stop === 'regret-end') enterRegretEnd();
   updateParty();
   updateCta();
+  renderRiders();
 
   scrollTopNow();
   if (focus) {
     const h = el(meta.title);
     if (h) h.focus({ preventScroll: true });
   }
-  if (say) announce(meta.say);
+  if (say) announce(stopSay(stop));
   saveDraft();
 }
 
+/** The live-region line for a stop; locals have only two stops (amendments §L). */
+const stopSay = (stop) => (isLocal() && STOPS[stop].sayHome) || STOPS[stop].say;
+
 function ctaText() {
+  const confirm = party() === 'waitlisted' ? 'Save my spot' : 'Confirm my seat';
   switch (state.stop) {
     case 'platform': return 'Board now';
     case 'passengers': return everyoneRegrets() ? 'Send my regrets' : 'Next station →';
-    case 'departure': return party() === 'waitlisted' ? 'Save my spot' : 'Confirm my seat';
+    case 'route': return isLocal() ? confirm : 'Next station →'; // locals finish here
+    case 'departure': return confirm;
     default: return 'Next station →';
   }
 }
@@ -421,7 +562,9 @@ function next() {
       else go('route');
       break;
     case 'route':
-      if (checkRoute(true)) go('arrival');
+      if (!checkRoute(true)) return;
+      if (isLocal()) submit(); // "Bhilwara is home": no arrival or departure stops
+      else go('arrival');
       break;
     case 'arrival':
       if (checkArrival(true)) go('departure');
@@ -509,6 +652,7 @@ let searchErrorDefault = '';
 
 function hideSearchMessages() {
   el('search-empty').hidden = true;
+  el('search-short').hidden = true;
   el('search-error').hidden = true;
   el('search-error').textContent = searchErrorDefault;
 }
@@ -539,6 +683,8 @@ function onSearchInput() {
   if (q.trim().length < 3) {
     searchSeq++;
     renderResults([]);
+    // A short first name ("Om") gets a nudge instead of silence
+    el('search-short').hidden = q.trim().length === 0;
     return;
   }
   searchTimer = setTimeout(() => runSearch(q), SEARCH_DEBOUNCE_MS);
@@ -579,8 +725,14 @@ async function pickListed(match, btn) {
     showSearchError("We couldn't open that ticket. Search for your name again.");
     return;
   }
-  chooseGuest(guest);
-  go('passengers');
+  chooseGuest(guest, el('guest-search').value);
+  goPassengers();
+}
+
+/** Into the passenger chart; a saved ticket's banner is read out with the stop name. */
+function goPassengers() {
+  go('passengers', { say: !state.booked });
+  if (state.booked) announce(`${stopSay('passengers')}. ${el('booked-text').textContent}`);
 }
 
 /* Keep the name search and its results above the phone keyboard. */
@@ -633,24 +785,97 @@ function startFreshIfNewHolder(id) {
   if (changedFrom && changedFrom !== id) {
     state.travel = blankTravel();
     state.note = '';
+    state.keepNote = false;
+    awayTravel = null;
     syncForm();
   }
   changedFrom = '';
 }
 
+/**
+ * Who is filling this in (amendments §C): the list name that best matches what they searched
+ * for, so "priya" on Rahul & Priya's ticket is Priya. No search (a ?g= link) means the first name.
+ */
+function fillerFor(g, query) {
+  const names = Array.isArray(g.names) ? g.names.filter(Boolean) : [];
+  if (!names.length) return clip(String(g.label || ''), 100);
+  let best = names[0];
+  let top = 0;
+  if (String(query || '').trim()) {
+    for (const n of names) {
+      const score = matchScore(query, { label: '', names: [n], aliases: [] });
+      if (score > top) { best = n; top = score; }
+    }
+  }
+  return clip(best, 100);
+}
+
+/**
+ * The initial passenger chart for a list record (amendments §A): one read-only card per known
+ * name (gender from the list), plus a card for an invited partner whose name the list doesn't
+ * know (name required, gender preset, no remove button).
+ */
+function cardsFor(g) {
+  const genders = Array.isArray(g.genders) ? g.genders : [];
+  const names = (g.names && g.names.length ? g.names : [g.label]).slice(0, MAX_GUESTS);
+  const guests = names.map((n, i) => ({
+    name: clip(String(n), NAME_MAX), status: '', gender: genderOf(genders[i]), added: false, partner: false, key: newKey(),
+  }));
+  if (g.partner && guests.length < MAX_GUESTS) {
+    guests.push({ name: '', status: '', gender: genderOf(g.partner.gender), added: false, partner: true, key: newKey() });
+  }
+  return guests;
+}
+
+/** Fill the chart, travel and note from the ticket's latest saved answer (amendments §C). */
+function applyBooked(g) {
+  const p = obj(g.booked && g.booked.payload);
+  const guests = cleanGuests(p.guests);
+  if (!guests.length) return false;
+  // Older answers may lack genders: take them from the list where the names match
+  const listed = Array.isArray(g.names) ? g.names : [];
+  for (const x of guests) {
+    if (x.gender || x.added || x.partner) continue;
+    const i = listed.findIndex((n) => normalizeName(n) === normalizeName(x.name));
+    if (i >= 0) x.gender = genderOf(g.genders && g.genders[i]);
+  }
+  state.guests = carryKeys(guests);
+  state.travel = p.travel && typeof p.travel === 'object' ? cleanTravel(p.travel) : blankTravel();
+  // The server never shares the note (anyone can search a name); has_note says one is saved
+  state.note = clip(String(p.note ?? ''), NOTE_MAX);
+  state.keepNote = !state.note && (g.booked.has_note === true || p.keep_note === true);
+  state.guest.max_guests = Math.max(state.guest.max_guests, guests.length);
+  awayTravel = null;
+  syncForm();
+  return true;
+}
+
+/** state.booked from a guest record's `booked` (null when the ticket has no saved answer yet). */
+function bookedFor(g, updated = false) {
+  const b = g && g.booked;
+  if (!b) return null;
+  return {
+    filled_by: String(b.filled_by || ''), updated_at: String(b.updated_at || ''), payload: b.payload,
+    has_note: b.has_note === true, updated,
+    names: Array.isArray(g.names) ? g.names : [], genders: Array.isArray(g.genders) ? g.genders : [],
+  };
+}
+
 /** Make a listed guest the ticket holder. Keeps the passenger chart if it's the same ticket. */
-function chooseGuest(g) {
+function chooseGuest(g, query = '') {
   startFreshIfNewHolder(g.id);
   const same = state.guest && state.guest.id === g.id && state.guests.length > 0;
-  const max = Math.min(10, Math.max(1, Number(g.max_guests) || 1));
-  state.guest = { id: g.id, label: clip(g.label, 100) || g.id, unlisted: false, max_guests: max };
-  if (!same) {
-    const names = (g.names && g.names.length ? g.names : [g.label]).slice(0, max);
-    state.guests = names.map((n) => ({ name: clip(String(n), NAME_MAX), status: '', added: false }));
-  }
+  const max = Math.min(10, Math.max(1, Number(g.max_guests) || MAX_GUESTS));
+  state.guest = { id: g.id, label: clip(g.label, 100) || g.id, unlisted: false, max_guests: max, couple: g.couple === true };
+  state.filledBy = fillerFor(g, query);
+  state.booked = bookedFor(g);
+  // The saved ticket wins over a fresh chart, but never over edits in progress on this phone
+  if (!same && !(state.booked && applyBooked(g))) state.guests = cardsFor(g);
   renderPlatform();
   updateParty();
-  markDirty();
+  renderRiders();
+  if (same || !state.booked) markDirty();
+  else dirty = false;
 }
 
 /** Board someone who isn't on the list. Re-boarding keeps the same unlisted id. */
@@ -659,11 +884,14 @@ function boardUnlisted(name) {
   const id = prev ? prev.id : (state.unlistedId || newUnlistedId());
   startFreshIfNewHolder(id);
   state.unlistedId = id;
-  if (!prev || !state.guests.length) state.guests = [{ name, status: '', added: false }];
+  if (!prev || !state.guests.length) state.guests = [{ name, status: '', gender: '', added: false, partner: false, key: newKey() }];
   else state.guests[0].name = name;
-  state.guest = { id, label: name, unlisted: true, max_guests: UNLISTED_MAX_GUESTS };
+  state.guest = { id, label: name, unlisted: true, max_guests: UNLISTED_MAX_GUESTS, couple: false };
+  state.filledBy = name;
+  state.booked = null;
   renderPlatform();
   updateParty();
+  renderRiders();
   markDirty();
 }
 
@@ -683,7 +911,7 @@ function boardNow() {
     return;
   }
   if (state.guest) {
-    go('passengers');
+    goPassengers();
     return;
   }
   showSearchError(searchErrorDefault);
@@ -718,6 +946,8 @@ function changeGuest({ focus = true, keepAnswers = false } = {}) {
   changedFrom = keepAnswers ? '' : (state.guest ? state.guest.id : changedFrom);
   state.guest = null;
   state.guests = [];
+  state.filledBy = '';
+  state.booked = null;
   dirty = false;
   local.clearDraft();
   el('guest-search').value = '';
@@ -725,6 +955,7 @@ function changeGuest({ focus = true, keepAnswers = false } = {}) {
   renderPlatform();
   updateParty();
   updateCta();
+  renderRiders();
   if (focus) el('guest-search').focus();
 }
 
@@ -747,8 +978,13 @@ function resetAll() {
   state.guests = [];
   state.travel = blankTravel();
   state.note = '';
+  state.keepNote = false;
   state.unlistedId = '';
+  state.filledBy = '';
+  state.booked = null;
+  awayTravel = null;
   changedFrom = '';
+  savedSync = null;
   dirty = false;
   el('guest-search').value = '';
   el('unlisted-name').value = '';
@@ -756,6 +992,7 @@ function resetAll() {
   hideWelcome();
   syncForm();
   updateCta();
+  renderRiders();
   el('guest-search').focus();
 }
 
@@ -764,11 +1001,59 @@ function resetAll() {
 /* ------------------------------------------------------------------ */
 
 let regret = null;
-let cards = []; // per guest index: {card, chips:{confirmed,waitlisted,regret}, input, err, group}
+let cards = []; // per guest index: {card, chips:{confirmed,waitlisted,regret}, input, err, group, gender}
 
 function statusGroupLabel(g, n) {
   const name = g.name.trim();
   return name ? `${name}'s status` : `Passenger ${n}'s status`;
+}
+function genderGroupLabel(g, n) {
+  const name = g.name.trim();
+  return name ? `${name}'s gender` : `Passenger ${n}'s gender`;
+}
+/** Names the guest types: Add guest cards and the invited partner whose name the list lacks. */
+const typesName = (g) => g.added || g.partner;
+/** M/F is asked of anyone the list doesn't describe: added guests, the partner, an unlisted guest. */
+const asksGender = (g) => g.added || g.partner || !!(state.guest && state.guest.unlisted);
+
+/** `{keep_note: true}` while the saved answer's unseen note should be kept (see state.keepNote), else `{}`. */
+const keepNoteFlag = () => (state.keepNote && !state.note.trim() ? { keep_note: true } : {});
+
+/** "Already booked" banner on the passenger chart (amendments §C). '' hides it. */
+function bookedMessage() {
+  const b = state.booked;
+  if (!b || !state.guest || state.guest.unlisted) return '';
+  const when = savedOn(b.updated_at);
+  const by = String(b.filled_by || '').trim();
+  const someoneElse = by && normalizeName(by) !== normalizeName(state.filledBy);
+  if (b.updated) {
+    // This phone's saved copy was older: the ticket was changed from another phone since
+    return someoneElse
+      ? `${firstWord(by)} updated your ticket${when ? ` on ${when}` : ''}. Check the details or make changes.`
+      : `Your ticket was updated from another phone${when ? ` on ${when}` : ''}. Check the details or make changes.`;
+  }
+  if (state.guest.couple && someoneElse) {
+    const who = state.guests.length > 2 ? 'everyone' : 'you both';
+    return `${firstWord(by)} already booked seats for ${who}${when ? ` on ${when}` : ''}. Check the details or make changes.`;
+  }
+  return `Your seats are already booked${when ? ` (updated ${when})` : ''}. Check the details or make changes.`;
+}
+function renderBooked() {
+  const msg = bookedMessage();
+  el('booked').hidden = !msg;
+  el('booked-text').textContent = msg;
+}
+
+/** "View my pass" on the banner: show the saved ticket (not edits in progress) at the junction. */
+function viewBookedPass() {
+  const b = state.booked;
+  if (busy || !b || !state.guest) return;
+  if (!applyBooked({ booked: b, names: b.names, genders: b.genders })) return;
+  const saved = obj(b.payload);
+  saveRecord({ ...saved, ...keepNoteFlag(), id: state.guest.id, label: state.guest.label, unlisted: false }, b.updated_at);
+  dirty = false;
+  local.clearDraft();
+  go(everyoneRegrets() ? 'regret-end' : 'junction', { nav: 'push' });
 }
 
 function setStamp(card, status) {
@@ -789,26 +1074,46 @@ function buildCard(g, i) {
   group.setAttribute('aria-label', statusGroupLabel(g, n));
   group.setAttribute('aria-describedby', err.id);
 
+  // M/F toggle (amendments §D): only for people the list doesn't describe
+  let gender = null;
+  if (asksGender(g)) {
+    gender = slot(card, 'gender');
+    gender.hidden = false;
+    gender.setAttribute('aria-label', genderGroupLabel(g, n));
+    for (const opt of $$('[role="radio"]', gender)) {
+      opt.setAttribute('aria-checked', String(opt.dataset.value === g.gender));
+      opt.addEventListener('click', () => setGender(g, opt.dataset.value));
+    }
+    rove(gender);
+  }
+
   let input = null;
-  if (g.added) {
-    card.classList.add('is-added');
+  if (typesName(g)) {
+    card.classList.toggle('is-added', !!g.added);
+    card.classList.toggle('is-partner', !!g.partner);
     slot(card, 'name').hidden = true;
     $('.guest-card__name-field', card).hidden = false;
     input = slot(card, 'name-input');
     input.id = `guest-name-${n}`;
     slot(card, 'name-label').htmlFor = input.id;
+    if (g.partner) input.placeholder = "Your partner's name";
+    input.required = true;
     input.value = g.name;
     input.setAttribute('aria-describedby', err.id);
     input.addEventListener('input', () => {
       g.name = input.value.slice(0, NAME_MAX);
       group.setAttribute('aria-label', statusGroupLabel(g, n));
+      if (gender) gender.setAttribute('aria-label', genderGroupLabel(g, n));
       if (card.classList.contains('is-invalid')) recheckCard(g);
       markDirty();
     });
-    const remove = $('[data-action="remove"]', card);
-    remove.hidden = false;
-    remove.setAttribute('aria-label', `Remove passenger ${n}`);
-    remove.addEventListener('click', () => removeGuest(g));
+    if (g.added) {
+      // The invited partner has no remove button: they pick a status (Regret included) instead
+      const remove = $('[data-action="remove"]', card);
+      remove.hidden = false;
+      remove.setAttribute('aria-label', `Remove passenger ${n}`);
+      remove.addEventListener('click', () => removeGuest(g));
+    }
   } else {
     slot(card, 'name').textContent = g.name;
   }
@@ -825,10 +1130,11 @@ function buildCard(g, i) {
         return;
       }
       if (g.status === 'regret') return; // already chosen: nothing to joke about
-      regret.handle(chip, () => setStatus(g, 'regret'));
+      // The stable per-guest key lets each card run its own joke (regret.js may ignore it)
+      regret.handle(chip, () => setStatus(g, 'regret'), g.key);
     });
   }
-  cards[i] = { card, chips, input, err, group };
+  cards[i] = { card, chips, input, err, group, gender };
   return card;
 }
 
@@ -838,7 +1144,18 @@ function renderGuests() {
   cards = [];
   state.guests.forEach((g, i) => list.appendChild(buildCard(g, i)));
   renderAddGuest();
+  renderBooked();
   el('passengers-error').hidden = true;
+}
+
+function setGender(g, value) {
+  const i = state.guests.indexOf(g);
+  if (i < 0 || !GENDER_IDS.includes(value)) return;
+  g.gender = value;
+  const ref = cards[i];
+  if (ref && ref.gender) checkChip(ref.gender, value);
+  renderRiders();
+  markDirty();
 }
 
 function renderAddGuest() {
@@ -863,13 +1180,17 @@ function setStatus(g, value) {
   }
   updateParty();
   updateCta();
+  renderRiders();
   markDirty();
 }
 
 function addGuest() {
   if (!state.guest || state.guests.length >= maxGuests()) return;
-  state.guests.push({ name: '', status: '', added: true });
+  // Guessing the other half of a pair: the opposite of passenger 1, or nothing if unknown
+  const gender = otherGender(state.guests[0] && state.guests[0].gender);
+  state.guests.push({ name: '', status: '', gender, added: true, partner: false, key: newKey() });
   renderGuests();
+  renderRiders();
   markDirty();
   const ref = cards[cards.length - 1];
   if (ref && ref.input) ref.input.focus();
@@ -883,14 +1204,15 @@ function removeGuest(g) {
   renderGuests();
   updateParty();
   updateCta();
+  renderRiders();
   markDirty();
   (el('add-guest').hidden ? el('t-passengers') : el('add-guest')).focus();
   announce(`Passenger ${i + 1} removed.`);
 }
 
-/** Errors for one guest: [nameMissing, statusMissing]. */
+/** Errors for one guest: [nameMissing, statusMissing, isPartner]. */
 function guestProblems(g) {
-  return [!g.name.trim(), !STATUS_IDS.includes(g.status)];
+  return [!g.name.trim(), !STATUS_IDS.includes(g.status), !!g.partner];
 }
 
 function setCardError(i, msg, nameBad) {
@@ -905,8 +1227,9 @@ function setCardError(i, msg, nameBad) {
   }
 }
 
-function cardMessage([nameBad, statusBad]) {
-  return [nameBad ? 'Add a name for this passenger.' : '', statusBad ? 'Pick Confirmed, Waitlisted or Regret.' : '']
+function cardMessage([nameBad, statusBad, partner]) {
+  const name = partner ? "Add your partner's name." : 'Add a name for this passenger.';
+  return [nameBad ? name : '', statusBad ? 'Pick Confirmed, Waitlisted or Regret.' : '']
     .filter(Boolean).join(' ');
 }
 
@@ -964,17 +1287,41 @@ function setSide(side, key, value) {
   markDirty();
 }
 
+/**
+ * Pick a travel mode. "Bhilwara is home" (amendments §L) fills in a local plan and skips the
+ * arrival and departure stops; the away plan is kept aside so switching back restores it.
+ */
 function setMode(value) {
-  state.travel.mode = value;
-  checkChip(el('mode-chips'), value);
-  document.body.dataset.mode = value;
+  if (!MODE_IDS.includes(value)) return;
+  const was = state.travel.mode;
+  if (value === LOCAL && was !== LOCAL) {
+    awayTravel = { from: state.travel.from, arrive: { ...state.travel.arrive }, depart: { ...state.travel.depart } };
+    state.travel = localTravel();
+  } else if (value !== LOCAL && was === LOCAL) {
+    const back = awayTravel || blankTravel();
+    state.travel = { mode: value, from: back.from, arrive: { ...back.arrive }, depart: { ...back.depart } };
+    awayTravel = null;
+  } else {
+    state.travel.mode = value;
+  }
   el('mode-error').hidden = true;
+  syncTravel();
+  renderCatches();
+  updateCta();
   markDirty();
+}
+
+/** Route stop for locals: every function lit, and the note to the couple (amendments §L). */
+function renderLocalExtras() {
+  const home = isLocal();
+  el('from-field').hidden = home;
+  el('local-extras').hidden = !home;
+  if (home) renderCatches(el('local-catches'));
 }
 
 function checkRoute(show) {
   const okMode = MODE_IDS.includes(state.travel.mode);
-  const okFrom = state.travel.from.trim().length > 0;
+  const okFrom = isLocal() || state.travel.from.trim().length > 0;
   if (show) {
     el('mode-error').hidden = okMode;
     el('from-error').hidden = okFrom;
@@ -1032,9 +1379,8 @@ function checkDeparture(show) {
   return !problem;
 }
 
-/** Live "Your stops" board on the departure stop. */
-function renderCatches() {
-  const list = el('catches');
+/** Live "Your stops" board on the departure stop (or, for locals, on the route stop). */
+function renderCatches(list = el('catches')) {
   list.replaceChildren();
   for (const c of catches(state.travel, CONFIG.functions)) {
     const fn = CONFIG.functions.find((f) => f.id === c.id) || {};
@@ -1052,16 +1398,36 @@ function updateCount(textareaId, countId) {
   el(countId).textContent = `${el(textareaId).value.length} / ${NOTE_MAX}`;
 }
 
-/** Push state into every static control (after a restore or reset). */
-function syncForm() {
+/** The note to the couple lives on the departure stop, or on the route stop for locals: keep both in step. */
+function syncNotes() {
+  for (const [id, count] of [['note', 'note-count'], ['local-note', 'local-note-count']]) {
+    if (el(id).value !== state.note) el(id).value = state.note;
+    updateCount(id, count);
+  }
+  renderNoteKept();
+}
+
+/** "Your earlier note is saved" under each note box, while the unseen saved note would be kept. */
+function renderNoteKept() {
+  const show = state.keepNote && !state.note.trim();
+  for (const p of $$('[data-note-kept]')) p.hidden = !show;
+}
+
+/** Mode chips, city, dates and the local extras from state.travel. */
+function syncTravel() {
   const t = state.travel;
   checkChip(el('mode-chips'), t.mode);
   document.body.dataset.mode = t.mode || 'train';
-  el('from-city').value = t.from;
+  el('from-city').value = isLocal() ? (awayTravel ? awayTravel.from : '') : t.from;
   syncSide('arrive');
   syncSide('depart');
-  el('note').value = state.note;
-  updateCount('note', 'note-count');
+  renderLocalExtras();
+}
+
+/** Push state into every static control (after a restore or reset). */
+function syncForm() {
+  syncTravel();
+  syncNotes();
   if (state.guest && state.guest.unlisted) el('unlisted-name').value = state.guest.label;
   for (const id of ['mode-error', 'from-error', 'arrive-error', 'depart-error', 'passengers-error']) el(id).hidden = true;
   el('from-city').removeAttribute('aria-invalid');
@@ -1079,7 +1445,7 @@ function firstInvalidStop() {
   if (!state.guest) return 'platform';
   if (!checkPassengers(false)) return 'passengers';
   if (everyoneRegrets()) return null;
-  for (const s of ['route', 'arrival', 'departure']) if (!CHECKS[s](false)) return s;
+  for (const s of isLocal() ? ['route'] : ['route', 'arrival', 'departure']) if (!CHECKS[s](false)) return s;
   return null;
 }
 
@@ -1116,7 +1482,8 @@ async function submit() {
     return;
   }
   for (const g of state.guests) g.name = g.name.trim();
-  const payload = buildPayload(state, client());
+  if (!state.filledBy) state.filledBy = (state.guests[0] && state.guests[0].name) || state.guest.label;
+  const payload = { ...buildPayload(state, client()), ...keepNoteFlag() };
   const check = validatePayload(payload);
   if (!check.ok) {
     showCtaError(check.errors[0] || 'Some details need another look.');
@@ -1132,7 +1499,9 @@ async function submit() {
     handleSubmitError(err);
     return;
   }
-  saveRecord(payload, res);
+  saveRecord(payload, res.updated_at);
+  state.booked = null; // this phone's answer is now the latest one
+  if (payload.note) state.keepNote = false; // a new note replaced the earlier one
   dirty = false;
   local.clearDraft();
   setBusy(false);
@@ -1195,11 +1564,22 @@ function waitForImage(img) {
   });
 }
 
+/* The couple's busts for the boarding pass (amendments §E), preloaded at boot so the pass prints
+   without waiting. If one fails to load, pass.js prints a BHILWARA JN postmark instead. */
+let bustImages = null;
+function preloadBusts() {
+  if (bustImages) return;
+  bustImages = {};
+  for (const [k, src] of Object.entries(BUSTS)) {
+    const img = new Image();
+    img.decoding = 'async';
+    img.src = src;
+    bustImages[k] = img;
+  }
+}
 async function loadHeads() {
-  const [a, b] = await Promise.all([
-    waitForImage($('#arrival-scene .bobble--a img')),
-    waitForImage($('#arrival-scene .bobble--b img')),
-  ]);
+  preloadBusts();
+  const [a, b] = await Promise.all([waitForImage(bustImages.a), waitForImage(bustImages.b)]);
   return { a, b };
 }
 
@@ -1253,12 +1633,22 @@ function renderPassPreview() {
   return job;
 }
 
+/** The official dates, e.g. '10–11 Dec 2026' (amendments §J: the 12th is only ever the Phera's time). */
+function weddingDates() {
+  const [y1, m1, d1] = WEDDING.first.split('-').map(Number);
+  const [, m2, d2] = WEDDING.last.split('-').map(Number);
+  const mon = formatDate(WEDDING.last).split(' ')[2];
+  return m1 === m2 ? `${d1}${d1 === d2 ? '' : `–${d2}`} ${mon} ${y1}` : `${formatDate(WEDDING.first)} – ${formatDate(WEDDING.last)} ${y1}`;
+}
+
 function shareText() {
   const wl = party() === 'waitlisted';
   const line = wl
     ? `On the waitlist for the ${CONFIG.train.name} to ${CONFIG.city} for ${CONFIG.couple.joined}'s wedding. Will confirm soon!`
-    : `Booked on the ${CONFIG.train.name} to ${CONFIG.city} for ${CONFIG.couple.joined}'s wedding! 🚂`;
-  return `${line} 10–12 Dec 2026.${CONFIG.siteUrl ? `\n${CONFIG.siteUrl}` : ''}`;
+    : isLocal()
+      ? `Home platform! I'll be at every function of ${CONFIG.couple.joined}'s wedding in ${CONFIG.city}. 🛺`
+      : `Booked on the ${CONFIG.train.name} to ${CONFIG.city} for ${CONFIG.couple.joined}'s wedding! 🚂`;
+  return `${line} ${weddingDates()}.${CONFIG.siteUrl ? `\n${CONFIG.siteUrl}` : ''}`;
 }
 
 /** wa.me link to Saumy, or '' when CONFIG.hostWhatsApp isn't set. */
@@ -1268,7 +1658,9 @@ function waLink() {
   const people = state.guests.map((g) => `${g.name.trim()} (${statusLabel(g.status)})`).join(', ');
   let text = `Hi ${CONFIG.couple.a}! ${state.guest.label} here. My ${CONFIG.train.name} ticket is saved. Passengers: ${people}.`;
   const t = state.travel;
-  if (!everyoneRegrets() && t.mode) {
+  if (!everyoneRegrets() && t.mode === LOCAL) {
+    text += ` ${CONFIG.city} is home, so I'll be at every function.`;
+  } else if (!everyoneRegrets() && t.mode) {
     text += ` Rough plan: ${modeLabel(t.mode)} from ${t.from.trim()}, arriving ${formatDate(t.arrive.date)} (${slotLabel(t.arrive.slot)}),`
       + ` leaving ${formatDate(t.depart.date)} (${slotLabel(t.depart.slot)}).`;
   }
@@ -1316,185 +1708,35 @@ async function onShare() {
   }
 }
 
-/* Booking reminders (train only) */
-
-let bookingUrls = [];
-let tickTimer = 0;
-
-function countdownText(ms) {
-  const mins = Math.max(1, Math.ceil(ms / 60000));
-  const d = Math.floor(mins / 1440);
-  const h = Math.floor((mins % 1440) / 60);
-  const m = mins % 60;
-  if (d) return `in ${plural(d, 'day')}${h ? ` ${h} h` : ''}`;
-  if (h) return `in ${h} h${m ? ` ${m} min` : ''}`;
-  return `in ${m} min`;
-}
-
-const siteTail = () => (CONFIG.siteUrl ? ` ${CONFIG.siteUrl}` : '');
-const legWhere = (leg) => (leg.kind === 'Onward' ? `to ${CONFIG.city}` : `back from ${CONFIG.city}`);
-
-/**
- * Which journeys to remind about (train only).
- * - A known date gives one card. An onward trip that arrives early or in the morning usually
- *   means an overnight train that left the day before, and booking counts from that day.
- * - "Not sure yet" lists every candidate date, so the unsure still hear when windows open.
- * @returns {{kind:'Onward'|'Return', date?:string, arrive?:string, overnight?:boolean, choices?:string[]}[]}
+/*
+ * The junction's one travel line (amendments §K/§L, v4 §O1), from logic.arrivalLine: trains get the
+ * single booking-date line, locals their home-platform line, and flight, bus and car one verified
+ * line each from js/travel-data.js. Nothing else about trains appears anywhere.
  */
-function bookingLegs() {
-  const t = state.travel;
-  if (everyoneRegrets() || t.mode !== 'train') return [];
-  const legs = [];
-  if (isValidISODate(t.arrive.date)) {
-    const overnight = OVERNIGHT_SLOTS.includes(t.arrive.slot);
-    legs.push({ kind: 'Onward', date: overnight ? addDays(t.arrive.date, -1) : t.arrive.date, arrive: t.arrive.date, overnight });
-  } else if (t.arrive.date === 'unsure') {
-    legs.push({ kind: 'Onward', choices: CONFIG.arriveDates.filter(isValidISODate) });
+const NBSP = ' ';
+const DAY_RE = /\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun) (\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/g;
+/** Keeps "Sat 10 Oct", "9 Dec", "8 AM" and "145 km" from breaking across lines on a narrow phone. */
+const keepTogether = (s) => s
+  .replace(DAY_RE, `$1${NBSP}$2${NBSP}$3`)
+  .replace(/\b(\d{1,2}) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/g, `$1${NBSP}$2`)
+  .replace(/\b(\d+) (AM|PM|km)\b/g, `$1${NBSP}$2`);
+
+function renderTravelLine() {
+  const line = everyoneRegrets() ? '' : arrivalLine(state.travel, { airports: AIRPORTS, highways: HIGHWAYS, busFacts: BUS_FACTS, now: Date.now() });
+  el('travel-line').textContent = keepTogether(line);
+  el('travel-line').hidden = !line;
+}
+
+/* Make it a Rajasthan long weekend (amendments §M): the map is mounted once, on the first visit
+   to the junction, and kept for later visits. */
+let trip = null;
+function mountTripOnce() {
+  if (trip) return;
+  try {
+    trip = mountTrip(el('trip'), { origin: ORIGIN, destinations: DESTINATIONS });
+  } catch {
+    el('trip-block').hidden = true; // the rest of the junction still works
   }
-  if (isValidISODate(t.depart.date)) legs.push({ kind: 'Return', date: t.depart.date });
-  else if (t.depart.date === 'unsure') legs.push({ kind: 'Return', choices: CONFIG.departDates.filter(isValidISODate) });
-  return legs;
-}
-
-function reminderEvent(leg, opens) {
-  const journey = formatDate(leg.date);
-  const sameDay = leg.overnight ? bookingOpens(leg.arrive) : null;
-  return {
-    title: `Book your train ${legWhere(leg)} (${leg.overnight ? `boards ${journey}` : journey})`,
-    startISO: `${opens.date}T07:50:00+05:30`,
-    minutes: 15,
-    details: `Train booking for ${journey} opens at 8:00 AM today, 60 days ahead. `
-      + 'Long-distance trains open 60 days before they leave their first station, so it may open a day earlier. '
-      + (sameDay ? `If your train leaves on ${formatDate(leg.arrive)} itself, booking opens ${sameDay.label} instead. ` : '')
-      + `${CONFIG.couple.joined}'s wedding, ${CONFIG.city}.${siteTail()}`,
-  };
-}
-
-function choicesEvent(leg, rows, next) {
-  const windows = rows.map((r) => `${formatDate(r.date)} opens ${r.opens.label}`).join(', ');
-  return {
-    title: `Book your train ${legWhere(leg)}`,
-    startISO: `${next.opens.date}T07:50:00+05:30`,
-    minutes: 15,
-    details: `Train booking opens 60 days ahead at 8:00 AM: ${windows}. `
-      + 'Long-distance trains count from the day they leave their first station, so it may open a day earlier. '
-      + `${CONFIG.couple.joined}'s wedding, ${CONFIG.city}.${siteTail()}`,
-  };
-}
-
-/** Google Calendar link + .ics download for one reminder. */
-function fillReminder(card, leg, opensLabel, ev, date) {
-  const gcal = slot(card, 'gcal');
-  gcal.href = calendarUrl(ev);
-  gcal.setAttribute('aria-label', `Add a 7:50 AM reminder on ${opensLabel} for your ${leg.kind.toLowerCase()} train (Google Calendar)`);
-  const ics = slot(card, 'ics');
-  const kind = leg.kind.toLowerCase();
-  const url = URL.createObjectURL(new Blob([icsText({ uid: `stt-${state.guest.id}-${kind}-${date}@shaadi-express`, ...ev })], { type: 'text/calendar' }));
-  bookingUrls.push(url);
-  ics.href = url;
-  ics.download = `book-train-${kind}-${date}.ics`;
-}
-
-function bookingCard(st, date) {
-  const card = tpl('tpl-booking');
-  card.dataset.state = st;
-  card.dataset.date = date;
-  const irctc = slot(card, 'irctc');
-  if (irctc) irctc.href = IRCTC_URL;
-  return card;
-}
-
-/** One known journey date. */
-function dateCard(leg, now) {
-  const opens = bookingOpens(leg.date);
-  const st = bookingStatus(leg.date, now);
-  if (!opens || !st) return null;
-  const card = bookingCard(st.state, leg.date);
-  slot(card, 'leg').textContent = leg.overnight ? `${leg.kind} · boards ~${formatDate(leg.date)}` : `${leg.kind} · ${formatDate(leg.date)}`;
-  slot(card, 'opens-verb').textContent = st.state === 'open' ? 'Opened' : 'Opens';
-  slot(card, 'opens').textContent = `${opens.label}, 8:00 AM`;
-  slot(card, 'countdown').textContent = st.state === 'upcoming' ? countdownText(st.msUntil) : '';
-  if (leg.overnight) {
-    const sameDay = bookingOpens(leg.arrive);
-    const note = slot(card, 'note');
-    note.textContent = `Arriving early on ${formatDate(leg.arrive)} usually means an overnight train that leaves the day before. `
-      + `If yours leaves on ${formatDate(leg.arrive)} itself, booking opens ${sameDay.label} instead.`;
-    note.hidden = false;
-  }
-  fillReminder(card, leg, opens.label, reminderEvent(leg, opens), leg.date);
-  return card;
-}
-
-/** "Not sure yet": every candidate date with its window, and a reminder for the next one. */
-function choicesCard(leg, now) {
-  const rows = leg.choices
-    .map((date) => ({ date, opens: bookingOpens(date), st: bookingStatus(date, now) }))
-    .filter((r) => r.opens && r.st);
-  if (!rows.length) return null;
-  const next = rows.find((r) => r.st.state === 'upcoming');
-  const card = bookingCard(next ? 'upcoming' : 'open', next ? next.date : rows[rows.length - 1].date);
-  slot(card, 'leg').textContent = `${leg.kind} · date not fixed yet`;
-  if (next && rows.some((r) => r.st.state === 'open')) {
-    // Some dates can already be booked: keep the IRCTC link visible next to the reminder.
-    card.dataset.anyOpen = 'true';
-    slot(card, 'open-now').querySelector('p').textContent = 'Some of these dates are open now.';
-  }
-  if (next) {
-    slot(card, 'opens-verb').textContent = 'Next window opens';
-    slot(card, 'opens').textContent = `${next.opens.label}, 8:00 AM`;
-    slot(card, 'countdown').textContent = countdownText(next.st.msUntil);
-  } else {
-    slot(card, 'opens-verb').textContent = 'Opened';
-    slot(card, 'opens').textContent = `${rows[0].opens.label} to ${rows[rows.length - 1].opens.label}`;
-  }
-  const list = slot(card, 'dates');
-  for (const r of rows) {
-    const li = document.createElement('li');
-    li.dataset.state = r.st.state;
-    const when = document.createElement('span');
-    when.textContent = formatDate(r.date);
-    const opensAt = document.createElement('span');
-    opensAt.textContent = r.st.state === 'open' ? 'open now' : `opens ${r.opens.label}`;
-    li.append(when, opensAt);
-    list.appendChild(li);
-  }
-  list.hidden = false;
-  const note = slot(card, 'note');
-  note.textContent = 'Pick your date and book on the morning its window opens.';
-  note.hidden = false;
-  if (next) fillReminder(card, leg, next.opens.label, choicesEvent(leg, rows, next), next.date);
-  return card;
-}
-
-function renderBooking() {
-  for (const u of bookingUrls) URL.revokeObjectURL(u);
-  bookingUrls = [];
-  const list = el('booking-list');
-  list.replaceChildren();
-  const now = Date.now();
-  for (const leg of bookingLegs()) {
-    const card = leg.choices ? choicesCard(leg, now) : dateCard(leg, now);
-    if (card) list.appendChild(card);
-  }
-  el('booking').hidden = list.children.length === 0;
-}
-
-function tickBooking() {
-  const now = Date.now();
-  for (const card of Array.from(el('booking-list').children)) {
-    const st = bookingStatus(card.dataset.date, now);
-    if (!st) continue;
-    if (st.state !== card.dataset.state) { renderBooking(); return; }
-    if (st.state === 'upcoming') slot(card, 'countdown').textContent = countdownText(st.msUntil);
-  }
-}
-function startTicking() {
-  stopTicking();
-  tickTimer = setInterval(tickBooking, 30000);
-}
-function stopTicking() {
-  clearInterval(tickTimer);
-  tickTimer = 0;
 }
 
 /* Leave kit */
@@ -1502,10 +1744,18 @@ function stopTicking() {
 let leaveKind = 'formal';
 let currentMail = { subject: '', body: '' };
 
+/*
+ * Leave dates. Locals need only the wedding days themselves off (amendments §L). For a guest whose
+ * dates are "Not sure yet", the email never invents a date with the 12th in it (amendments §J): an
+ * unsure arrival is the usual travel day before the wedding, and an unsure departure is the last
+ * wedding day (the Saturday after it is not a working day, so the count is the same either way).
+ */
+const USUAL_ARRIVAL = addDays(WEDDING.first, -1);
+
 function renderLeave() {
   const t = state.travel;
-  const arrive = t.arrive.date || 'unsure';
-  const depart = t.depart.date || 'unsure';
+  const arrive = isLocal() ? WEDDING.first : (isValidISODate(t.arrive.date) ? t.arrive.date : USUAL_ARRIVAL);
+  const depart = isLocal() ? WEDDING.last : (isValidISODate(t.depart.date) ? t.depart.date : WEDDING.last);
   const days = workingDays(arrive, depart);
   const daysEl = el('leave-days');
   daysEl.textContent = String(days);
@@ -1560,9 +1810,9 @@ function enterJunction() {
     scene.classList.add('is-arrived');
   }, prefersReducedMotion() ? 0 : 350);
   renderPassPreview();
-  renderBooking();
+  renderTravelLine();
   renderLeave();
-  startTicking();
+  mountTripOnce();
 }
 
 /* ------------------------------------------------------------------ */
@@ -1572,9 +1822,10 @@ function enterJunction() {
 function enterRegretEnd() {
   el('regret-note').value = state.note;
   updateCount('regret-note', 'regret-note-count');
+  renderNoteKept();
   const err = el('regret-note-error');
   if (err) err.hidden = true;
-  el('regret-note-save').textContent = state.note.trim() ? 'Update note' : 'Send note';
+  el('regret-note-save').textContent = state.note.trim() || state.keepNote ? 'Update note' : 'Send note';
 }
 
 async function saveRegretNote() {
@@ -1609,7 +1860,8 @@ async function saveRegretNote() {
   btn.textContent = 'Sending…';
   try {
     const res = await submitRsvp(payload);
-    saveRecord(payload, res);
+    saveRecord(payload, res.updated_at);
+    state.keepNote = false; // the new note replaced any earlier one
     if (err) err.hidden = true;
     btn.textContent = 'Update note';
     toast('Note sent. Thank you!');
@@ -1632,15 +1884,97 @@ function startEdit() {
   refreshGuest();
 }
 
-/** Pick up any change to max_guests made in the Sheet since this ticket was saved. */
+/**
+ * Pick up changes made since this ticket was saved on this phone: max_guests from the Sheet, and a
+ * newer answer saved from another phone (a partner, amendments §C), unless the guest has already
+ * started changing things here.
+ */
 function refreshGuest() {
   const g = state.guest;
   if (!g || g.unlisted) return;
   getGuest(g.id).then((fresh) => {
     if (!fresh || !state.guest || state.guest.id !== fresh.id) return;
     state.guest.max_guests = Math.max(fresh.max_guests, state.guests.length);
+    state.guest.couple = fresh.couple === true;
+    const r = local.load();
+    if (!dirty && !busy && state.stop === 'passengers' && r && r.id === fresh.id && isNewer(fresh.booked, r.updated_at)) {
+      adoptNewer(fresh);
+      renderGuests();
+      updateParty();
+      updateCta();
+      renderRiders();
+      announce(el('booked-text').textContent);
+      return;
+    }
     if (state.stop === 'passengers') renderAddGuest();
   }).catch(() => { /* offline: keep what we have */ });
+}
+
+/*
+ * The ticket saved on this phone can go stale: a partner (or the same guest on another phone) may
+ * have saved a newer answer since. Before "View my pass" or "Edit my ticket" shows the saved copy,
+ * the server's latest answer is fetched; when it is newer it replaces this phone's copy, so an old
+ * copy can't silently undo the other person's answer. Offline, the phone's copy is used.
+ */
+const NEWER_MS = 2000;     // the server's copy must be this much newer (absorbs timestamp rounding)
+const SYNC_WAIT_MS = 4000; // how long the welcome buttons wait for that check before using the phone's copy
+let savedSync = null;      // Promise<guest record with a newer `booked` | null>, started with the welcome panel
+
+/** True when a server `booked` was saved clearly after `ts` (this phone's copy). */
+function isNewer(b, ts) {
+  const theirs = Date.parse(String((b && b.updated_at) || ''));
+  const ours = Date.parse(String(ts || ''));
+  return Number.isFinite(theirs) && Number.isFinite(ours) && theirs - ours > NEWER_MS;
+}
+
+/** The guest record when the server holds a newer answer for this saved ticket, else null. Never rejects. */
+async function checkNewer(record) {
+  if (!record || record.unlisted === true || typeof record.id !== 'string' || !record.id) return null;
+  try {
+    const g = await getGuest(record.id);
+    return g && g.id === record.id && isNewer(g.booked, record.updated_at) ? g : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Take the server's newer answer: it fills the chart and replaces this phone's saved copy. */
+function adoptNewer(g) {
+  const mine = state.filledBy; // who uses this phone; the banner and the next save are theirs
+  const booked = bookedFor(g, true);
+  if (!applyBooked(g)) return false;
+  state.booked = booked;
+  state.guest.couple = g.couple === true;
+  state.filledBy = mine || state.filledBy;
+  const saved = obj(g.booked.payload);
+  saveRecord({ ...saved, ...keepNoteFlag(), id: state.guest.id, label: state.guest.label, unlisted: false, filled_by: state.filledBy }, g.booked.updated_at);
+  dirty = false;
+  return true;
+}
+
+/** The welcome panel's "View my pass" / "Edit my ticket": the saved ticket, brought up to date first. */
+async function openSaved(kind) {
+  const btn = el(kind === 'edit' ? 'welcome-edit' : 'welcome-view-pass');
+  if (busy || btn.getAttribute('aria-busy') === 'true') return;
+  btn.setAttribute('aria-busy', 'true');
+  let newer = null;
+  try {
+    const check = savedSync || checkNewer(local.load());
+    newer = await Promise.race([check, new Promise((resolve) => { setTimeout(() => resolve(null), SYNC_WAIT_MS); })]);
+  } finally {
+    btn.removeAttribute('aria-busy');
+  }
+  savedSync = null;
+  const r = local.load();
+  if (!r || !loadRecord(r)) { resetAll(); return; }
+  const updated = !!(newer && newer.id === r.id && adoptNewer(newer));
+  hideWelcome();
+  if (kind === 'edit') {
+    startEdit();
+    return;
+  }
+  go(everyoneRegrets() ? 'regret-end' : 'junction', { nav: 'push' });
+  if (updated) toast(bookedMessage().replace(/ Check the details or make changes\.$/, ''), 4000);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1671,15 +2005,6 @@ function hideBaajaNudge(remember) {
   if (n) n.hidden = true;
   if (remember) {
     try { localStorage.setItem(NUDGE_KEY, '1'); } catch { /* ignore */ }
-  }
-}
-
-function swapHeads() {
-  if (document.body.dataset.heads !== 'png') return;
-  for (const img of $$('img[data-head]')) {
-    const svg = img.src;
-    img.onerror = () => { img.onerror = null; img.src = svg; };
-    img.src = img.dataset.png;
   }
 }
 
@@ -1773,21 +2098,13 @@ function bind() {
     }
   });
   el('boarding-change').addEventListener('click', () => changeGuest());
-  el('welcome-view-pass').addEventListener('click', () => {
-    const r = local.load();
-    if (!r || !loadRecord(r)) { resetAll(); return; }
-    hideWelcome();
-    go(everyoneRegrets() ? 'regret-end' : 'junction', { nav: 'push' });
-  });
-  el('welcome-edit').addEventListener('click', () => {
-    const r = local.load();
-    if (!r || !loadRecord(r)) { resetAll(); return; }
-    startEdit();
-  });
+  el('welcome-view-pass').addEventListener('click', () => { openSaved('pass'); });
+  el('welcome-edit').addEventListener('click', () => { openSaved('edit'); });
   el('welcome-reset').addEventListener('click', resetAll);
 
   // Passengers
   el('add-guest').addEventListener('click', addGuest);
+  el('booked-view-pass').addEventListener('click', viewBookedPass);
 
   // Route
   bindGroup(el('mode-chips'), setMode);
@@ -1805,11 +2122,13 @@ function bind() {
   bindGroup(el('arrive-slot-chips'), (v) => setSide('arrive', 'slot', v));
   bindGroup(el('depart-date-chips'), (v) => setSide('depart', 'date', v));
   bindGroup(el('depart-slot-chips'), (v) => setSide('depart', 'slot', v));
-  el('note').addEventListener('input', () => {
-    state.note = el('note').value.slice(0, NOTE_MAX);
-    updateCount('note', 'note-count');
-    markDirty();
-  });
+  for (const id of ['note', 'local-note']) {
+    el(id).addEventListener('input', () => {
+      state.note = el(id).value.slice(0, NOTE_MAX);
+      syncNotes();
+      markDirty();
+    });
+  }
 
   // Junction
   el('pass-download').addEventListener('click', onDownload);
@@ -1826,6 +2145,7 @@ function bind() {
   el('regret-note').addEventListener('input', () => {
     state.note = el('regret-note').value.slice(0, NOTE_MAX);
     updateCount('regret-note', 'regret-note-count');
+    renderNoteKept();
     const err = el('regret-note-error');
     if (err) err.hidden = true;
   });
@@ -1844,8 +2164,11 @@ async function restore() {
     state.guest = draft.guest;
     state.guests = draft.guests;
     state.travel = draft.travel;
+    awayTravel = draft.awayTravel;
     state.note = draft.note;
+    state.keepNote = draft.keepNote;
     state.unlistedId = draft.unlistedId || (draft.guest.unlisted ? draft.guest.id : '');
+    state.filledBy = draft.filledBy;
     dirty = true;
     syncForm();
     go(draft.stop, { focus: false, say: false, nav: 'replace' });
@@ -1853,6 +2176,7 @@ async function restore() {
   }
   if (record && (!gParam || record.id === gParam)) {
     showWelcome(record);
+    savedSync = checkNewer(record); // ready (usually) by the time "View my pass" is tapped
     return;
   }
   if (gParam) {
@@ -1871,12 +2195,17 @@ function boot() {
   if (document.body.classList.contains('preview-all')) return;
   try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch { /* ignore */ }
   searchErrorDefault = el('search-error').textContent;
-  for (const id of ['search-results', 'guest-list', 'catches', 'booking-list']) el(id).replaceChildren();
-  swapHeads();
+  for (const id of ['search-results', 'guest-list', 'catches', 'local-catches']) el(id).replaceChildren();
+  // Long-weekend copy lives with the map data (js/trip-data.js)
+  el('trip-title').textContent = TRIP_COPY.title;
+  el('trip-intro').textContent = TRIP_COPY.intro;
+  el('trip-teaser-text').textContent = TRIP_COPY.teaser;
+  preloadBusts();
   bind();
   syncForm();
   for (const group of $$('[role="radiogroup"]')) rove(group);
   updateCta();
+  renderRiders();
   restore().catch(() => { /* never leave the platform stuck */ });
   scheduleBaajaNudge();
 }

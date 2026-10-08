@@ -1,21 +1,22 @@
 /**
  * Save the Train: every piece of content and configuration in one place.
  *
- * To go live, fill in three values (see docs/SETUP.md):
- *   apiUrl        the Google Apps Script web app URL ending in /exec
- *   hostWhatsApp  Saumy's WhatsApp number, digits only with country code
- *   siteUrl       the public address of this website once hosted
+ * To go live (see docs/SETUP.md):
+ *   apiUrl        fill in the Google Apps Script web app URL ending in /exec
+ *   hostWhatsApp  Saumy's WhatsApp number, digits only with country code (already set)
+ *   siteUrl       the public address of this website once hosted (already set)
  *
- * While apiUrl is empty the site runs in mock mode: sample guests, and
+ * While apiUrl is empty the site runs in mock mode: fictional sample guests, and
  * answers are kept only in this browser.
  */
 export const CONFIG = {
   couple: { a: 'Saumy', b: 'Manorika', joined: 'Saumy & Manorika', weds: 'Saumy weds Manorika' },
   city: 'Bhilwara', cityHi: 'भीलवाड़ा', station: 'BHL', state: 'Rajasthan',
-  train: { name: 'Shaadi Express', number: '1012' },
+  train: { name: 'Shaadi Express', number: '1011' },
   apiUrl: '',          // Apps Script /exec URL; '' => mock mode
-  hostWhatsApp: '',    // Saumy's WhatsApp, digits only with country code, e.g. '919812345678'
+  hostWhatsApp: '919414087162', // Saumy's WhatsApp, digits only with country code
   siteUrl: 'https://saumy-weds-manorika.github.io/', // GitHub Pages address of this repo; keep in step with the og: tags in index.html
+  lists: ['Primary', 'Secondary'], // the two guest-list tabs ("First List", "Second List"); for display only
   functions: [
     { id: 'carnival', name: 'Carnival', date: '2026-12-10', when: 'Afternoon', at: '2026-12-10T13:00' },
     { id: 'sangeet',  name: 'Sangeet',  date: '2026-12-10', when: 'Evening',   at: '2026-12-10T19:00' },
@@ -33,9 +34,12 @@ export const CONFIG = {
     { id: 'night', label: 'Night', hint: 'after 8 PM' },
     { id: 'unsure', label: 'Not sure yet', hint: '' },
   ],
+  // Route-stop chip order (v4 §O1): Bhilwara is home · Train · Bus · Car · Flight. The UI writes its own
+  // chip copy (e.g. "Bhilwara is home"); these labels are the short names used on the pass and elsewhere.
   modes: [
-    { id: 'train', label: 'Train' }, { id: 'flight', label: 'Flight' },
-    { id: 'bus', label: 'Bus' }, { id: 'car', label: 'Car' },
+    { id: 'local', label: 'Local' }, // "Bhilwara is home": no travel details needed
+    { id: 'train', label: 'Train' }, { id: 'bus', label: 'Bus' },
+    { id: 'car', label: 'Car' }, { id: 'flight', label: 'Flight' },
   ],
   statuses: [
     { id: 'confirmed', label: 'Confirmed', stamp: 'CNF' },

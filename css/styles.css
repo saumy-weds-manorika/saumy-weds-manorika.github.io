@@ -29,6 +29,7 @@
 
   /* Derived (contrast-checked) */
   --rani-ink: #A8174F;        /* rani for small text on kagaz: 5.9:1 */
+  --patta-ink: #22602A;       /* patta for small text on kagaz: 6.6:1 */
   --kagaz-hi: #FFF6EC;        /* inputs, chips */
   --ink-muted: #4A4560;       /* 7.6:1 on kagaz */
   --line: rgb(27 27 47 / .24);
@@ -149,6 +150,11 @@ a { color: inherit; }
 .v-wl { display: none; }
 body[data-party="waitlisted"] .v-wl { display: revert; }
 body[data-party="waitlisted"] .v-cnf { display: none; }
+
+/* Locals (mode "local") skip the travel stops: body[data-mode] swaps .v-away for .v-home */
+.v-home { display: none; }
+body[data-mode="local"] .v-home { display: revert; }
+body[data-mode="local"] .v-away { display: none; }
 
 /* Sample children: visible only in ?preview=all (app.js replaces them) */
 body:not(.preview-all) [data-sample] { display: none !important; }
@@ -398,6 +404,73 @@ body.is-busy .main { pointer-events: none; }
 }
 .chip--slot { min-height: 56px; }
 
+/* "Bhilwara is home": a little station nameboard, set apart above the travel modes */
+.chips--mode .chip--home { grid-column: 1 / -1; }
+.chip--home {
+  gap: 12px;
+  min-height: 78px;
+  margin: 3px 3px 0;
+  padding: 10px 14px 10px 10px;
+  border: 2px solid var(--syahi);
+  border-radius: 9px;
+  background: var(--haldi);
+  text-align: left;
+  box-shadow: 0 0 0 3px var(--haldi), 0 5px 0 1px rgb(27 27 47 / .22);
+}
+.chip--home .chip__icon { width: 52px; height: 36px; }
+.chip__text { display: grid; gap: 3px; min-width: 0; padding-right: 10px; }
+.chip--home .chip__label { font: clamp(17px, 5.4vw, 21px)/1.05 var(--font-display); letter-spacing: .01em; }
+.chip__sub { font: 400 14px/1.3 var(--font-body); color: var(--syahi); text-wrap: pretty; }
+.chip--home[aria-checked="true"] {
+  border-color: var(--rani);
+  box-shadow: 0 0 0 3px var(--rani), inset 0 0 0 2px color-mix(in srgb, #fff 80%, transparent);
+}
+.chip--home[aria-checked="true"] .chip__sub { color: inherit; }
+/* Once a travel mode is picked, the nameboard steps back so the chosen mode reads as the active one */
+#mode-chips:has([aria-checked="true"]:not(.chip--home)) .chip--home {
+  border: 1.5px dashed var(--line-strong);
+  background: var(--kagaz-hi);
+  box-shadow: none;
+}
+@media (hover: hover) {
+  .chip--home:hover { border-color: var(--syahi); background: #FFDA5C; }
+  .chip--home[aria-checked="true"]:hover { background: var(--rani); }
+}
+.chips__or {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 -2px;
+  font: 13px/1 var(--font-dm);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.chips__or::before,
+.chips__or::after {
+  content: "";
+  flex: 1 1 auto;
+  border-top: 1.5px dashed var(--line-strong);
+}
+
+.local-extras { display: grid; gap: 18px; }
+.your-stops--home .your-stops__lede { font-weight: 600; color: var(--genda); }
+
+/* Departure: the one-line teaser for the long-weekend map at the end of the journey */
+.teaser {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 2px;
+  padding: 9px 2px 0;
+  border-top: 1.5px dashed rgb(168 23 79 / .35);
+  font: 600 14px/1.4 var(--font-body);
+  color: var(--rani-ink);
+  text-wrap: pretty;
+}
+.teaser__pin { flex: none; width: 16px; height: 16px; margin-top: 2px; }
+
 .chip--confirmed { --on: var(--patta); }
 .chip--waitlisted { --on: var(--genda-deep); --on-ink: var(--syahi); }
 .chip--regret { --on: var(--sindoor); }
@@ -578,7 +651,7 @@ body.is-busy .main { pointer-events: none; }
 
 /* Track */
 .journey {
-  --veh-w: 40px;
+  --veh-w: 44px;
   position: relative;
   flex: 1 1 auto;
   min-width: 0;
@@ -637,19 +710,25 @@ body.is-busy .main { pointer-events: none; }
   left: 0;
   width: var(--veh-w);
   bottom: 11px;
-  height: 26px;
+  height: 27px;
   transform: translateX(calc(var(--progress) * (100cqw - var(--veh-w))));
   will-change: transform;
 }
 .vehicle {
+  /* Where the two riders sit, per vehicle (see the per-mode overrides below) */
+  --rider-h: 15px;
+  --rider-b: 11px;
+  --rider-x0: 30%;
+  --rider-x1: 46%;
   position: absolute;
   left: 0;
   bottom: 0;
   width: var(--veh-w);
-  height: 24px;
+  height: 26px;
 }
 .vehicle__svg {
   position: absolute;
+  z-index: 1;
   inset: 0;
   width: 100%;
   height: 100%;
@@ -660,12 +739,48 @@ body.is-busy .main { pointer-events: none; }
 .vehicle__svg[data-mode="train"],
 body[data-mode="flight"] .vehicle__svg[data-mode="flight"],
 body[data-mode="bus"] .vehicle__svg[data-mode="bus"],
-body[data-mode="car"] .vehicle__svg[data-mode="car"] { display: block; }
+body[data-mode="car"] .vehicle__svg[data-mode="car"],
+body[data-mode="local"] .vehicle__svg[data-mode="local"] { display: block; }
 body[data-mode="flight"] .vehicle__svg[data-mode="train"],
 body[data-mode="bus"] .vehicle__svg[data-mode="train"],
-body[data-mode="car"] .vehicle__svg[data-mode="train"] { display: none; }
+body[data-mode="car"] .vehicle__svg[data-mode="train"],
+body[data-mode="local"] .vehicle__svg[data-mode="train"] { display: none; }
 body[data-mode="flight"] .vehicle { bottom: 9px; }
-body[data-mode="flight"] .vehicle__svg { transform: rotate(-7deg); }
+body[data-mode="flight"] :is(.vehicle__svg, .riders) { transform: rotate(-7deg); }
+
+/* Riders: up to two guest busts peeking out of the vehicle (app.js keeps it to two). On the
+   train they sit behind the boiler with their heads above it; in the others they sit in front,
+   cut off at the window sill (--rider-sill, px from the vehicle's top), so they look out of it. */
+.riders {
+  position: absolute;
+  z-index: var(--rider-z, 0);
+  inset: 0;
+  clip-path: var(--rider-clip, none);
+  pointer-events: none;
+}
+.rider {
+  position: absolute;
+  bottom: var(--rider-b);
+  width: auto;
+  max-width: none;
+  height: var(--rider-h);
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / .45));
+}
+.rider[data-rider="0"] { left: var(--rider-x0); }
+.rider[data-rider="1"] { left: var(--rider-x1); }
+body:is([data-mode="flight"], [data-mode="bus"], [data-mode="car"], [data-mode="local"]) .vehicle {
+  --rider-z: 2;
+  --rider-clip: inset(-14px 0 calc(100% - var(--rider-sill)) 0);
+  --rider-h: 13px;
+}
+body[data-mode="flight"] .vehicle { --rider-sill: 14px; --rider-b: 9px; --rider-x0: 36%; --rider-x1: 54%; }
+body[data-mode="bus"] .vehicle { --rider-sill: 12px; --rider-b: 11px; --rider-x0: 9%; --rider-x1: 27%; }
+body[data-mode="car"] .vehicle { --rider-sill: 11.5px; --rider-b: 11px; --rider-x0: 31%; --rider-x1: 52%; }
+body[data-mode="local"] .vehicle { --rider-sill: 15px; --rider-h: 14px; --rider-b: 10px; --rider-x0: 22%; --rider-x1: 39%; }
+
+/* Locals jump from Route straight to Bhilwara: the travel stops fade on the track */
+body[data-mode="local"] .journey__station:is([data-stop="arrival"], [data-stop="departure"]) { opacity: .3; }
 
 .vehicle__puffs {
   position: absolute;
@@ -699,16 +814,20 @@ body:not([data-mode]) .vehicle__puffs { display: block; }
 }
 .mini-board__heads {
   position: absolute;
-  top: -7px;
+  top: -6px;
   left: 50%;
   display: flex;
+  align-items: flex-end;
   transform: translateX(-50%);
 }
 .mini-board__head {
-  width: 29px;
-  height: 29px;
+  width: 21px;
+  height: auto;
   margin-inline: -1px;
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / .35));
 }
+.mini-board__head[data-head="b"] { width: 24px; }
 .mini-board__plate {
   position: relative;
   z-index: 1;
@@ -918,15 +1037,37 @@ body.is-typing-name[data-stop="platform"] .cta-bar { visibility: hidden; }
   transform-origin: 0 50%;
 }
 .cover__blessing {
-  position: absolute;
-  z-index: 1;
-  top: -28px;
-  left: 0;
-  right: 0;
+  margin-bottom: 8px;
   font: 15px/1 var(--font-display);
   color: var(--rani-ink);
   text-align: center;
 }
+
+/* The couple peeks out of the jharokha, over the top edge of the ticket. The box ends at the
+   ticket's edge and clips, so they look as if they are standing just behind it. */
+.cover__peek {
+  position: absolute;
+  z-index: 0;
+  bottom: 100%;
+  left: 50%;
+  width: 104px;
+  height: 64px;
+  overflow: hidden;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.cover__bust {
+  position: absolute;
+  bottom: -12px;
+  width: 44px;
+  max-width: none;
+  height: auto;
+  filter: drop-shadow(0 2px 3px rgb(5 8 40 / .35));
+}
+/* Her bust is cropped wider (hair and dupatta), so it runs a little larger to match his face */
+.cover__bust--a { right: 50%; margin-right: -3px; rotate: -5deg; transform-origin: 70% 100%; }
+.cover__bust--b { left: 50%; width: 51px; margin-left: -5px; rotate: 5deg; transform-origin: 30% 100%; }
+.cover > .ticket__part { position: relative; z-index: 1; }
 
 .ticket__part {
   background-color: var(--kagaz);
@@ -1175,6 +1316,56 @@ body.is-typing-name[data-stop="platform"] .cta-bar { visibility: hidden; }
 }
 .guest-card__remove { margin: -11px -11px -11px 0; }
 
+/* Name (read-only text or an input) and, for added / partner / unlisted cards, the M/F toggle */
+.guest-card__who {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+.guest-card__who > .guest-card__name { flex: 1 1 auto; align-self: center; min-width: 0; }
+.guest-card__who > .guest-card__name-field { flex: 1 1 auto; min-width: 0; }
+.guest-card__who:has(> .gender:not([hidden])) > .guest-card__name { padding-right: 0; }
+
+.gender {
+  flex: none;
+  display: inline-grid;
+  grid-template-columns: repeat(2, 44px);
+  gap: 2px;
+  padding: 2px;
+  border: 1.5px solid rgb(27 27 47 / .42);
+  border-radius: var(--radius-ctl);
+  background: var(--kagaz-hi);
+}
+.gender__opt {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink-muted);
+  font: 16px/1 var(--font-dm);
+  touch-action: manipulation;
+  transition: background-color .16s, color .16s;
+}
+.gender__opt[aria-checked="true"] { background: var(--neel); color: var(--kagaz); }
+@media (hover: hover) {
+  .gender__opt[aria-checked="false"]:hover { background: rgb(27 27 47 / .07); color: var(--syahi); }
+}
+
+/* "Already booked": this ticket was saved before, maybe by the other half of a couple */
+.booked {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px 14px;
+  border: 1.5px solid rgb(47 125 50 / .45);
+  border-left: 6px solid var(--patta);
+  border-radius: var(--radius-ctl);
+  background: rgb(47 125 50 / .07);
+}
+.booked__kicker { font-size: 13px; letter-spacing: .14em; color: var(--patta-ink); }
+.booked__text { font-weight: 600; line-height: 1.4; color: var(--syahi); text-wrap: pretty; }
+.booked__pass { justify-self: start; margin-top: 8px; }
+
 /* Rubber stamp for the chosen status */
 .guest-card::after {
   position: absolute;
@@ -1291,7 +1482,7 @@ body.is-typing-name[data-stop="platform"] .cta-bar { visibility: hidden; }
 .scene {
   position: relative;
   isolation: isolate;
-  height: 380px;
+  height: 400px;
   overflow: hidden;
   border-radius: 20px;
   background:
@@ -1377,58 +1568,46 @@ body.is-typing-name[data-stop="platform"] .cta-bar { visibility: hidden; }
   position: absolute;
   z-index: 3;
   left: 50%;
-  bottom: 18px;
+  bottom: 16px;
   display: flex;
   align-items: flex-end;
   transform: translateX(-50%);
 }
-.bobble {
-  --head: 100px;
+/* A bobblehead: body and head share one canvas (900px tall), stacked; the head turns on its
+   neck pivot (assets/bobble/meta.json). Namaste and wave are part of the art. */
+.figure {
+  --fig-h: 218px;
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 104px;
+  flex: none;
+  height: var(--fig-h);
 }
-.bobble--a { margin-right: -16px; }
-.bobble__head {
-  position: relative;
-  z-index: 0;
-  width: var(--head);
-  height: var(--head);
-  margin-bottom: -10px;
-  transform-origin: 50% 90%;
-}
-.bobble__head img { width: 100%; height: 100%; }
-.bobble__body {
-  position: relative;
-  z-index: 1;
-  width: 84px;
-  height: auto;
-  aspect-ratio: 100 / 124;
-  overflow: visible;
-}
-.bobble__arm { transform-box: view-box; }
-.bobble--a .bobble__arm { transform-origin: 28px 18px; }
-.bobble--b .bobble__arm { transform-origin: 71px 16px; }
-.bobble.is-sad .bobble__head { transform: rotate(var(--sad-tilt, -18deg)) translateY(8px); }
-.bobble--b.is-sad { --sad-tilt: 18deg; }
-/* The SVG placeholders have sad versions with a tear. Photo heads (data-heads="png") can't
-   change expression, so they go a little grey and get a CSS tear instead. */
-.bobble__tear { display: none; }
-body[data-heads="png"] .bobble.is-sad .bobble__head img { filter: saturate(.55) brightness(.92); }
-body[data-heads="png"] .bobble.is-sad .bobble__tear {
-  display: block;
+.figure--a { aspect-ratio: 309 / 900; --pivot: 49.64% 29.52%; margin-right: -4px; }
+.figure--b { aspect-ratio: 418 / 900; --pivot: 45.96% 24.88%; }
+.figure img {
   position: absolute;
-  top: 58%;
-  left: 34%;
-  width: 9px;
-  height: 13px;
-  border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
-  background: #9DB4FF;
-  box-shadow: inset -2px -2px 0 rgb(91 120 214 / .6);
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
 }
-.bobble--b.is-sad .bobble__tear { left: auto; right: 34%; }
+.figure__head { transform-origin: var(--pivot); }
+.figure::after {           /* a soft shadow on the platform */
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 14%;
+  right: 14%;
+  bottom: -5px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgb(5 8 40 / .55);
+  filter: blur(3px);
+}
+/* Regret ending: heads drooped and leaning in towards each other (consoling), colour drained a little */
+.figure--a.is-sad { --sad-from: 8deg; --sad-to: 6.5deg; }
+.figure--b.is-sad { --sad-from: -8deg; --sad-to: -6.5deg; }
+.figure.is-sad .figure__head { rotate: var(--sad-from); translate: 0 2.5%; }
+.figure.is-sad img { filter: saturate(.72) brightness(.94); }
 
 .instrument {
   --focus: var(--haldi);
@@ -1512,13 +1691,38 @@ body[data-heads="png"] .bobble.is-sad .bobble__tear {
 .raincloud__drops i:nth-child(3) { left: 50%; top: 2px; }
 .raincloud__drops i:nth-child(4) { left: 72%; top: 18px; }
 .raincloud__drops i:nth-child(5) { left: 94%; top: 8px; }
-.scene--sad { height: 352px; }
-.scene--sad .couple { bottom: 18px; }
+.scene--sad { height: 380px; }
 
 .junction__intro {
   display: grid;
   gap: 6px;
   margin-top: 4px;
+}
+
+/* The one travel line on the junction: train booking date, or the locals' home platform */
+.travel-line {
+  margin-top: 8px;
+  padding: 11px 14px;
+  border-left: 4px solid var(--genda);
+  border-radius: 10px;
+  background: rgb(16 22 74 / .75);
+  box-shadow: inset 0 0 0 1px rgb(246 166 9 / .22);
+  color: var(--kagaz);
+  font: 600 15px/1.45 var(--font-body);
+  text-wrap: pretty;
+}
+
+/* Make it a Rajasthan long weekend (js/trip.js renders the map ticket into #trip) */
+.trip-block {
+  display: grid;
+  gap: 10px;
+  margin-top: 6px;
+}
+.trip-block__intro {
+  margin-bottom: 4px;
+  color: var(--on-dark-muted);
+  text-align: center;
+  text-wrap: pretty;
 }
 
 /* 13. Boarding pass -------------------------------------------------- */
@@ -1612,74 +1816,10 @@ body[data-heads="png"] .bobble.is-sad .bobble__tear {
   gap: 10px;
 }
 
-/* 14. Booking + leave kit -------------------------------------------- */
+/* 14. Leave kit ----------------------------------------------------- */
 
 .info-card__text { color: var(--ink-muted); text-wrap: pretty; }
 .info-card__text strong { color: var(--syahi); }
-
-.booking-list {
-  display: grid;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.booking-card {
-  display: grid;
-  gap: 4px;
-  padding: 14px;
-  border: 1.5px solid var(--line);
-  border-left: 6px solid var(--rani);
-  border-radius: var(--radius-ctl);
-  background: var(--kagaz-hi);
-}
-.booking-card__leg { font-size: 13px; letter-spacing: .1em; color: var(--rani-ink); }
-.booking-card__countdown {
-  font: 24px/1.15 var(--font-dm);
-  letter-spacing: .02em;
-  text-transform: none;
-  color: var(--syahi);
-}
-.booking-card__open-now {
-  display: grid;
-  justify-items: start;
-  gap: 8px;
-}
-.booking-card__open-now p { font-weight: 600; color: var(--patta); }
-.booking-card__note {
-  margin-top: 4px;
-  font-size: 14px;
-  line-height: 1.4;
-  color: var(--ink-muted);
-  text-wrap: pretty;
-}
-.booking-card__dates {
-  display: grid;
-  margin: 6px 0 0;
-  padding: 0;
-  list-style: none;
-  font: 14px/1.2 var(--font-dm);
-  letter-spacing: .03em;
-  text-transform: uppercase;
-}
-.booking-card__dates li {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 6px 0;
-  border-top: 1px dashed var(--line);
-}
-.booking-card__dates li[data-state="open"] span:last-child { color: var(--patta); }
-.booking-card__actions {
-  display: grid;
-  justify-items: start;
-  gap: 8px;
-  margin-top: 8px;
-}
-.booking-card__actions .btn--secondary { width: 100%; }
-.booking-card[data-state="upcoming"]:not([data-any-open]) .booking-card__open-now { display: none; }
-.booking-card[data-state="open"] { border-left-color: var(--patta); }
-.booking-card[data-state="open"] :is(.booking-card__countdown, .booking-card__actions) { display: none; }
 
 .leave__days {
   font: 600 20px/1 var(--font-body);
@@ -1822,18 +1962,23 @@ body[data-heads="png"] .bobble.is-sad .bobble__tear {
   35%, 100% { transform: scale(1); }
 }
 @keyframes hop { from { transform: translateY(0); } to { transform: translateY(-4px); } }
-@keyframes bobble {
-  0%, 62%, 100% { transform: rotate(0); }
-  8% { transform: rotate(-10deg); }
-  18% { transform: rotate(8deg); }
-  28% { transform: rotate(-6deg); }
-  38% { transform: rotate(4deg); }
-  48% { transform: rotate(-2deg); }
+/* Bobblehead wobble: swings to just under 4° and springs back to 3.2°, equally on both sides
+   (the spring lives in the keyframes, so the head never parks on one side) */
+@keyframes wobble {
+  0%, 100% { rotate: -3.2deg; }
+  42% { rotate: 3.7deg; }
+  50% { rotate: 3.2deg; }
+  92% { rotate: -3.7deg; }
 }
-@keyframes wave {
-  0%, 100% { transform: rotate(0); }
-  30% { transform: rotate(-18deg); }
-  70% { transform: rotate(12deg); }
+@keyframes sad-wobble { from { rotate: var(--sad-from); } to { rotate: var(--sad-to); } }
+@keyframes peek-up { from { translate: 0 110%; } }
+@keyframes rider-in {
+  0% { opacity: 0; transform: translateY(80%) scale(.6); }
+  55% { opacity: 1; transform: translateY(-22%) scale(1.06); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes rider-out {
+  to { opacity: 0; transform: translate(40%, -70%) rotate(28deg) scale(.8); }
 }
 @keyframes petal-fall {
   0% { opacity: 0; transform: translate(0, 0) rotate(0) scale(var(--s)); }
@@ -1844,10 +1989,6 @@ body[data-heads="png"] .bobble.is-sad .bobble__tear {
 @keyframes drizzle {
   from { transform: translateY(0); opacity: .85; }
   to { transform: translateY(34px); opacity: 0; }
-}
-@keyframes sad-sway {
-  from { transform: rotate(var(--sad-tilt, -18deg)) translateY(8px); }
-  to { transform: rotate(calc(var(--sad-tilt, -18deg) * .8)) translateY(7px); }
 }
 @keyframes stamp-a { from { transform: rotate(-9deg) scale(1.7); opacity: 0; } }
 @keyframes stamp-b { from { transform: rotate(-9deg) scale(1.7); opacity: 0; } }
@@ -1896,14 +2037,20 @@ body[data-heads="png"] .bobble.is-sad .bobble__tear {
   body:has(.baaja[aria-pressed="true"]) .instrument--shehnai svg,
   body.is-baaja-on .instrument--shehnai svg { animation: shehnai-play 2.4s ease-in-out infinite; transform-origin: 10% 90%; }
 
-  body[data-stop="junction"] .mini-board__head { animation: hop .45s ease-in-out infinite alternate; }
+  /* A short celebratory burst on arrival (about 2.7s), not a bounce for the whole reading stop */
+  body[data-stop="junction"] .mini-board__head { animation: hop .45s ease-in-out 6 alternate; }
   body[data-stop="junction"] .mini-board__head:last-child { animation-delay: -.22s; }
 
-  .scene.is-arrived .bobble__head { animation: bobble 3.2s var(--ease-out) infinite; }
-  .scene.is-arrived .bobble--b .bobble__head { animation-delay: .35s; }
-  .scene.is-arrived .bobble__arm { animation: wave 1s ease-in-out 3 .4s; }
+  .scene.is-arrived .figure__head { animation: wobble 3.2s cubic-bezier(.37, 0, .63, 1) infinite; }
+  .scene.is-arrived .figure--b .figure__head { animation-duration: 3.7s; animation-delay: -1.4s; }
   .scene.is-arrived .petal { animation: petal-fall var(--t) cubic-bezier(.3, .1, .5, 1) var(--d) 1 both; }
-  .bobble.is-sad .bobble__head { animation: sad-sway 3.6s ease-in-out infinite alternate; }
+  .figure.is-sad .figure__head { animation: sad-wobble 4.2s ease-in-out infinite alternate; }
+  .figure--b.is-sad .figure__head { animation-delay: -1.9s; }
+
+  .cover__bust { animation: peek-up .7s var(--ease-spring) .5s both; }
+  .cover__bust--b { animation-delay: .62s; }
+  .rider.is-in { animation: rider-in .5s var(--ease-spring) both; }
+  .rider.is-out { animation: rider-out .28s ease-in both; }
   .raincloud__drops i { animation: drizzle 1.1s linear infinite; }
   .raincloud__drops i:nth-child(2) { animation-delay: -.35s; }
   .raincloud__drops i:nth-child(3) { animation-delay: -.7s; }
@@ -1926,7 +2073,6 @@ body[data-heads="png"] .bobble.is-sad .bobble__tear {
 
   /* Spring movement (static under reduced motion) */
   .mini-board__head { transition: transform .5s var(--ease-spring); }
-  .bobble__head { transition: transform .6s var(--ease-spring); }
   .toast { transition: opacity .2s, transform .2s var(--ease-out), visibility .2s; }
   .baaja-nudge:not([hidden]) { animation: nudge-in .4s var(--ease-spring) both, nudge-bob 1.4s ease-in-out .5s 3 alternate; }
 }
@@ -1943,8 +2089,7 @@ body[data-heads="png"] .bobble.is-sad .bobble__tear {
 @media (max-width: 359px) {
   .cover__name { font-size: 38px; }
   .chip { font-size: 15px; }
-  .bobble { --head: 88px; width: 94px; }
-  .bobble__body { width: 76px; }
+  .figure { --fig-h: 206px; }
   .instrument { width: 60px; }
   .instrument svg { width: 54px; }
 }

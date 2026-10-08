@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trip map demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&amp;family=Mukta:wght@400;600&amp;family=Yatra+One&amp;display=swap">
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/trip.css">
+<style>
+  .demo {
+    width: 100%;
+    max-width: var(--col);
+    margin-inline: auto;
+    padding: 24px var(--gutter) 48px;
+    display: grid;
+    gap: 20px;
+  }
+  .demo__note { font-size: 14px; color: var(--on-dark-muted); }
+  .demo__note code { font-family: var(--font-dm); font-size: 12px; }
+  .demo__tools { display: flex; flex-wrap: wrap; gap: 8px; }
+  .trip-block { display: grid; gap: 14px; }
+  .trip-block__intro { color: var(--on-dark-muted); text-align: center; text-wrap: pretty; }
+  .demo__teaser {
+    padding: 12px 14px;
+    border: 1.5px dashed rgb(252 233 214 / .38);
+    border-radius: var(--radius-ctl);
+    color: var(--on-dark-muted);
+    font-size: 15px;
+  }
+  #log { font: 12px/1.4 var(--font-dm); color: var(--on-dark-muted); white-space: pre-wrap; min-height: 1.4em; }
+</style>
+</head>
+<body>
+<main class="demo">
+  <p class="demo__note">Standalone check for <code>js/trip.js</code>. Flags: <code>?still=1</code> forces reduced motion, <code>?hidden=1</code> mounts while hidden and reveals after 800 ms, <code>?fit=outline</code> fits to the outline (only matters once <code>OUTLINE</code> exists).</p>
+  <div class="demo__tools">
+    <button class="btn btn--ghost btn--small" type="button" id="tour">Visit every stop</button>
+    <button class="btn btn--ghost btn--small" type="button" id="clear">Clear</button>
+  </div>
+  <p id="log" aria-live="off"></p>
+
+  <!-- Departure-stop teaser (shown here only to review the copy) -->
+  <p class="demo__teaser" id="teaser"></p>
+
+  <!-- Junction-stop section, as index.html would hold it -->
+  <section class="trip-block" aria-labelledby="trip-title" id="trip-block">
+    <h3 class="section-title section-title--dark" id="trip-title"></h3>
+    <p class="trip-block__intro" id="trip-intro"></p>
+    <div id="trip"></div>
+  </section>
+</main>
+<script type="module">
+  import { mountTrip } from '../js/trip.js';
+  import { ORIGIN, DESTINATIONS, TRIP_COPY } from '../js/trip-data.js';
+
+  const q = new URLSearchParams(location.search);
+  document.getElementById('trip-title').textContent = TRIP_COPY.title;
+  document.getElementById('trip-intro').textContent = TRIP_COPY.intro;
+  document.getElementById('teaser').textContent = TRIP_COPY.teaser;
+
+  const block = document.getElementById('trip-block');
+  if (q.has('hidden')) block.hidden = true;
+  const trip = mountTrip(document.getElementById('trip'), {
+    origin: ORIGIN,
+    destinations: DESTINATIONS,
+    fit: q.get('fit') || 'points',
+    reducedMotion: q.has('still') ? true : undefined,
+  });
+  window.trip = trip;
+  if (q.has('hidden')) setTimeout(() => { block.hidden = false; }, 800);
+
+  const log = document.getElementById('log');
+  document.getElementById('clear').addEventListener('click', () => { trip.clear(); log.textContent = ''; });
+  document.getElementById('tour').addEventListener('click', async () => {
+    for (const d of [...DESTINATIONS].sort((a, b) => a.km - b.km)) {
+      trip.select(d.id);
+      log.textContent = `selected: ${trip.selected}`;
+      await new Promise((r) => setTimeout(r, 1700));
+    }
+  });
+</script>
+</body>
+</html>

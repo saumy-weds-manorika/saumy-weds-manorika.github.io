@@ -37,6 +37,9 @@ const CARD = { x: 76, y: 150, w: 928, h: 1162, r: 30 };
 const TEAR = CARD.y + Math.round(CARD.h * 0.62);
 const NOTCH = 30;
 const HOLE = { x: CARD.x + 60, y: CARD.y + 47, r: 16 };
+/* Bust portraits: drawn this many circle-radii wide, with the face (this far down the image) centred. */
+const BUST_ZOOM = 2.05;
+const BUST_FACE_Y = 0.41;
 const L = CARD.x + 60;
 const R = CARD.x + CARD.w - 60;
 const MID = W / 2;
@@ -63,7 +66,9 @@ const Y = {
  *   travel: {mode:string, from:string, arrive:{date:string,slot:string}, depart:{date:string,slot:string}} | null,
  *   catches?: {id:string, name:string, caught:boolean}[],
  *   heads?: {a?: HTMLImageElement|null, b?: HTMLImageElement|null},
- * }} data
+ * }} data  `travel.mode === 'local'` prints the home-platform variant (amendments §L). `heads` are
+ *   the couple's bobblehead busts (assets/bobble/*-bust.webp, preloaded by app.js); without them a
+ *   BHILWARA JN postmark is printed instead.
  * @returns {Promise<HTMLCanvasElement>} a 1080×1350 canvas
  */
 export async function renderPass(data) {
@@ -213,6 +218,7 @@ function normalise(data = {}) {
   const stops = fns.map((f) => ({ ...f, caught: allRegret ? false : (caught.has(f.id) ? caught.get(f.id) : true) }));
   return {
     config, guests, allRegret, travel, stops,
+    local: !allRegret && !!travel && travel.mode === 'local',
     label: label || guests[0].name,
     passId: String(data.passId ?? '').trim().toUpperCase() || 'SHAADI',
     heads: data.heads || {},
@@ -329,10 +335,22 @@ function stampText(cfg, status) {
 }
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const NIGHT_ENDS_HOUR = 6; // a function before 6 AM (the 3 AM Phera) is the tail of the previous night
 
-/** '10–12 Dec 2026' from the function dates. */
+/** The wedding day a function belongs to: its own date, or the day before for a small-hours function. */
+function weddingDay(f) {
+  const [date, time = ''] = String(f.at || '').split('T');
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : String(f.date || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return '';
+  const hour = Number(time.split(':')[0]);
+  if (!time || !Number.isFinite(hour) || hour >= NIGHT_ENDS_HOUR) return day;
+  const [y, m, d] = day.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10);
+}
+
+/** The official dates, e.g. 'D1–D2 Mon YYYY' from the wedding days (the Phera counts as the last night). */
 function dateRange(cfg) {
-  const ds = (cfg.functions || []).map((f) => f.date).filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s)).sort();
+  const ds = (cfg.functions || []).map(weddingDay).filter(Boolean).sort();
   if (!ds.length) return '';
   const [y1, m1, d1] = ds[0].split('-').map(Number);
   const [y2, m2, d2] = ds[ds.length - 1].split('-').map(Number);
@@ -654,7 +672,7 @@ function drawCard(ctx, d, rand) {
 function drawHeader(ctx, d) {
   const cfg = d.config;
   const train = cfg.train || {};
-  const name = `${(train.name || 'Shaadi Express').toUpperCase()} · ${train.number || '1012'}`;
+  const name = `${(train.name || 'Shaadi Express').toUpperCase()} · ${train.number || '1011'}`;
   const tx = HOLE.x + HOLE.r + 22;
   const f = fit(ctx, name, { fam: F.dot, max: 38, min: 24, width: 520, ls: 2 });
   text(ctx, f.text, tx, Y.strip + 58, { size: f.size, color: C.kagaz, ls: 2 });
@@ -750,16 +768,20 @@ function drawRoute(ctx, d) {
   dotRule(ctx, L, R, Y.routeHead - 34, 'rgba(27,27,47,0.22)');
   sectionHead(ctx, 'FROM', 'TO', Y.routeHead);
 
-  const from = (t && t.from ? t.from : 'Your city').trim().toUpperCase();
+  // Locals (amendments §L): a home platform, bound for every function.
+  const city = (cfg.city || 'Bhilwara').toUpperCase();
+  const from = d.local ? `${city} · LOCAL` : (t && t.from ? t.from : 'Your city').trim().toUpperCase();
   const ff = fit(ctx, from, { fam: F.dot, max: 52, min: 24, width: 262 });
   text(ctx, ff.text, L, Y.city, { size: ff.size, color: C.syahi });
-  const to = (cfg.city || 'Bhilwara').toUpperCase();
+  const to = d.local ? 'EVERY FUNCTION' : city;
   const tf = fit(ctx, to, { fam: F.dot, max: 52, min: 24, width: 262 });
   text(ctx, tf.text, R, Y.city, { size: tf.size, color: C.syahi, align: 'right' });
 
-  text(ctx, t ? `BY ${modeLabel(cfg, t.mode).toUpperCase()}` : 'TBC', L, Y.routeSub, { size: 20, color: MUTED, ls: 1.5 });
+  const by = d.local ? 'BY AUTO-RICKSHAW' : t ? `BY ${modeLabel(cfg, t.mode).toUpperCase()}` : 'TBC';
+  text(ctx, by, L, Y.routeSub, { size: 20, color: MUTED, ls: 1.5 });
   const code = cfg.station || 'BHL';
-  text(ctx, `(${code}) ${(cfg.state || '').toUpperCase()}`.trim(), R, Y.routeSub, { size: 20, color: MUTED, align: 'right', ls: 1.5 });
+  const sub = d.local ? 'CARNIVAL TO PHERA' : `(${code}) ${(cfg.state || '').toUpperCase()}`.trim();
+  text(ctx, sub, R, Y.routeSub, { size: 20, color: MUTED, align: 'right', ls: 1.5 });
 
   if (d.allRegret) return; // the REGRET stamp takes this space
   // Route line with the vehicle riding it.
@@ -797,6 +819,13 @@ function drawWhen(ctx, d) {
     const x = MID - (wa + wb) / 2;
     text(ctx, a, x, Y.when + 8, { size: 50, fam: F.display, color: C.rani });
     text(ctx, b, x + wa, Y.when + 8, { size: 28, fam: F.body, weight: 600, color: MUTED });
+    return;
+  }
+  if (d.local) {
+    // One row instead of ARR / DEP: locals are home for the whole wedding.
+    text(ctx, 'HOME PLATFORM', L, Y.whenHead, { size: 20, color: C.rani, ls: 1.5 });
+    const f = fit(ctx, 'SEE YOU AT EVERY FUNCTION', { fam: F.dot, max: 32, min: 18, width: R - L, ls: 0.5 });
+    text(ctx, f.text, L, Y.when, { size: f.size, color: C.syahi, ls: 0.5 });
     return;
   }
   const colW = (R - L) / 2;
@@ -922,7 +951,11 @@ function drawable(img) {
   return !!img && ((img.naturalWidth || img.width || 0) > 0) && img.complete !== false;
 }
 
-/** Bobblehead portraits in garlanded circles, leaning in towards each other. */
+/**
+ * Bobblehead portraits in garlanded circles, leaning in towards each other. The busts are
+ * portrait cut-outs (head and shoulders), so they are sized by width and lifted until the face
+ * sits in the middle of the circle.
+ */
 function drawHeads(ctx, heads) {
   const cy = 1214;
   const rad = 60;
@@ -950,8 +983,10 @@ function drawHeads(ctx, heads) {
     ctx.clip();
     const iw = s.img.naturalWidth || s.img.width;
     const ih = s.img.naturalHeight || s.img.height;
-    const k = (rad * 2.15) / Math.max(iw, ih);
-    ctx.drawImage(s.img, (-iw * k) / 2, (-ih * k) / 2 + 6, iw * k, ih * k);
+    const portrait = ih > iw * 1.1;
+    const k = portrait ? (rad * BUST_ZOOM) / iw : (rad * 2.15) / Math.max(iw, ih);
+    const top = portrait ? -ih * k * BUST_FACE_Y : (-ih * k) / 2 + 6;
+    ctx.drawImage(s.img, (-iw * k) / 2, top, iw * k, ih * k);
     ctx.restore();
     ctx.beginPath();
     ctx.arc(0, 0, rad + 8, 0, Math.PI * 2);
@@ -1094,7 +1129,39 @@ function drawVehicle(ctx, mode, x, gy, s = 1) {
   ctx.translate(x, gy);
   ctx.scale(s, s);
   ctx.lineJoin = 'round';
-  if (mode === 'flight') {
+  if (mode === 'local') {
+    // Auto-rickshaw: haldi canopy, rani body, open side with a kagaz seat, nose to the right.
+    ctx.fillStyle = 'rgba(27,27,47,0.9)'; // open side: the dark cabin behind the seat
+    ctx.beginPath();
+    rr(ctx, -36, -62, 46, 28, 5);
+    ctx.fill();
+    ctx.fillStyle = C.kagaz;
+    ctx.fillRect(-34, -41, 26, 5);
+    ctx.fillStyle = C.haldi; // canopy: roof curving down into the back panel
+    ctx.beginPath();
+    ctx.moveTo(-48, -32); ctx.lineTo(-48, -58);
+    ctx.quadraticCurveTo(-48, -74, -31, -74);
+    ctx.lineTo(22, -74); ctx.quadraticCurveTo(29, -74, 29, -67);
+    ctx.lineTo(29, -62); ctx.lineTo(-36, -62); ctx.lineTo(-38, -32); ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = 'rgba(252,233,214,0.6)'; // windscreen
+    ctx.beginPath();
+    ctx.moveTo(14, -36); ctx.lineTo(22, -62); ctx.lineTo(29, -62); ctx.lineTo(27, -34); ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = C.rani;
+    ctx.beginPath();
+    ctx.moveTo(-50, -12); ctx.lineTo(-50, -38); ctx.lineTo(14, -38); ctx.lineTo(24, -32);
+    ctx.quadraticCurveTo(44, -30, 50, -12); ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = C.haldi;
+    ctx.fillRect(-50, -26, 94, 4);
+    circle(ctx, 46, -21, 3.5, C.haldi);
+    ctx.fillStyle = C.syahi;
+    ctx.fillRect(-48, -14, 94, 4);
+    wheel(ctx, -30, -8, 9);
+    wheel(ctx, 34, -8, 8);
+    garlandDots(ctx, [[-30, -60], [-20, -59], [-10, -58.6], [0, -58.6], [10, -59], [20, -60]]);
+  } else if (mode === 'flight') {
     ctx.translate(0, -30);
     ctx.rotate(-0.12);
     ctx.fillStyle = '#A81B55';

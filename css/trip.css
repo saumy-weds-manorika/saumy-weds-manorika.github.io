@@ -1,0 +1,357 @@
+/* ==========================================================================
+   Save the Train · trip.css
+   The Rajasthan long-weekend map (spec v3 §M), rendered by js/trip.js.
+   A route-map ticket: kagaz top part with the map and destination chips, and a
+   perforated stub that shows the chosen escape. Uses the tokens in styles.css.
+   Everything is scoped under .trip.
+   ========================================================================== */
+
+.trip {
+  --trip-sand: #F7DCB8;
+  --trip-sea: #EFE2D2;
+  --trip-notch: 12px;
+  display: block;
+  color: var(--syahi);
+}
+
+.trip__card {
+  --focus: var(--neel);
+  position: relative;
+  isolation: isolate;
+  color-scheme: light;
+}
+/* Static blurred shadow behind the ticket (no filter on the animated card itself) */
+.trip__card::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 10px 8px 0;
+  border-radius: var(--radius-card);
+  background: rgb(5 8 40 / .55);
+  filter: blur(14px);
+  transform: translateY(12px);
+  pointer-events: none;
+}
+
+/* Top part and stub, joined by a perforation with real notches (as on the cover ticket) */
+.trip__top,
+.trip__stub {
+  background-color: var(--kagaz);
+  background-image: var(--paper);
+}
+.trip__top {
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  -webkit-mask:
+    radial-gradient(circle var(--trip-notch) at 0 100%, #0000 97%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle var(--trip-notch) at 100% 100%, #0000 97%, #000) right / 51% 100% no-repeat;
+  mask:
+    radial-gradient(circle var(--trip-notch) at 0 100%, #0000 97%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle var(--trip-notch) at 100% 100%, #0000 97%, #000) right / 51% 100% no-repeat;
+}
+.trip__stub {
+  border-top: 2px dashed rgb(27 27 47 / .3);
+  border-radius: 0 0 var(--radius-card) var(--radius-card);
+  padding: 18px 18px 22px;
+  -webkit-mask:
+    radial-gradient(circle var(--trip-notch) at 0 0, #0000 97%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle var(--trip-notch) at 100% 0, #0000 97%, #000) right / 51% 100% no-repeat;
+  mask:
+    radial-gradient(circle var(--trip-notch) at 0 0, #0000 97%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle var(--trip-notch) at 100% 0, #0000 97%, #000) right / 51% 100% no-repeat;
+}
+
+.trip__strip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  white-space: nowrap;
+  margin: 0;
+  padding: 9px 16px 8px;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  background: var(--bandhani) 0 0 / 36px 36px, var(--rani);
+  color: #fff;
+  font: 13px/1 var(--font-dm);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+/* 1. The map -------------------------------------------------------------- */
+
+.trip__map-wrap { padding: 10px 8px 0; }
+
+.trip__map {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: none;
+  overflow: visible;
+  font-family: var(--font-body);
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.trip__frame { fill: var(--trip-sand); }
+.trip__frame--sea { fill: var(--trip-sea); }
+.trip__land { fill: var(--trip-sand); }
+.trip__border {
+  fill: none;
+  stroke: var(--rani-ink);
+  stroke-width: 1.4px;
+  stroke-dasharray: 7 2.5 1.5 2.5;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  opacity: .7;
+}
+.trip__dot { fill: rgb(27 27 47 / .09); }
+.trip__rule {
+  fill: none;
+  stroke: rgb(27 27 47 / .22);
+  stroke-width: .75;
+  stroke-dasharray: 2 2.5;
+}
+.trip__edge {
+  fill: none;
+  stroke: rgb(27 27 47 / .5);
+  stroke-width: 1.3;
+}
+
+.trip__grid line {
+  stroke: rgb(27 27 47 / .13);
+  stroke-width: .8;
+  stroke-dasharray: 1.5 3;
+}
+.trip__grid-labels text,
+.trip__scale text,
+.trip__compass text {
+  font: 7.5px/1 var(--font-dm);
+  letter-spacing: .05em;
+  fill: var(--ink-muted);
+}
+.trip__grid-labels text { opacity: .8; }
+
+.trip__compass-ring { fill: rgb(255 246 236 / .6); stroke: rgb(27 27 47 / .3); stroke-width: .8; }
+.trip__compass-n { fill: var(--rani-ink); }
+.trip__compass-s { fill: rgb(27 27 47 / .35); }
+.trip__compass text { font-size: 8.5px; fill: var(--syahi); }
+
+.trip__cartouche-bg { fill: rgb(255 246 236 / .88); stroke: rgb(27 27 47 / .45); stroke-width: 1; }
+.trip__cartouche-rule { fill: none; stroke: var(--rani-ink); stroke-width: .6; opacity: .6; }
+.trip__cartouche-hi { font: 15px/1 var(--font-display); fill: var(--rani-ink); }
+.trip__cartouche-en { font: 7.5px/1 var(--font-dm); letter-spacing: .34em; fill: var(--ink-muted); }
+
+.trip__scale-dark { fill: var(--syahi); }
+.trip__scale-light { fill: var(--kagaz-hi); stroke: var(--syahi); stroke-width: .8; }
+
+.trip__locator-bg { fill: var(--kagaz-hi); stroke: rgb(27 27 47 / .35); stroke-width: .8; }
+.trip__locator-land { fill: var(--trip-sand); stroke: var(--rani-ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.trip__locator-view { fill: rgb(214 36 110 / .14); stroke: var(--rani); stroke-width: 1.2; }
+
+/* Railway line: the classic map symbol, a solid casing with paper-coloured dashes */
+.trip__route { opacity: 0; }
+.trip__route.is-on { opacity: 1; }
+.trip__rail,
+.trip__ties { fill: none; stroke-linecap: round; }
+.trip__rail { stroke: var(--rani); stroke-width: 4.8; }
+.trip__ties { stroke: var(--kagaz-hi); stroke-width: 2; stroke-dasharray: 4.5 4; stroke-linecap: butt; }
+
+/* Engine riding the tip of the line */
+.trip__engine { opacity: 0; pointer-events: none; }
+.trip__engine.is-running { opacity: 1; }
+.trip__engine rect,
+.trip__engine circle { stroke: var(--kagaz-hi); stroke-width: .9; }
+.trip__engine-cab { fill: var(--neel); }
+.trip__engine-boiler { fill: var(--rani); }
+.trip__engine-stack { fill: var(--syahi); }
+.trip__engine-wheel { fill: var(--syahi); }
+
+/* Bhilwara: home pin in station-board yellow, with a tiny board on posts */
+.trip__home { pointer-events: none; }
+.trip__pulse {
+  fill: rgb(255 210 63 / .55);
+  stroke: var(--genda-deep);
+  stroke-width: 1;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.trip__posts rect { fill: var(--syahi); }
+.trip__board-plate {
+  fill: var(--haldi);
+  stroke: var(--syahi);
+  stroke-width: 1.6;
+}
+.trip__board-text {
+  font: 10.5px/1 var(--font-display);
+  letter-spacing: .07em;
+  fill: var(--syahi);
+}
+.trip__home-pin { fill: var(--haldi); stroke: var(--syahi); stroke-width: 2.2; }
+.trip__home-dot { fill: var(--syahi); }
+
+/* Destination pins: marigolds */
+.trip__pin { cursor: pointer; outline: none; }
+.trip__pin:focus { outline: none; }
+.trip__hit { fill: transparent; pointer-events: all; }
+.trip__ghost { pointer-events: none; }
+.trip__ring {
+  fill: none;
+  stroke: var(--neel);
+  stroke-width: 2.4;
+  opacity: 0;
+}
+.trip__pin:focus-visible .trip__ring { opacity: 1; }
+.trip__sel {
+  fill: rgb(255 246 236 / .85);
+  stroke: var(--rani);
+  stroke-width: 2.2;
+  opacity: 0;
+}
+.trip__pin.is-selected .trip__sel { opacity: 1; }
+.trip__bloom {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform .3s var(--ease-spring);
+}
+.trip__pin.is-selected .trip__bloom { transform: scale(1.12); }
+.trip__shadow { fill: rgb(27 27 47 / .3); }
+.trip__petal { fill: var(--genda); stroke: #9A4F00; stroke-width: .55; }
+.trip__core { fill: var(--genda-deep); stroke: #9A4F00; stroke-width: .5; }
+.trip__eye { fill: var(--rani); }
+
+/* Name labels: a paper halo keeps them legible over the grid and the line. The selected
+   one turns into a little yellow station board. */
+.trip__labels { cursor: pointer; }
+.trip__label {
+  font: 600 13px/1 var(--font-body);
+  fill: var(--syahi);
+  paint-order: stroke;
+  stroke: var(--trip-sand);
+  stroke-width: 3.4px;
+  stroke-linejoin: round;
+}
+.trip__label.is-selected { stroke: var(--haldi); stroke-width: 0; }
+.trip__plate {
+  fill: var(--haldi);
+  stroke: var(--syahi);
+  stroke-width: 1.4;
+  opacity: 0;
+}
+.trip__plate.is-on { opacity: 1; }
+
+/* 2. Destination chips ---------------------------------------------------- */
+
+.trip__pick {
+  display: grid;
+  gap: 10px;
+  padding: 14px 14px 22px;
+}
+.trip__pick-label {
+  margin: 0;
+  font: 12px/1.2 var(--font-dm);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.trip__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.trip__chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  min-height: 44px;
+  padding: 11px 12px 9px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius-chip);
+  background: var(--kagaz-hi);
+  color: var(--syahi);
+  font: 600 15px/1.15 var(--font-body);
+  touch-action: manipulation;
+  transition: background-color .16s, border-color .16s, color .16s, transform .12s var(--ease-out);
+}
+.trip__chip-km {
+  font: 11px/1 var(--font-dm);
+  letter-spacing: .04em;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+.trip__chip:active { transform: scale(.97); }
+.trip__chip[aria-pressed="true"] {
+  border-color: var(--rani);
+  background: var(--rani);
+  color: #fff;
+  box-shadow: inset 0 0 0 2px var(--rani), inset 0 0 0 3.5px rgb(255 255 255 / .55);
+}
+.trip__chip[aria-pressed="true"] .trip__chip-km { color: rgb(255 255 255 / .9); }
+@media (hover: hover) {
+  .trip__chip:not([aria-pressed="true"]):hover { border-color: var(--syahi); background: #fff; }
+}
+
+/* 3. The stub ------------------------------------------------------------- */
+
+.trip__info {
+  display: grid;
+  gap: 8px;
+}
+.trip__info > * { margin: 0; }
+.trip__kicker {
+  font: 12px/1.2 var(--font-dm);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--rani-ink);
+}
+.trip__name {
+  font: 30px/1.1 var(--font-display);
+  color: var(--syahi);
+}
+.trip__meta {
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--ink-muted);
+}
+.trip__meta strong { color: var(--syahi); }
+.trip__note {
+  color: var(--syahi);
+  text-wrap: pretty;
+}
+.trip__dir {
+  justify-self: start;
+  margin-top: 6px;
+}
+.trip__dir-icon { flex: none; width: 16px; height: 16px; }
+
+/* 4. Motion (only when the guest hasn't asked for less) ------------------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  .trip:not(.trip--still) .trip__pulse { animation: trip-pulse 2.6s var(--ease-out) infinite; }
+  .trip:not(.trip--still) .trip__pin.is-arrived .trip__bloom { animation: trip-pop .55s var(--ease-spring); }
+  .trip:not(.trip--still) .trip__info > * { animation: trip-in .4s var(--ease-out) both; }
+  .trip:not(.trip--still) .trip__info > :nth-child(2) { animation-delay: .04s; }
+  .trip:not(.trip--still) .trip__info > :nth-child(3) { animation-delay: .08s; }
+  .trip:not(.trip--still) .trip__info > :nth-child(n+4) { animation-delay: .12s; }
+}
+.trip--still .trip__bloom,
+.trip--still .trip__chip { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  .trip__bloom,
+  .trip__chip { transition: none; }
+}
+
+@keyframes trip-pulse {
+  0% { opacity: .9; transform: scale(1); }
+  70%, 100% { opacity: 0; transform: scale(2.9); }
+}
+@keyframes trip-pop {
+  0% { transform: scale(1.12); }
+  40% { transform: scale(1.5); }
+  100% { transform: scale(1.12); }
+}
+@keyframes trip-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}

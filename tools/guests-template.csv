@@ -1,5 +1,7 @@
-id,label,names,max_guests,notes
-k7m2,Rahul Sharma,Rahul Sharma|Priya Sharma,2,
-p3x9,Mr & Mrs Agarwal,Mr Agarwal|Mrs Agarwal,2,
-a1b2,Ananya Iyer,Ananya Iyer,1,
-z8q4,Kabir Khan,Kabir Khan,2,
+Guest 1,Gender Guest 1,Guest 2,Gender Guest 2,Both Primary?,Nicknames,ID
+Rahul Sharma,M,Priya Sharma,F,Y,,
+Arjun Mehra,M,Tara,F,N,,
+Kabir Khan,M,Mrs,F,N,,
+Ananya Iyer,F,NA,NA,NA,Annu,
+Isha Agarwal,F,NA,NA,NA,,
+Rohan Mehta,M,NA,NA,NA,"Ro, Rohu",

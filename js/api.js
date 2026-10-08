@@ -3,9 +3,22 @@
  *
  * Live mode talks to the Google Apps Script web app at CONFIG.apiUrl.
  * Mock mode (CONFIG.apiUrl is empty, or the page URL has ?mock=1) uses the
- * sample guests below and keeps submissions in localStorage only.
+ * fictional sample guests below and keeps submissions in localStorage only.
  * In mock mode, ?mockfail=1 makes submitRsvp fail after 600ms, to test the
  * error path.
+ *
+ * A guest record (from getGuest) looks like this (amendments §A/§C):
+ *   { id, label, names:[...], genders:['M'|'F'|'', ...] (aligned to names),
+ *     partner: null | { title:'Mr'|'Mrs'|'Ms', gender:'M'|'F'|'' },
+ *     max_guests: 4, couple: boolean, list: 'Primary'|'Secondary'|'',
+ *     booked: null | { filled_by, updated_at, payload, has_note? } }
+ * `partner` is an invited partner whose name isn't on the list; `booked` is the
+ * latest saved answer for that ticket (from any device), so it can be shown and edited.
+ * Its payload never carries the note: anyone can search a name, and a note to the couple
+ * is private. `has_note: true` says one is saved; submitting with `keep_note: true` and an
+ * empty note keeps it.
+ * Its `payload.travel.via` ({hub, onward}, v4 §O3) is there when the answer was saved from
+ * a v4 page; older answers have no `via`, which callers treat as `{hub:'', onward:''}`.
  *
  * Every error thrown from here is an Error whose message is safe to show to
  * guests as-is. Errors also carry a machine-readable `code`
@@ -13,7 +26,7 @@
  * 'full', 'server', ...).
  */
 import { CONFIG } from './config.js';
-import { matchesQuery, validatePayload } from './logic.js';
+import { searchGuests, validatePayload } from './logic.js';
 
 /* Mock and live mode keep separate on-device records, so trying ?mock=1 on the live site never
    leaves a sample ticket behind (or overwrites a real one). Live keys are 'stt.v1' / 'stt.draft.v1'. */
@@ -25,8 +38,11 @@ const POST_TIMEOUT_MS = 25000;   // POST waits longer than the server's 10s lock
 const MOCK_DELAY_MS = 600;
 const MOCK_LOG_MAX = 50;
 const MAX_MATCHES = 5;
+const MAX_GUESTS = 4;            // every ticket may use "Add guest" up to 4 people (amendments §A)
 const UNLISTED_RE = /^u-[a-z0-9]{8}$/;
 const BASE36 = '0123456789abcdefghijklmnopqrstuvwxyz';
+const LISTS = ['Primary', 'Secondary'];
+const TITLES = ['Mr', 'Mrs', 'Ms'];
 
 const MSG = {
   network: "Couldn't reach the ticket counter. Check your connection and try again.",
@@ -39,12 +55,30 @@ const MSG = {
   invalid: 'Some details need another look',
 };
 
-/** Sample passenger list used in mock mode. */
+/** Sample passenger list used in mock mode: fictional people, in the shape Code.gs parses
+ * from the "First List" (Primary) and "Second List" (Secondary) tabs. `aliases` come from the
+ * Nicknames column; they are used for search only and never returned by getGuest. */
 const MOCK_GUESTS = [
-  { id: 'k7m2', label: 'Rahul Sharma', names: ['Rahul Sharma', 'Priya Sharma'], max_guests: 2 },
-  { id: 'p3x9', label: 'Mr & Mrs Agarwal', names: ['Mr Agarwal', 'Mrs Agarwal'], max_guests: 2 },
-  { id: 'a1b2', label: 'Ananya Iyer', names: ['Ananya Iyer'], max_guests: 1 },
-  { id: 'z8q4', label: 'Kabir Khan', names: ['Kabir Khan'], max_guests: 2 },
+  { // Both Primary? = Y: either of them may open the link and fill in the ticket
+    id: 'k7m2', label: 'Rahul Sharma & Priya Sharma', names: ['Rahul Sharma', 'Priya Sharma'], genders: ['M', 'F'],
+    partner: null, max_guests: MAX_GUESTS, couple: true, list: 'Primary', aliases: [],
+  },
+  { // Both Primary? = N: Tara is Arjun's partner
+    id: 'm4t8', label: 'Arjun Mehra & Tara', names: ['Arjun Mehra', 'Tara'], genders: ['M', 'F'],
+    partner: null, max_guests: MAX_GUESTS, couple: false, list: 'Primary', aliases: [],
+  },
+  { // Guest 2 = "Mrs": a partner is invited, name unknown
+    id: 'z8q4', label: 'Mr & Mrs Kabir Khan', names: ['Kabir Khan'], genders: ['M'],
+    partner: { title: 'Mrs', gender: 'F' }, max_guests: MAX_GUESTS, couple: false, list: 'Secondary', aliases: [],
+  },
+  { id: 'a1b2', label: 'Ananya Iyer', names: ['Ananya Iyer'], genders: ['F'],
+    partner: null, max_guests: MAX_GUESTS, couple: false, list: 'Primary', aliases: ['Annu'] },
+  { // a search for "agrawal" still finds her
+    id: 'p3x9', label: 'Isha Agarwal', names: ['Isha Agarwal'], genders: ['F'],
+    partner: null, max_guests: MAX_GUESTS, couple: false, list: 'Primary', aliases: [] },
+  { // a search for "Rohan Kumar Mehta" still finds him
+    id: 'r0m1', label: 'Rohan Mehta', names: ['Rohan Mehta'], genders: ['M'],
+    partner: null, max_guests: MAX_GUESTS, couple: false, list: 'Primary', aliases: [] },
 ];
 
 /* ---------- small helpers ---------- */
@@ -105,18 +139,69 @@ function fail(message, code) {
   return err;
 }
 
+const genderOf = (v) => (v === 'M' || v === 'F' ? v : '');
+
+function normalizePartner(p) {
+  if (!isPlainObject(p)) return null;
+  const want = String(p.title ?? '').trim().replace(/\.$/, '').toLowerCase();
+  const title = TITLES.find((t) => t.toLowerCase() === want);
+  return title ? { title, gender: genderOf(p.gender) } : null;
+}
+
+function normalizeBooked(b) {
+  if (!isPlainObject(b) || !isPlainObject(b.payload)) return null;
+  const out = {
+    filled_by: String(b.filled_by ?? '').trim(),
+    updated_at: String(b.updated_at ?? ''),
+    payload: b.payload,
+  };
+  if (b.has_note === true) out.has_note = true;
+  return out;
+}
+
+/** A server (or mock) guest record in the shape documented at the top of this file. */
 function normalizeGuest(g) {
   if (!isPlainObject(g) || !g.id) return null;
-  const names = Array.isArray(g.names)
-    ? g.names.map((n) => String(n ?? '').trim()).filter(Boolean)
-    : [];
+  const rawGenders = Array.isArray(g.genders) ? g.genders : [];
+  const people = (Array.isArray(g.names) ? g.names : [])
+    .map((n, i) => ({ name: String(n ?? '').trim(), gender: genderOf(rawGenders[i]) }))
+    .filter((p) => p.name);
   const max = Math.trunc(Number(g.max_guests));
   return {
     id: String(g.id),
     label: String(g.label ?? '').trim(),
-    names,
-    max_guests: Number.isFinite(max) ? Math.min(10, Math.max(1, max)) : 1,
+    names: people.map((p) => p.name),
+    genders: people.map((p) => p.gender),
+    partner: normalizePartner(g.partner),
+    max_guests: Number.isFinite(max) ? Math.min(10, Math.max(1, max)) : MAX_GUESTS,
+    couple: g.couple === true,
+    list: LISTS.includes(g.list) ? g.list : '',
+    booked: normalizeBooked(g.booked),
   };
+}
+
+/** Mock mode: the latest logged answer for a ticket id ({updated_at, payload}), or null. */
+function mockLatest(id, { listedOnly = false } = {}) {
+  const log = readJSON(KEY_MOCK);
+  const list = Array.isArray(log) ? log : [];
+  for (let i = list.length - 1; i >= 0; i -= 1) {
+    const entry = list[i];
+    const p = isPlainObject(entry) ? entry.payload : null;
+    if (!isPlainObject(p) || (listedOnly && p.unlisted === true) || String(p.id ?? '').trim().toLowerCase() !== id) continue;
+    return { updated_at: String(entry.updated_at ?? ''), payload: p };
+  }
+  return null;
+}
+
+/** Mock mode: the latest saved answer for a listed ticket id, like the server's `booked`
+ * (browser details and the private note left out; `has_note` when a note is saved). */
+function mockBooked(id) {
+  const latest = mockLatest(id, { listedOnly: true });
+  if (!latest) return null;
+  const { client, note, ...payload } = latest.payload;
+  const out = { filled_by: String(latest.payload.filled_by ?? '').trim(), updated_at: latest.updated_at, payload };
+  if (String(note ?? '').trim()) out.has_note = true;
+  return out;
 }
 
 /** Maps a `{ok:false, error, code}` server reply to a guest-facing Error. */
@@ -167,15 +252,16 @@ function apiUrl(params) {
   return url.toString();
 }
 
-/** Mirrors the server's guest checks so mock mode catches the same mistakes. */
+/** Mirrors the server's guest checks so mock mode catches the same mistakes. Returns the list entry (null if unlisted). */
 function mockCheckGuest(payload) {
   if (payload.unlisted === true) {
     if (!UNLISTED_RE.test(String(payload.id))) throw fail(`${MSG.invalid}: ticket id looks wrong.`, 'invalid');
-    return;
+    return null;
   }
   const g = MOCK_GUESTS.find((x) => x.id === String(payload.id).trim().toLowerCase());
   if (!g) throw fail(MSG.unknownGuest, 'unknown_guest');
   if (payload.guests.length > g.max_guests) throw fail(MSG.tooMany, 'too_many');
+  return g;
 }
 
 /* ---------- public API ---------- */
@@ -189,7 +275,8 @@ export function isMock() {
 }
 
 /**
- * Searches the private guest list. Fewer than 3 characters returns [].
+ * Searches the private guest list, forgivingly (first names, nicknames, small typos and
+ * extra middle names all work; best matches first). Fewer than 3 characters returns [].
  * @param {string} q
  * @returns {Promise<{id:string,label:string}[]>} at most 5 matches
  * @throws {Error} guest-facing message when the counter can't be reached (live mode)
@@ -198,10 +285,7 @@ export async function findGuests(q) {
   const term = String(q ?? '').trim().slice(0, 60);
   if (term.length < 3) return [];
   if (isMock()) {
-    return MOCK_GUESTS
-      .filter((g) => matchesQuery(term, g.label, g.names))
-      .slice(0, MAX_MATCHES)
-      .map(({ id, label }) => ({ id, label }));
+    return searchGuests(term, MOCK_GUESTS, MAX_MATCHES).map(({ id, label }) => ({ id, label }));
   }
   const data = await request(apiUrl({ action: 'find', q: term }), { method: 'GET' });
   if (!data.ok) throw errorFrom(data);
@@ -213,9 +297,12 @@ export async function findGuests(q) {
 }
 
 /**
- * Loads one guest-list entry by id (used for ?g=<id> links).
+ * Loads one guest-list entry by id (after a search pick, or for ?g=<id> links), including
+ * the latest saved answer for that ticket as `booked` (see the record shape at the top).
  * @param {string} id
- * @returns {Promise<{id:string,label:string,names:string[],max_guests:number}|null>} null when unknown
+ * @returns {Promise<{id:string,label:string,names:string[],genders:string[],partner:{title:string,gender:string}|null,
+ *   max_guests:number,couple:boolean,list:string,booked:{filled_by:string,updated_at:string,payload:object}|null}|null>}
+ *   null when unknown
  * @throws {Error} guest-facing message when the counter can't be reached (live mode)
  */
 export async function getGuest(id) {
@@ -223,7 +310,7 @@ export async function getGuest(id) {
   if (!key || key.length > 40) return null;
   if (isMock()) {
     const g = MOCK_GUESTS.find((x) => x.id === key);
-    return g ? normalizeGuest(g) : null;
+    return g ? normalizeGuest({ ...g, booked: mockBooked(key) }) : null;
   }
   const data = await request(apiUrl({ action: 'guest', id: key }), { method: 'GET' });
   if (!data.ok) {
@@ -236,6 +323,8 @@ export async function getGuest(id) {
 
 /**
  * Saves an RSVP. The latest submission per id wins on the server.
+ * The payload is sent (or, in mock mode, kept) as built, so `travel.via` passes through untouched.
+ * `keep_note: true` with an empty note keeps the ticket's previous note (see `booked.has_note`).
  * @param {object} payload built by logic.buildPayload
  * @returns {Promise<{ok:true,id:string,updated_at:string}>}
  * @throws {Error} with a guest-facing message on any failure
@@ -254,11 +343,17 @@ export async function submitRsvp(payload) {
 
   if (mock) {
     await wait(MOCK_DELAY_MS);
-    mockCheckGuest(payload);
+    const g = mockCheckGuest(payload);
     const updated_at = new Date().toISOString();
+    // Like the server: an empty note with keep_note keeps the previous (unseen) note
+    const { keep_note: keepNote, ...stored } = payload;
+    if (keepNote === true && !String(stored.note ?? '').trim()) {
+      const prev = mockLatest(String(stored.id).trim().toLowerCase());
+      stored.note = String((prev && prev.payload.note) ?? '');
+    }
     const log = readJSON(KEY_MOCK);
     const list = Array.isArray(log) ? log : [];
-    list.push({ updated_at, payload });
+    list.push({ updated_at, payload: g ? { ...stored, label: g.label } : stored }); // like the server: the list's label wins
     writeJSON(KEY_MOCK, list.slice(-MOCK_LOG_MAX));
     return { ok: true, id: String(payload.id), updated_at };
   }

@@ -18,9 +18,8 @@ This document is the contract between the static UI shell (`index.html`, `css/st
 |---|---|---|---|
 | `body[data-stop]` | `platform` `passengers` `route` `arrival` `departure` `junction` `regret-end` | app, on every stop change (initial markup: `platform`) | At `junction` the mini-board heads hop. Also useful to app.js for conditionals. |
 | `body[data-dir]` | `forward` `back` | app, before switching stops | Slide direction of the stop entrance (from the right or the left). |
-| `body[data-mode]` | `train` `flight` `bus` `car` | app, whenever the mode chip changes (initial: `train`) | Swaps the vehicle on the journey track. Steam puffs show only for `train`. |
+| `body[data-mode]` | `local` `train` `flight` `bus` `car` | app, whenever the mode chip changes (initial: `train`) | Swaps the vehicle on the journey track (`local` is the auto-rickshaw) and where its riders sit. Steam puffs show only for `train`. `local` also swaps `.v-away` for `.v-home` copy and fades the arrival and departure stations. |
 | `body[data-party]` | `confirmed` `waitlisted` `regret` | app: `overallStatus(state.guests)` from `logic.js` on every status change (initial: `confirmed`) | `waitlisted` swaps `.v-cnf` copy for `.v-wl` copy (route, arrival and departure titles; junction heading). `regret` tilts the mini-board heads sadly. |
-| `body[data-heads]` | `svg` `png` | static markup, or app (see §9) | Tells app.js whether to swap the head images to the PNGs. |
 | `body.is-busy` | class | app, while `submitRsvp` is in flight | Disables pointer events on `<main>`. Pair it with `#cta-next[aria-busy="true"]`. |
 | `body.is-baaja-on` | class (optional) | app, optional | The same as `#baaja-toggle[aria-pressed="true"]`, which CSS already detects with `:has()`. The dhol icon, the scene dhol and both shehnais move to the beat. |
 | `body.preview-all` | class | inline preview script only | Dev review mode. Never set it from app.js. |
@@ -46,7 +45,7 @@ This document is the contract between the static UI shell (`index.html`, `css/st
   5. Scroll to the top: `scrollTo({top: 0})`.
   6. Focus the heading: `#t-<name>.focus({preventScroll: true})`. Every stop title has `tabindex="-1"`.
   7. Announce it: `announce('Stop 2 of 4: Route')`.
-- **Copy variants:** `.v-cnf` and `.v-wl` spans sit inside `#t-route`, `#t-arrival`, `#t-departure`, `#t-junction` and the junction lede. Only `body[data-party]` controls them, so there's no JS text swapping.
+- **Copy variants:** `.v-cnf` and `.v-wl` spans sit inside `#t-route`, `#t-arrival`, `#t-departure`, `#t-junction` and the junction lede. Only `body[data-party]` controls them, so there's no JS text swapping. `.v-away` / `.v-home` (by `body[data-mode]`) do the same for locals: the passengers and route strips ("Stop 1 of 2", "Last stop") and the junction heading ("See you at the shaadi!"). The live-region line follows suit ("Stop 1 of 2", "Last stop: How you are travelling").
 
 ## 3. Journey bar (sticky, `header#journey-bar`)
 
@@ -57,14 +56,15 @@ This document is the contract between the static UI shell (`index.html`, `css/st
 | `.journey__station[data-stop]` | Static dots at `--at` = 0, .2, .4, .6, .8. Read-only. |
 | `.vehicle__svg[data-mode]` | Four inline SVGs. CSS shows the one that matches `body[data-mode]`, so app.js only sets `data-mode`. |
 | `#baaja-toggle[aria-pressed]` | Set `aria-pressed="true"` or `"false"` to match `baaja.toggle()`. The icon is a dhol, struck through when off. Its accessible name is static ("Baaja: wedding band sound"). |
-| `.mini-board`, `.mini-board__head[data-head="a"/"b"]` | Decor, `aria-hidden`. The heads hop on `body[data-stop="junction"]` and droop on `body[data-party="regret"]`. |
+| `.riders > img.rider[data-rider="0"/"1"]` | The two rider slots in the vehicle (amendments §D). app.js sets `src` to `assets/bobble/guest-{m,f}-bust.webp` from `ridersFor(guests)`, toggles `hidden`, and adds `.is-in` (hop in) or `.is-out` (hop out, then `hidden`). There are only two slots, so never more than two riders. |
+| `.mini-board`, `.mini-board__head[data-head="a"/"b"]` | Decor, `aria-hidden`: the couple's busts (`assets/bobble/*-bust.webp`). They hop on `body[data-stop="junction"]` and droop on `body[data-party="regret"]`. |
 | `.toran` | The garland hanging 20–30px below the bar, with no pointer events. Count it in regret insets (§10). |
 
 ## 4. Platform (`#stop-platform`)
 
 | Id | Element | Contract |
 |---|---|---|
-| `#cover` | `article.ticket.cover` | Static cover ticket with the timetable. No hooks. |
+| `#cover` | `article.ticket.cover` | Static cover ticket with the timetable. No hooks. `.cover__peek` holds the couple's busts, peeking out of the jharokha over the ticket's top edge (CSS only). |
 | `#welcome` | panel, **hidden** by default | Show it when `local.load()` returns a record, and hide `#search-block`. |
 | `#welcome-name` | `p` | `textContent = record.label` |
 | `#welcome-view-pass` | button | Go to the junction with the saved payload. |
@@ -74,6 +74,7 @@ This document is the contract between the static UI shell (`index.html`, `css/st
 | `#guest-search` | `input[type=search]` | Debounce 250ms, call `findGuests(q)` when `q.trim().length >= 3`, and render rows into `#search-results`. |
 | `#search-results` | `ul` | `replaceChildren()` and then append `#tpl-result` clones. It collapses when empty (`:empty`). |
 | `#search-empty` | `p`, **hidden** | Show it when a 3+ character query returns `[]`. Its copy is already in the markup. |
+| `#search-short` | `p`, **hidden** | Show it while 1–2 characters are typed ("Keep going: type at least 3 letters, or add your surname."). Hide it at 0 or 3+. |
 | `#search-error` | `p`, **hidden** | Show it when "Board now" is tapped with nothing chosen. Also focus `#guest-search`. |
 | `#boarding-as` | panel, **hidden** | Show it once a guest is picked (or an unlisted name is typed). |
 | `#boarding-as-name` | `span` | The chosen label. |
@@ -95,6 +96,7 @@ This document is the contract between the static UI shell (`index.html`, `css/st
 | `#add-guest` | Show it while `guests.length < max_guests`. Clicking it appends a card with an empty name and focuses its input. |
 | `#add-guest-hint` | e.g. "You can bring 1 more." Hide it when `#add-guest` is hidden. |
 | `#passengers-error` (`role=alert`, **hidden**) | A stop-level error, e.g. "Pick a status for every passenger." |
+| `#booked` (**hidden**) | Shown when the ticket was already saved (`getGuest(...).booked`, amendments §C). `#booked-text` gets the message ("Priya already booked seats for you both on Fri 9 Oct. …" for a couple when someone else filled it in, else "Your seats are already booked (updated …). …"). `#booked-view-pass` shows the saved ticket at the junction. |
 
 **`#tpl-guest`** produces `li.guest-card`:
 
@@ -105,8 +107,9 @@ This document is the contract between the static UI shell (`index.html`, `css/st
 | `li.guest-card.is-invalid` | Red solid border. Toggle it with `[data-slot="error"]`. |
 | `li.guest-card.is-added` | Optional. Added cards are also detected with `:has(.guest-card__remove:not([hidden]))`. |
 | `[data-slot="no"]` | 1-based passenger number. |
-| `[data-slot="name"]` (`p`) | Read-only name for listed guests. Hide it on added cards. |
-| `.guest-card__name-field` (**hidden**) | Unhide it on added cards. |
+| `[data-slot="name"]` (`p`) | Read-only name for listed guests. Hide it on added and partner cards. |
+| `.guest-card__name-field` (**hidden**) | Unhide it on added cards and on the invited-partner card (placeholder "Your partner's name", required, no remove button). `li.guest-card.is-partner` marks that card. |
+| `[data-slot="gender"]` (`.gender[role=radiogroup][data-group=gender]`, **hidden**) | The M/F toggle (amendments §D): two `role=radio` buttons with `data-value="M"/"F"` and accessible names "Male"/"Female". Unhide it on added, partner and unlisted cards; set the group's `aria-label` to "<name>'s gender". Name and toggle share the `.guest-card__who` row. |
 | `[data-slot="name-label"]` + `[data-slot="name-input"]` | Give the input a unique `id` (e.g. `guest-name-1`) and set the label's `htmlFor` to it. Use `aria-invalid="true"` on errors. |
 | `button[data-action="remove"]` (**hidden**) | Unhide it on added cards. Set `aria-label="Remove passenger N"`. |
 | `.chips[role=radiogroup][data-group="status"]` | Set `aria-label` to `"<name>'s status"` (or "Passenger N's status"). |
@@ -117,7 +120,9 @@ This document is the contract between the static UI shell (`index.html`, `css/st
 
 | Id | Contract |
 |---|---|
-| `#mode-chips[data-group="mode"]` | Static chips with `data-value` = `train`, `flight`, `bus`, `car`. On select, also set `body.dataset.mode`. |
+| `#mode-chips[data-group="mode"]` | Static chips with `data-value` = `local` ("Bhilwara is home", `.chip--home`, first and full width), then `train`, `bus`, `car`, `flight` (the `CONFIG.modes` order, v4 §O1). On select, also set `body.dataset.mode`. The home chip is named by `#home-label` (`aria-labelledby`) and described by `#home-sub`. |
+| `#from-field` | The city field's wrapper. Hidden for locals. |
+| `#local-extras` (**hidden**) | Locals only (amendments §L): "Your stops" with every function lit (`#local-catches`, `#tpl-catch-row` rows) and the note to the couple (`#local-note`, `#local-note-count`, kept in step with `#note`). Locals skip the arrival and departure stops; the CTA reads "Confirm my seat". |
 | `#mode-error` (**hidden**) | |
 | `#from-city` | Text input (maxlength 60). `aria-invalid` on error. |
 | `#city-list` (`datalist`, empty) | Fill it from `CONFIG.cities` with `new Option(city)`. |
@@ -128,8 +133,10 @@ This document is the contract between the static UI shell (`index.html`, `css/st
 | `#depart-date-chips[data-group="depart-date"]` | Static: `2026-12-11` to `2026-12-14` and `unsure`. |
 | `#depart-slot-chips[data-group="depart-slot"]` | Same values as the arrival slots. |
 | `#depart-error` (**hidden**) | For the "departure before arrival" validation message. |
+| `#trip-teaser` / `#trip-teaser-text` | The one-line teaser for the long-weekend map, under the departure date chips (text from `TRIP_COPY.teaser`). |
 | `#catches` (`ol`) | `replaceChildren()` plus one `#tpl-catch-row` per entry of `catches()`. Re-render on every date or slot change. |
 | `#note` | textarea (maxlength 500). Update `#note-count` (`"N / 500"`) on input. |
+| `[data-note-kept]` (**hidden**) | One under each note box (`#note`, `#local-note`, `#regret-note`): "Your earlier note is saved…". Shown while the saved answer has a note this page can't see (`booked.has_note`; the server never sends the note itself) and the box is empty; the next save then sends `keep_note: true`. |
 
 **`#tpl-catch-row`** produces `li.tt-row`:
 - `[data-caught]` is `"true"` (lit diya) or `"false"` (unlit diya, struck-through name).
@@ -150,7 +157,8 @@ This document is the contract between the static UI shell (`index.html`, `css/st
 
 | Id | Contract |
 |---|---|
-| `#arrival-scene.scene` | Add `.is-arrived` once the stop is shown (after a frame). This drives the marigold shower (about 3–5s, runs once), the bobbling heads and the waving arms. Remove it and re-add it to replay. Under reduced motion it's a static scene. |
+| `#arrival-scene.scene` | Add `.is-arrived` once the stop is shown (after a frame). This drives the marigold shower (about 3–5s, runs once) and the wobbling heads. Remove it and re-add it to replay. Under reduced motion it's a static scene. The couple are `.figure` bobbleheads: `.figure__body` and `.figure__head` images stacked on one canvas, the head turning on its neck pivot from `assets/bobble/meta.json`. |
+| `#travel-line` (**hidden**) | The junction's one travel line from `logic.arrivalLine` (amendments §K/§L, v4 §O1): the train booking date for `train`, the home-platform line for `local`, one verified line for `flight`, `bus` and `car`. Hidden when everyone regrets. Dates, times and distances use non-breaking spaces. |
 | `#tap-dhol`, `#tap-shehnai` | Buttons (72px). On click, call `baaja.dholHit()` / `baaja.shehnaiPhrase()`. |
 | `#pass` (`figure.pass.is-loading`) | Keep `.is-loading` while `renderPass` runs; it shows the dot-matrix "Printing your ticket…" placeholder. Then set `#pass-img.src` to an object URL of `passBlob(canvas)` (the cached PNG, revoke the previous URL) and remove `.is-loading`. The figure sits in `.pass-wrap`, whose `::before` is the tilted rani card behind it. |
 | `#pass-img` | `<img>` with intrinsic size 1080×1350. Its alt text is set. |
@@ -158,53 +166,25 @@ This document is the contract between the static UI shell (`index.html`, `css/st
 | `#pass-share` | `sharePass(...)`. On `'unsupported'`, download and then unhide `#pass-wa` (only when `CONFIG.hostWhatsApp` is set). |
 | `#pass-wa` (`a`, **hidden**) | Set `href` to `https://wa.me/<hostWhatsApp>?text=<encoded>`. It already has `target=_blank rel=noopener`. |
 | `#pass-error` (**hidden**) | Shown if rendering fails. |
-| `#booking` (section, **hidden**) | Unhide it only when `travel.mode === 'train'`. |
-| `#booking-list` (`ul`) | `replaceChildren()` plus one `#tpl-booking` per leg. Onward uses the arrival date, or the day before for an early/morning arrival (overnight train). Return uses the departure date. A `Not sure yet` side gets one card listing every candidate date's window. |
 | `#leave-days` | `textContent = workingDays(...)` |
 | `#leave-subject`, `#leave-body` | From `leaveEmail(kind, …)`. `#leave-body` keeps line breaks (`white-space: pre-wrap`). |
 | `#leave-copy` | `navigator.clipboard.writeText(...)`, falling back to a textarea select. Confirm with the toast "Copied". |
 | `#leave-mail` (`a`) | Set `href` to `mailto:?subject=…&body=…`. |
+| `#trip-block`, `#trip` | "Make it a Rajasthan long weekend" (amendments §M): `mountTrip(#trip, {origin, destinations})` from `js/trip.js`, once, on the first visit to the junction. Shown for locals too. |
 | `#junction-edit` | Return to passengers with the state restored. |
-
-**`#tpl-booking`** produces `li.booking-card`:
-
-| Hook | Contract |
-|---|---|
-| `li.booking-card[data-state]` | `upcoming` or `open`. With `open`, CSS hides the countdown and the reminder actions and shows `[data-slot="open-now"]` (text plus an "Open IRCTC" link, `[data-slot="irctc"]`). With `upcoming`, it hides `open-now`. |
-| `[data-slot="leg"]` | e.g. `Onward · Wed 9 Dec` or `Return · Sat 12 Dec` |
-| `[data-slot="opens-verb"]` | `Opens` or `Opened` |
-| `[data-slot="opens"]` | e.g. `Sat 10 Oct, 8:00 AM` |
-| `[data-slot="countdown"]` | e.g. `in 1 day 23 h`. Tick it every minute while the stop is visible. |
-| `[data-slot="dates"]` (`ul`, **hidden**) | "Not sure yet" cards: one `li[data-state]` per candidate date with two spans (date, "opens …" / "open now"). |
-| `[data-slot="note"]` (**hidden**) | A short explanation, e.g. the overnight-train note. |
-| `[data-slot="open-now"]` | Pre-filled: "Booking is open now. Book today." |
-| `[data-slot="gcal"]` | `href = calendarUrl(...)`. The link text "Add 7:50 AM reminder" is in the markup. |
-| `[data-slot="ics"]` | `href = URL.createObjectURL(new Blob([icsText(...)], {type: 'text/calendar'}))`. Set the `download` attribute to a filename. |
 
 ## 9. Regret ending (`#stop-regret-end`)
 
 | Id | Contract |
 |---|---|
-| `#regret-scene` | Static sad couple (`.bobble.is-sad`, arms down, drizzle cloud, `*-head-sad.svg` placeholders with a frown and a tear). There's nothing to toggle. With photo heads (`data-heads="png"`) CSS greys them slightly and shows `.bobble__tear`. |
+| `#regret-scene` | The same bobbleheads as the junction (`.figure.is-sad`), heads drooped about 8° with a slow small wobble, colour slightly drained, under a drizzle cloud. There's nothing to toggle. |
 | `#regret-sub` | Default "Your reply is saved. Still loved, always." Override it if the save hasn't happened yet. |
 | `#regret-note-wrap` | Hide it if a note was already written on the departure stop. |
 | `#regret-note`, `#regret-note-count` | Same behaviour as `#note` / `#note-count`. |
 | `#regret-note-save` | Re-submit with the note (or submit for the first time, depending on the flow). Use `aria-busy` while saving. |
 | `#regret-edit` | Return to passengers. |
 
-**Head images:** every `img[data-head="a" or "b"]` (two on the mini board and one in each scene) carries `src` = the SVG placeholder and `data-png` = the future PNG path. To avoid a 404 in the console, app.js should swap only when `document.body.dataset.heads === 'png'`. Saumy changes that attribute in `index.html` once the PNGs are added (docs/SETUP.md, Part 9):
-
-```js
-if (document.body.dataset.heads === 'png') {
-  document.querySelectorAll('img[data-head]').forEach((img) => {
-    const svg = img.src;
-    img.onerror = () => { img.onerror = null; img.src = svg; };
-    img.src = img.dataset.png;
-  });
-}
-```
-
-`renderPass` wants `heads: {a, b}` as loaded `HTMLImageElement`s. Pass `document.querySelector('.bobble--a img')` and `document.querySelector('.bobble--b img')` once each has `complete && naturalWidth`.
+**Busts for the pass:** `renderPass` wants `heads: {a, b}` as loaded `HTMLImageElement`s. app.js preloads `assets/bobble/saumy-bust.webp` and `manorika-bust.webp` at boot and passes them once loaded; if one fails, pass.js prints a BHILWARA JN postmark instead.
 
 ## 10. Bottom CTA bar (`#cta-bar`) and `regret.js` insets
 
@@ -252,9 +232,8 @@ reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
 | Template | Root | Slots |
 |---|---|---|
 | `#tpl-result` | `li > button.result[data-id]` | `label` |
-| `#tpl-guest` | `li.guest-card[data-index][data-status]` | `no`, `name`, `name-label`, `name-input`, `error`; `[data-action="remove"]`; status chips |
+| `#tpl-guest` | `li.guest-card[data-index][data-status]` | `no`, `name`, `name-label`, `name-input`, `gender`, `error`; `[data-action="remove"]`; status chips |
 | `#tpl-chip` | `button.chip[role=radio][data-value]` | `kicker`, `label`, `hint` |
-| `#tpl-booking` | `li.booking-card[data-state]` | `leg`, `opens-verb`, `opens`, `countdown`, `dates`, `note`, `open-now`, `irctc`, `gcal`, `ics` |
 | `#tpl-catch-row` | `li.tt-row[data-caught]` | `name`, `when`, `quip`, `status` |
 
 ## 14. Static-review recipe

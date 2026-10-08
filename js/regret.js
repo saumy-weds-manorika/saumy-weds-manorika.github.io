@@ -1,12 +1,14 @@
 /**
- * js/regret.js: the runaway "Regret" chip (spec §3.1).
+ * js/regret.js: the runaway "Regret" chip (spec §3.1, per-card counters per v4 §P).
  *
- * The first three taps on any Regret chip make it dodge instead of selecting:
- * the chip is lifted out to document.body as position:fixed (so ancestor
- * transforms or overflow can't trap it) and jumps to a random spot inside the
- * visual viewport, at least 12px from every edge and clear of the sticky bars.
- * A dashed ghost holds its slot and a speech bubble shows the joke. The fourth
- * tap sends it home and selects. From then on, every Regret chip selects at once.
+ * Each guest card runs its own joke, keyed by a stable per-guest key (or, when no
+ * key is given, by the chip element itself). The first three taps for a key make
+ * the chip dodge instead of selecting: the chip is lifted out to document.body as
+ * position:fixed (so ancestor transforms or overflow can't trap it) and jumps to a
+ * random spot inside the visual viewport, at least 12px from every edge and clear
+ * of the sticky bars. A dashed ghost holds its slot and a speech bubble shows the
+ * joke. The fourth tap sends it home and selects. From then on, that key's Regret
+ * selects at once; other keys keep their own count (a new key starts at 0).
  *
  * Self-styled (.rj-* classes, one injected <style id="rj-style">). No dependencies.
  */
@@ -82,9 +84,17 @@ function overlaps(x, y, w, h, r) {
   return x < r.right && x + w > r.left && y < r.bottom && y + h > r.top;
 }
 
+/** A usable counter key: a non-empty string (numbers are stringified) or an object. Else undefined. */
+function normKey(key) {
+  if (typeof key === 'string') return key ? key : undefined;
+  if (typeof key === 'number') return Number.isFinite(key) ? String(key) : undefined;
+  if (key && (typeof key === 'object' || typeof key === 'function')) return key;
+  return undefined;
+}
+
 /**
- * Create the runaway-Regret controller. One instance per page: the dodge count is shared
- * by every Regret chip.
+ * Create the runaway-Regret controller. One instance per page; each key (guest) has its own
+ * dodge count, so one card's joke never uses up another's.
  *
  * @param {object} opts
  * @param {string[]} [opts.messages]      the three dodge messages, in order
@@ -92,7 +102,16 @@ function overlaps(x, y, w, h, r) {
  * @param {(text:string)=>void} [opts.announce] aria-live writer provided by the app
  * @param {()=>({top:number,bottom:number})} [opts.getInsets] px covered by the sticky bar (top) and bottom CTA
  * @param {boolean|(()=>boolean)} [opts.reducedMotion] no spring/wobble when true (OS preference also honoured)
- * @returns {{handle:(buttonEl:HTMLElement,onSelect:()=>void)=>('dodged'|'selected'|'ignored'), readonly dodges:number, reset:()=>void}}
+ * @returns {{
+ *   handle:(buttonEl:HTMLElement,onSelect:()=>void,key?:string)=>('dodged'|'selected'|'ignored'),
+ *   dodgesFor:(key:string|HTMLElement)=>number,
+ *   readonly dodges:number,
+ *   reset:(key?:string|HTMLElement)=>void,
+ * }}
+ *   handle: `key` is the guest's stable id; without it the counter is keyed by the element.
+ *   dodgesFor: dodges so far for that key (0…messages.length).
+ *   dodges: total dodges across every key (debugging only).
+ *   reset: forgets one key's count, or every count when called with no key.
  */
 export function createRegretController({
   messages = DEFAULT_MESSAGES,
@@ -105,9 +124,13 @@ export function createRegretController({
   const finalText = finalMessage || DEFAULT_FINAL;
   const say = typeof announce === 'function' ? announce : null;
 
-  let dodges = 0;
-  let done = false;
-  let moved = null;            // { btn, ghost, x, y } while a chip is out of its slot
+  // Per-key joke state { dodges, done }: string keys in a Map, object keys (incl. the chip
+  // element when no key is given) in a WeakMap so dropped elements are not kept alive.
+  let named = new Map();
+  let byObject = new WeakMap();
+  let total = 0;               // dodges across every key (debugging)
+  let moved = null;            // { btn, ghost, x, y, joke } while a chip is out of its slot
+  let bubbleJoke = null;       // the joke state the visible bubble belongs to
   let lastDodgeAt = 0;
   let calls = 0;               // handle() call counter (for the delegated-click fallback)
   let watchTimer = 0;
@@ -120,8 +143,21 @@ export function createRegretController({
 
   const originals = new WeakMap(); // btn -> original style attribute (string|null)
   const onSelects = new WeakMap(); // btn -> last onSelect passed for it
+  const btnKeys = new WeakMap();   // btn -> last key passed for it (for the delegated-click fallback)
   const flipping = new WeakSet();
   let wired = false;
+
+  /** The joke state for a normalised key (see normKey); created on demand when `create`. */
+  function jokeFor(k, create) {
+    if (k === undefined) return null;
+    const store = typeof k === 'string' ? named : byObject;
+    let j = store.get(k);
+    if (!j && create) {
+      j = { dodges: 0, done: false };
+      store.set(k, j);
+    }
+    return j || null;
+  }
 
   const rm = () => {
     const own = typeof reducedMotion === 'function' ? !!reducedMotion() : !!reducedMotion;
@@ -263,6 +299,7 @@ export function createRegretController({
     clearTimeout(bubbleTimer);
     clearInterval(anchorWatch);
     bubbleAnchor = null;
+    bubbleJoke = null;
     if (bubble) {
       bubble.hidden = true;
       bubble.classList.remove('rj-pop');
@@ -343,7 +380,7 @@ export function createRegretController({
       const { btn } = m;
       const before = calls;
       setTimeout(() => {
-        if (calls === before && moved && moved.btn === btn) handle(btn, onSelects.get(btn));
+        if (calls === before && moved && moved.btn === btn) handle(btn, onSelects.get(btn), btnKeys.get(btn));
       }, 0);
     }, true);
   }
@@ -376,24 +413,27 @@ export function createRegretController({
     };
     let best = { x: x0, y: y0 };
     let bestScore = -1;
-    for (let i = 0; i < 120; i++) {
+    // Cheap per sample; dense phone layouts can leave only a few spots that satisfy everything.
+    for (let i = 0; i < 400; i++) {
       const x = Math.round(x0 + Math.random() * (x1 - x0));
       const y = Math.round(y0 + Math.random() * (y1 - y0));
       const clear = !obstacles.some((r) => overlaps(x - 6, y - 6, w + 12, h + 12, r));
+      // It has to visibly leave its old spot (no overlap with it), or it doesn't read as a dodge.
+      const leaves = Math.abs(x - prev.x) >= w || Math.abs(y - prev.y) >= h;
       const far = Math.hypot(x - prev.x, y - prev.y) >= MIN_JUMP;
       const roomy = !bsize || y - GAP - bsize.h >= reg.top || y + h + GAP + bsize.h <= reg.bottom;
-      // The chip must be tappable (clear), and the bubble should not cover the other options.
-      const score = (clear ? 8 : 0) + (clear && bubbleClear(x, y) ? 4 : 0) + (far ? 2 : 0) + (roomy ? 1 : 0);
+      // The chip must be tappable (clear) and actually move, and the bubble should not cover the other options.
+      const score = (clear ? 16 : 0) + (leaves ? 8 : 0) + (clear && bubbleClear(x, y) ? 4 : 0) + (far ? 2 : 0) + (roomy ? 1 : 0);
       if (score > bestScore) {
         best = { x, y };
         bestScore = score;
-        if (score === 15) break;
+        if (score === 31) break;
       }
     }
     return best;
   }
 
-  function dodge(btn, text) {
+  function dodge(btn, text, joke) {
     if (moved && moved.btn !== btn) settle(true, false);
     if (!moved) {
       if (!originals.has(btn)) originals.set(btn, btn.getAttribute('style'));
@@ -404,7 +444,7 @@ export function createRegretController({
       ghost.textContent = GHOST_TEXT;
       ghost.setAttribute('aria-hidden', 'true');
       if (r.width) ghost.style.minWidth = `${Math.round(r.width)}px`;
-      moved = { btn, ghost, x: Math.round(r.left), y: Math.round(r.top) };
+      moved = { btn, ghost, x: Math.round(r.left), y: Math.round(r.top), joke };
       btn.replaceWith(ghost);
       btn.classList.add('rj-moving');
       pin(btn, moved.x, moved.y, false);
@@ -414,6 +454,7 @@ export function createRegretController({
       listen();
     }
     const m = moved;
+    m.joke = joke;
     const { w, h } = boxSize(btn); // also flushes the start position so the jump animates
     const size = prepBubble(text);
     const spot = pickSpot(w, h, m, size, btn);
@@ -428,6 +469,7 @@ export function createRegretController({
       btn.classList.add('rj-wob');
     }
     revealBubble(() => ({ left: m.x, top: m.y, width: w, height: h }), DODGE_MS);
+    bubbleJoke = joke;
     btn.focus({ preventScroll: true });
   }
 
@@ -486,9 +528,9 @@ export function createRegretController({
 
   /**
    * Call from the Regret chip's click handler.
-   * Dodges for the first three calls (page-wide), then selects.
+   * Dodges for the first three calls for `key` (the guest; the element when omitted), then selects.
    */
-  function handle(btn, onSelect) {
+  function handle(btn, onSelect, key) {
     calls++;
     if (typeof onSelect === 'function' && btn) onSelects.set(btn, onSelect);
     const select = typeof onSelect === 'function' ? onSelect : (btn ? onSelects.get(btn) : null);
@@ -496,32 +538,39 @@ export function createRegretController({
       if (select) select();
       return 'selected';
     }
+    const k = normKey(key);
+    if (k === undefined) btnKeys.delete(btn);
+    else btnKeys.set(btn, k);
+    const joke = jokeFor(k === undefined ? btn : k, true);
     injectStyle();
 
-    if (done) {
-      if (moved) settle(false, false);
+    if (joke.done) {
+      // Another card's chip may still be on the run: send it home and drop its bubble.
+      if (moved) { settle(true, false); hideBubble(); }
       if (select) select();
       return 'selected';
     }
 
-    if (dodges < msgs.length) {
+    if (joke.dodges < msgs.length) {
       const now = Date.now();
       if (moved && moved.btn === btn && now - lastDodgeAt < REPEAT_GUARD_MS) return 'ignored';
       lastDodgeAt = now;
-      const text = msgs[dodges];
-      dodge(btn, text);
+      const text = msgs[joke.dodges];
+      dodge(btn, text, joke);
       if (say) say(text);
-      dodges++;
+      joke.dodges++;
+      total++;
       return 'dodged';
     }
 
     // Fourth tap: home, final message, select.
-    done = true;
+    joke.done = true;
     if (moved) settle(true, moved.btn === btn);
     if (btn.isConnected) {
       if (document.activeElement !== btn) btn.focus({ preventScroll: true });
       prepBubble(finalText);
       revealBubble(() => (isShown(btn) ? layoutRect(btn) : null), FINAL_MS);
+      bubbleJoke = joke;
       listen();
       // If the guest moves on (e.g. "Send my regrets") while the message is up, take it down.
       clearInterval(anchorWatch);
@@ -535,15 +584,36 @@ export function createRegretController({
     return 'selected';
   }
 
-  return {
-    handle,
-    get dodges() { return dodges; },
-    reset() {
+  /** Dodges so far for one key (a string key, or the chip element when handle() got no key). */
+  function dodgesFor(key) {
+    const j = jokeFor(normKey(key), false);
+    return j ? j.dodges : 0;
+  }
+
+  /** Forget one key's count (e.g. a removed guest), or every count when called without a key. */
+  function reset(key) {
+    const k = normKey(key);
+    if (k === undefined) {
       if (moved) settle(false, false);
       hideBubble();
-      dodges = 0;
-      done = false;
+      named = new Map();
+      byObject = new WeakMap();
+      total = 0;
       lastDodgeAt = 0;
-    },
+      return;
+    }
+    const j = jokeFor(k, false);
+    if (!j) return;
+    if (moved && moved.joke === j) { settle(false, false); hideBubble(); }
+    else if (bubbleJoke === j) hideBubble();
+    total = Math.max(0, total - j.dodges);
+    (typeof k === 'string' ? named : byObject).delete(k);
+  }
+
+  return {
+    handle,
+    dodgesFor,
+    get dodges() { return total; },
+    reset,
   };
 }
