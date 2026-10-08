@@ -514,6 +514,302 @@ test('buildSummary_: People references line up with the v4 columns; hub table ab
   assert.ok(unlisted.v.includes('where Col7=true order by Col6 desc'));
 });
 
+/* ---------- v4 §Q: "Other date" (a day typed in instead of a chip) ---------- */
+
+test('validatePayload_ / cleanPayload_ (v4 §Q): a typed-in day passes and is stored as plain YYYY-MM-DD text, like the chips', () => {
+  const custom = (arrive, depart, extra = {}) => ({ ...one({ gender: 'M' }), travel: { ...travel, via: { hub: 'UDZ', onward: 'car' }, arrive, depart, ...extra } });
+  const p = custom({ date: '2026-12-05', slot: 'morning' }, { date: '2026-12-15', slot: 'evening' });
+  assert.deepEqual(gs('validatePayload_', p), { ok: true, errors: [] });
+  const clean = gs('cleanPayload_', p);
+  assert.deepEqual(clean.travel, {
+    mode: 'train', from: 'Pune', arrive: { date: '2026-12-05', slot: 'morning' }, depart: { date: '2026-12-15', slot: 'evening' },
+    via: { hub: 'UDZ', onward: 'car' },
+  });
+  const built = logic.buildPayload({ guest: { id: 'k7m2', label: base.label, unlisted: false }, guests: p.guests, travel: p.travel, note: '' }, { ts: 't', ua: 'u' });
+  assert.deepEqual(clean.travel, JSON.parse(JSON.stringify(built.travel)), 'stored exactly as the website sends it');
+  const headers = gsConst('HEADERS').People;
+  const [row] = gs('peopleRows_', clean, { list: 'Primary', couple: false }, new Date('2026-10-09T12:00:00.000Z'));
+  assert.deepEqual(['arrive_date', 'arrive_slot', 'depart_date', 'depart_slot'].map((h) => row[headers.indexOf(h)]),
+    ["'2026-12-05", "'morning", "'2026-12-15", "'evening"], 'People keeps the date as plain text');
+
+  // Same verdict and messages as js/logic.js: the whole range "Other date" allows, typed days mixed with chips,
+  // locals, the departure-before-arrival rule, dates that aren't real, and real dates outside the range
+  // (arrive 1–11 Dec, leave 10–31 Dec), which only a stale or hand-made page could send.
+  const cases = [
+    custom({ date: '2026-12-01', slot: 'early' }, { date: '2026-12-31', slot: 'night' }),
+    custom({ date: '2026-12-08', slot: 'unsure' }, { date: '2026-12-12', slot: 'morning' }),
+    custom({ date: '2026-12-09', slot: 'evening' }, { date: '2026-12-10', slot: 'night' }),
+    custom({ date: 'unsure', slot: 'unsure' }, { date: '2026-12-13', slot: 'early' }),
+    custom({ date: '2026-12-03', slot: 'morning' }, { date: 'unsure', slot: 'unsure' }, { mode: 'bus' }),
+    custom({ date: '2026-12-02', slot: 'night' }, { date: '2026-12-20', slot: 'morning' }, { mode: 'local', from: '' }),
+    custom({ date: '2026-12-11', slot: 'morning' }, { date: '2026-12-10', slot: 'morning' }),
+    custom({ date: '2026-12-05', slot: 'morning' }, { date: '2026-12-04', slot: 'night' }),
+    custom({ date: '2026-12-10', slot: 'evening' }, { date: '2026-12-10', slot: 'early' }),
+    custom({ date: '2026-12-32', slot: 'morning' }, { date: '2026-12-12', slot: 'morning' }),
+    custom({ date: '2026-12-5', slot: 'morning' }, { date: '2026-12-12', slot: 'morning' }),
+    custom({ date: '2026-11-31', slot: 'morning' }, { date: '2026-12-12', slot: 'morning' }),
+    custom({ date: '2026-12-09', slot: 'morning' }, { date: '15 Dec', slot: 'morning' }),
+    custom({ date: '', slot: 'morning' }, { date: '2026-12-12', slot: 'morning' }),
+    custom({ date: '2026-11-30', slot: 'morning' }, { date: '2026-12-12', slot: 'morning' }),
+    custom({ date: '2026-12-12', slot: 'morning' }, { date: '2026-12-13', slot: 'morning' }),
+    custom({ date: '2026-12-09', slot: 'morning' }, { date: '2027-01-02', slot: 'morning' }),
+    custom({ date: '2026-12-05', slot: 'morning' }, { date: '2026-12-09', slot: 'morning' }),
+    custom({ date: '2025-12-05', slot: 'morning' }, { date: '2026-12-12', slot: 'morning' }),
+    custom({ date: '2026-12-15', slot: 'evening' }, { date: '2026-12-15', slot: 'early' }),
+    custom({ date: 'unsure', slot: 'unsure' }, { date: '2026-12-09', slot: 'night' }, { mode: 'local', from: '' }),
+  ];
+  const verdicts = cases.map((q) => {
+    const got = gs('validatePayload_', q);
+    assert.deepEqual(got, JSON.parse(JSON.stringify(logic.validatePayload(q))), JSON.stringify(q.travel));
+    return got.ok;
+  });
+  assert.deepEqual(verdicts, [true, true, true, true, true, true, false, false, false, false, false, false, false, false,
+    false, false, false, false, false, false, false]);
+  assert.deepEqual(gs('validatePayload_', cases[6]).errors, ["Your departure date can't be before your arrival date."]);
+  assert.deepEqual(gs('validatePayload_', cases[8]).errors, ["Your departure time can't be before your arrival time."]);
+  assert.deepEqual(gs('cleanPayload_', cases[5]).travel.arrive, { date: '2026-12-02', slot: 'night' }, 'a local may give a typed day too');
+  const arriveRange = 'Pick a rough arrival date from 1 to 11 Dec (or "Not sure yet").';
+  const departRange = 'Pick a rough departure date from 10 to 31 Dec (or "Not sure yet").';
+  assert.deepEqual(gs('validatePayload_', cases[14]).errors, [arriveRange]);
+  assert.deepEqual(gs('validatePayload_', cases[15]).errors, [arriveRange]);
+  assert.deepEqual(gs('validatePayload_', cases[16]).errors, [departRange]);
+  assert.deepEqual(gs('validatePayload_', cases[17]).errors, [departRange]);
+  assert.deepEqual(gs('validatePayload_', cases[18]).errors, [arriveRange]);
+  assert.deepEqual(gs('validatePayload_', cases[19]).errors, [arriveRange, "Your departure time can't be before your arrival time."]);
+  assert.deepEqual(gs('validatePayload_', cases[20]).errors, [departRange], 'locals too');
+  // Every date chip is inside the range.
+  for (const date of gsConst('ARRIVE_DATES')) assert.equal(gs('validatePayload_', custom({ date, slot: 'morning' }, { date: 'unsure', slot: 'unsure' })).ok, true, date);
+  for (const date of gsConst('DEPART_DATES')) assert.equal(gs('validatePayload_', custom({ date: 'unsure', slot: 'unsure' }, { date, slot: 'night' })).ok, true, date);
+});
+
+test('dateLabel_ reads typed-in days like logic.formatDate', () => {
+  for (const d of ['2026-12-01', '2026-12-05', '2026-12-09', '2026-12-12', '2026-12-15', '2026-12-31', 'unsure']) {
+    assert.equal(gs('dateLabel_', d), logic.formatDate(d), d);
+  }
+});
+
+/**
+ * Counts what one "=ARRAYFORMULA(SUMPRODUCT(…))" cell from buildSummary_ would show for some fictional People
+ * rows, by turning its per-row expression into JavaScript. It knows only what those counts use: People column
+ * ranges, "…" literals, {…} lists, = <> < <= > >=, & * +, IF, REGEXMATCH, ISNA, MATCH(…,…,0), ISNUMBER and
+ * TEXT(…,"yyyy-mm-dd"). A cell value is text, or a SheetNumber for a date Sheets stored as a number.
+ */
+const NA = Symbol('#N/A');
+const DAY_MS = 86400000;
+const SHEETS_EPOCH = Date.UTC(1899, 11, 30); // day 0 of Sheets date numbers
+/**
+ * A date number, as Sheets stores a date typed into a cell by hand (days since 30 Dec 1899). It compares with
+ * text the way Sheets does: below any text and never equal to it (its primitive is a string starting with
+ * U+0000), and with another date number in date order.
+ */
+class SheetNumber {
+  constructor(iso) { this.n = (Date.parse(`${iso}T00:00:00Z`) - SHEETS_EPOCH) / DAY_MS; }
+  valueOf() { return `\u0000${String(this.n).padStart(9, '0')}`; }
+}
+const SHEET_FNS = {
+  IF: (cond, a, b) => (cond ? a : b),
+  REGEXMATCH: (s, re) => new RegExp(re).test(String(s)),
+  ISNA: (v) => v === NA,
+  MATCH: (v, list) => { const i = list.indexOf(v); return i < 0 ? NA : i + 1; },
+  ISNUMBER: (v) => v instanceof SheetNumber,
+  TEXT: (v, format) => {
+    assert.equal(format, 'yyyy-mm-dd');
+    return v instanceof SheetNumber ? new Date(SHEETS_EPOCH + v.n * DAY_MS).toISOString().slice(0, 10) : String(v);
+  },
+};
+function countPeople(formula, people) {
+  const m = /^=ARRAYFORMULA\(SUMPRODUCT\((.*)\)\)$/.exec(formula);
+  assert.ok(m, `not a SUMPRODUCT count: ${formula}`);
+  const js = m[1].split(/("[^"]*")/).map((part, i) => (i % 2 ? JSON.stringify(part.slice(1, -1)) : part
+    .replace(/People!\$([A-Z]+)\$2:\$\1/g, 'v.$1')
+    .replace(/<>/g, '!=')
+    .replace(/(^|[^<>!])=/g, '$1==')
+    .replace(/&/g, '+')
+    .replace(/\{/g, '[')
+    .replace(/\}/g, ']'))).join('');
+  assert.ok(!/People!|[A-Z]+\d+/.test(js.replace(/"[^"]*"/g, '')), `every reference was translated: ${js}`);
+  const fn = new Function('v', ...Object.keys(SHEET_FNS), `return ${js};`);
+  return people.reduce((n, v) => n + Number(fn(v, ...Object.values(SHEET_FNS))), 0);
+}
+/** A People row keyed by column letter (A = id …), as the Summary formulas see it. */
+const personRow = (o) => Object.fromEntries(gsConst('HEADERS').People.map((h, i) => [String.fromCharCode(65 + i), o[h] ?? '']));
+const traveller = (status, mode, arrive, aslot, depart, dslot) => personRow({
+  status, mode, arrive_date: arrive, arrive_slot: aslot, depart_date: depart, depart_slot: dslot,
+});
+// Fictional answers: chips, typed-in days ("Other date"), "Not sure yet", locals with typed days, a regret.
+const SUMMARY_PEOPLE = [
+  traveller('confirmed', 'train', '2026-12-09', 'evening', '2026-12-12', 'morning'),
+  traveller('confirmed', 'flight', '2026-12-05', 'morning', '2026-12-15', 'evening'),
+  traveller('waitlisted', 'car', '2026-12-07', 'night', 'unsure', 'unsure'),
+  traveller('confirmed', 'bus', 'unsure', 'unsure', '2026-12-10', 'afternoon'),
+  traveller('confirmed', 'local', '2026-12-01', 'morning', '2026-12-20', 'night'),
+  traveller('waitlisted', 'local', 'unsure', 'unsure', 'unsure', 'unsure'),
+  traveller('regret', '', '', '', '', ''),
+  traveller('waitlisted', 'train', '2026-12-11', 'morning', '2026-12-13', 'early'),
+  traveller('confirmed', 'train', '2026-12-10', 'afternoon', '2026-12-11', 'night'),
+];
+const SUMMARY_TABS = [
+  { list: 'Primary', sheet: { getName: () => 'First List' }, col: { guest1: 0, gender1: 1, guest2: 2, gender2: 3, both: 4, nick: 5, id: 6 } },
+  { list: 'Secondary', sheet: { getName: () => 'Second List' }, col: { guest1: 0, gender1: 1, guest2: 2, gender2: 3, both: 4, nick: 5, id: 6 } },
+];
+
+test('buildSummary_ (v4 §Q): arrival and departure grids get an "Other dates" row before "Not sure yet"', () => {
+  const { sheet, writes } = summaryRecorder();
+  ctx.buildSummary_(sheet, SUMMARY_TABS);
+  const cell = (r, c) => writes.find((w) => w.r === r && w.c === c)?.v;
+  const titleRow = (prefix) => writes.find((w) => w.c === 1 && String(w.v).startsWith(prefix)).r;
+  const slots = gsConst('SLOTS');
+  const grid = (prefix) => {
+    const head = titleRow(prefix) + 1;
+    assert.deepEqual(writes.filter((w) => w.r === head).map((w) => w.v),
+      ['Date', 'Early morning', 'Morning', 'Afternoon', 'Evening', 'Night', 'Not sure yet', 'Total']);
+    const rows = [];
+    for (let r = head + 1; ; r++) { rows.push(r); if (cell(r, 1) === 'Total') break; }
+    return { head, rows, labels: rows.map((r) => cell(r, 1)) };
+  };
+  const arrivals = grid('Arrivals (confirmed');
+  const departures = grid('Departures (confirmed');
+  assert.deepEqual(arrivals.labels, ["'Wed 9 Dec", "'Thu 10 Dec", "'Fri 11 Dec", "'Other dates", "'Not sure yet", 'Total']);
+  assert.deepEqual(departures.labels, ["'Fri 11 Dec", "'Sat 12 Dec", "'Other dates", "'Not sure yet", 'Total']);
+
+  // The "Other dates" formulas: a YYYY-MM-DD date that isn't one of the chips (nor 'unsure'), confirmed +
+  // waitlisted, locals left out, one cell per time of day.
+  for (const [g, col, dates] of [[arrivals, 'L', gsConst('ARRIVE_DATES')], [departures, 'N', gsConst('DEPART_DATES')]]) {
+    const other = g.rows[g.labels.indexOf("'Other dates")];
+    // The date as text, even where Sheets holds a date number (a date typed into People by hand)
+    const date = `IF(ISNUMBER(People!$${col}$2:$${col}),TEXT(People!$${col}$2:$${col},"yyyy-mm-dd"),People!$${col}$2:$${col})`;
+    dates.filter((d) => d !== 'unsure').forEach((d, k) => {
+      assert.ok(cell(g.rows[k], 2).startsWith(`=ARRAYFORMULA(SUMPRODUCT((${date}="${d}")*`), cell(g.rows[k], 2));
+    });
+    slots.forEach((slot, i) => {
+      const f = cell(other, 2 + i);
+      assert.ok(f.includes(`REGEXMATCH(""&${date},"^\\d{4}-\\d{2}-\\d{2}$")`), f);
+      assert.ok(f.includes(`ISNA(MATCH(${date},{"${dates.join('","')}"},0))`), f);
+      assert.ok(f.includes(`(People!$${String.fromCharCode(col.charCodeAt(0) + 1)}$2:$${String.fromCharCode(col.charCodeAt(0) + 1)}="${slot}")`), 'by time of day');
+      assert.ok(f.includes('((People!$G$2:$G="confirmed")+(People!$G$2:$G="waitlisted"))'), 'confirmed + waitlisted');
+      assert.ok(f.includes('(People!$H$2:$H<>"local")'), 'locals left out');
+    });
+    assert.equal(cell(other, 8), `=SUM(B${other}:G${other})`);
+    // The Total row adds up every row above it, "Other dates" included.
+    const first = g.rows[0];
+    const total = g.rows.at(-1);
+    assert.deepEqual([2, 3, 4, 5, 6, 7, 8].map((c) => cell(total, c)),
+      ['B', 'C', 'D', 'E', 'F', 'G', 'H'].map((L) => `=SUM(${L}${first}:${L}${total - 1})`));
+  }
+
+  // What the cells would show for the fictional answers: rows × [early, morning, afternoon, evening, night, unsure].
+  const shown = (g) => g.rows.slice(0, -1).map((r) => slots.map((_, i) => countPeople(cell(r, 2 + i), SUMMARY_PEOPLE)));
+  assert.deepEqual(shown(arrivals), [
+    [0, 0, 0, 1, 0, 0], // 9 Dec
+    [0, 0, 1, 0, 0, 0], // 10 Dec
+    [0, 1, 0, 0, 0, 0], // 11 Dec
+    [0, 1, 0, 0, 1, 0], // Other dates: 5 Dec morning, 7 Dec night
+    [0, 0, 0, 0, 0, 1], // Not sure yet
+  ]);
+  assert.deepEqual(shown(departures), [
+    [0, 0, 0, 0, 1, 0], // 11 Dec
+    [0, 1, 0, 0, 0, 0], // 12 Dec
+    [1, 0, 1, 1, 0, 0], // Other dates: 13 Dec early, 10 Dec afternoon, 15 Dec evening
+    [0, 0, 0, 0, 0, 1], // Not sure yet
+  ]);
+  // Each travelling guest who is coming lands in exactly one row of each grid.
+  const coming = SUMMARY_PEOPLE.filter((p) => ['confirmed', 'waitlisted'].includes(p.G) && p.H !== 'local').length;
+  for (const g of [arrivals, departures]) assert.equal(shown(g).flat().reduce((a, b) => a + b, 0), coming);
+  // Blank or hand-typed junk is never an "Other date".
+  const junk = [traveller('confirmed', 'train', '', 'morning', '', 'morning'), traveller('confirmed', 'train', 'soon', 'morning', '13 Dec', 'morning')];
+  for (const g of [arrivals, departures]) {
+    const other = g.rows[g.labels.indexOf("'Other dates")];
+    assert.equal(countPeople(cell(other, 3), junk), 0);
+  }
+
+  // A note under the departures grid explains the row, then one blank row before "Arrivals by hub".
+  const departTotal = departures.rows.at(-1);
+  assert.match(cell(departTotal + 1, 1), /^"Other dates" counts the guests who typed in a day/);
+  assert.equal(cell(departTotal + 2, 1), undefined);
+  assert.equal(titleRow('Arrivals by hub'), departTotal + 3);
+  assert.equal(cell(arrivals.rows.at(-1) + 1, 1), undefined, 'a blank row between the two grids');
+});
+
+test('buildSummary_ (v4 §Q): the nights table adds "Nights before 9 Dec" and "Nights from 12 Dec on"', () => {
+  const { sheet, writes } = summaryRecorder();
+  ctx.buildSummary_(sheet, SUMMARY_TABS);
+  const cell = (r, c) => writes.find((w) => w.r === r && w.c === c)?.v;
+  const head = writes.find((w) => w.c === 1 && w.v === 'Nights in Bhilwara (travelling guests)').r + 1;
+  assert.deepEqual(writes.filter((w) => w.r === head).map((w) => w.v), ['Night of', 'Confirmed', 'Waitlisted', 'Total']);
+  const rows = [1, 2, 3, 4, 5].map((i) => head + i);
+  assert.deepEqual(rows.map((r) => cell(r, 1)), ["'Nights before 9 Dec", "'Wed 9 Dec", "'Thu 10 Dec", "'Fri 11 Dec", "'Nights from 12 Dec on"]);
+  const note = cell(head + 6, 1);
+  assert.match(note, /^Someone counts for a night if they arrive on or before that date and leave after it\./);
+  assert.ok(note.includes('"Nights before 9 Dec"') && note.includes('"Nights from 12 Dec on"') && note.includes('Locals are not counted'), note);
+
+  // Dates compared as text, even where Sheets holds a date number (a date typed into People by hand)
+  const asText = (L) => `IF(ISNUMBER(People!$${L}$2:$${L}),TEXT(People!$${L}$2:$${L},"yyyy-mm-dd"),People!$${L}$2:$${L})`;
+  const arrive = `IF(People!$L$2:$L="unsure","2026-12-09",${asText('L')})`;
+  const depart = `IF(People!$N$2:$N="unsure","2026-12-12",${asText('N')})`;
+  for (const r of rows) {
+    assert.ok(cell(r, 2).startsWith('=ARRAYFORMULA(SUMPRODUCT((People!$G$2:$G="confirmed")*'), cell(r, 2));
+    assert.ok(cell(r, 3).startsWith('=ARRAYFORMULA(SUMPRODUCT((People!$G$2:$G="waitlisted")*'), cell(r, 3));
+    for (const f of [cell(r, 2), cell(r, 3)]) assert.ok(f.includes('*(People!$H$2:$H<>"local")'), 'locals left out');
+    assert.equal(cell(r, 4), `=B${r}+C${r}`);
+  }
+  assert.ok(cell(rows[0], 2).includes(`(${arrive}<"2026-12-09")*(${depart}>${arrive})`), cell(rows[0], 2));
+  assert.ok(cell(rows[1], 2).includes(`(${arrive}<="2026-12-09")*(${depart}>"2026-12-09")`), 'listed nights unchanged');
+  assert.ok(cell(rows[4], 2).includes(`(${depart}>"2026-12-12")*(${depart}>${arrive})`), cell(rows[4], 2));
+
+  // [confirmed, waitlisted] per row for the fictional answers (locals and the regret never count).
+  assert.deepEqual(rows.map((r) => [countPeople(cell(r, 2), SUMMARY_PEOPLE), countPeople(cell(r, 3), SUMMARY_PEOPLE)]), [
+    [1, 1], // before 9 Dec: arrives 5 Dec (confirmed), 7 Dec (waitlisted)
+    [3, 1],
+    [3, 1],
+    [2, 2],
+    [1, 1], // from 12 Dec on: leaves 15 Dec (confirmed), 13 Dec (waitlisted); "Not sure yet" leaves 12 Dec
+  ]);
+  // The two new rows need at least one night in town: a same-day visit counts for neither.
+  const visit = (a, d) => [traveller('confirmed', 'car', a, 'morning', d, 'evening')];
+  assert.equal(countPeople(cell(rows[0], 2), visit('2026-12-03', '2026-12-03')), 0);
+  assert.equal(countPeople(cell(rows[0], 2), visit('2026-12-03', '2026-12-04')), 1);
+  assert.equal(countPeople(cell(rows[4], 2), visit('2026-12-20', '2026-12-20')), 0);
+  assert.equal(countPeople(cell(rows[4], 2), visit('2026-12-11', '2026-12-13')), 1);
+  assert.equal(countPeople(cell(rows[4], 2), visit('2026-12-11', 'unsure')), 0);
+});
+
+test('buildSummary_ (v4 §Q): a date typed into People by hand (a date number in Sheets) counts like the same date as text', () => {
+  const { sheet, writes } = summaryRecorder();
+  ctx.buildSummary_(sheet, SUMMARY_TABS);
+  // Sheets sorts a number before any text, which is what made a raw date number look like an early arrival
+  assert.ok(new SheetNumber('2026-12-10') < '2026-12-09' && new SheetNumber('2026-12-10') != '2026-12-10');
+  assert.ok(new SheetNumber('2026-12-09') < new SheetNumber('2026-12-10'));
+  assert.equal(SHEET_FNS.TEXT(new SheetNumber('2026-12-10'), 'yyyy-mm-dd'), '2026-12-10');
+
+  // Fictional rows: the same answers once as the script writes them (text) and once hand-typed (date numbers).
+  const answers = [
+    ['confirmed', 'train', '2026-12-10', 'morning', '2026-12-12', 'evening'], // chip dates
+    ['waitlisted', 'car', '2026-12-05', 'night', '2026-12-15', 'morning'], // typed-in days
+    ['confirmed', 'flight', '2026-12-09', 'evening', 'unsure', 'unsure'],
+    ['confirmed', 'local', '2026-12-10', 'morning', '2026-12-11', 'night'],
+  ];
+  const asText = answers.map((a) => traveller(...a));
+  const asNumbers = answers.map(([st, mode, ad, as, dd, ds]) => traveller(st, mode,
+    /^\d{4}-/.test(ad) ? new SheetNumber(ad) : ad, as, /^\d{4}-/.test(dd) ? new SheetNumber(dd) : dd, ds));
+  // Every count that reads a date column (the nights table and both grids) shows the same for both.
+  const counts = writes.filter((w) => typeof w.v === 'string' && w.v.startsWith('=ARRAYFORMULA(SUMPRODUCT(')
+    && /People!\$[LN]\$2:\$[LN]/.test(w.v));
+  assert.ok(counts.length >= 5 * 2 + 9 * 6, `nights and grid cells found: ${counts.length}`);
+  for (const w of counts) assert.equal(countPeople(w.v, asNumbers), countPeople(w.v, asText), `R${w.r}C${w.c}: ${w.v}`);
+
+  // Spot checks: nobody arrives "before 9 Dec" by being a number, and the grids still add up.
+  const head = writes.find((w) => w.c === 1 && w.v === 'Nights in Bhilwara (travelling guests)').r + 1;
+  const at = (r, c) => writes.find((w) => w.r === r && w.c === c).v;
+  assert.deepEqual([1, 2, 3, 4, 5].map((i) => countPeople(at(head + i, 2), asNumbers) + countPeople(at(head + i, 3), asNumbers)),
+    [1, 2, 3, 3, 1]); // before 9 Dec: the 5 Dec arrival · 9, 10, 11 Dec · from 12 Dec on: leaves 15 Dec
+  for (const prefix of ['Arrivals (confirmed', 'Departures (confirmed']) {
+    const top = writes.find((w) => w.c === 1 && String(w.v).startsWith(prefix)).r + 2;
+    let sum = 0;
+    for (let r = top; at(r, 1) !== 'Total'; r++) for (let c = 2; c <= 7; c++) sum += countPeople(at(r, c), asNumbers);
+    assert.equal(sum, 3, `${prefix}: every travelling guest in exactly one row`);
+  }
+});
+
 /* ---------- small helpers ---------- */
 
 test('chunk_ splits the cached list without breaking characters; runs_ groups rows', () => {

@@ -10,7 +10,7 @@
  */
 import { CONFIG } from './config.js';
 import {
-  formatDate, isValidISODate, slotHour, catches, workingDays, arrivalLine,
+  formatDate, isValidISODate, slotHour, catches, workingDays, arrivalLine, customDate, pastedDay,
   overallStatus, validatePayload, buildPayload, leaveEmail, matchScore, normalizeName, ridersFor,
 } from './logic.js';
 import { findGuests, getGuest, submitRsvp, newUnlistedId, local, warmUp } from './api.js';
@@ -56,6 +56,11 @@ const HUBS = {
 const ONWARD_ORDER = { flight: ['car', 'train', 'bus', 'unsure'], train: ['car', 'bus', 'train', 'unsure'] };
 const ONWARD_LABEL = { car: 'Car/cab', train: 'Train', bus: 'Bus', unsure: 'Not sure yet' };
 const RIDER_OUT_MS = 300;        // matches .rider.is-out in styles.css
+const SIDES = ['arrive', 'depart'];
+/** Each side's date chips (`unsure` included); "Other date" (v4 §Q) covers any other allowed December day. */
+const CHIP_DATES = { arrive: CONFIG.arriveDates, depart: CONFIG.departDates };
+const OTHER = 'other';           // data-value of the "Other date" chip; never stored (the typed date is)
+const OTHER_LABEL = 'Other date';
 
 /** Bobblehead art (amendments §E): the couple's busts for the pass, guest busts for the riders. */
 const BUSTS = { a: 'assets/bobble/saumy-bust.webp', b: 'assets/bobble/manorika-bust.webp' };
@@ -174,6 +179,12 @@ let busy = false;   // a submission is in flight
 let lastGoAt = 0;   // performance.now() of the last stop change (double-tap guard)
 let changedFrom = ''; // id of the ticket holder before "Change", so a different pick starts fresh
 let awayTravel = null; // the non-local plan, kept while "Bhilwara is home" is picked, so switching back restores it
+/**
+ * "Other date" is the picked date chip on this side (v4 §Q). The typed day lives in #<side>-day and the
+ * side's date stays '' until it is a valid day. Set again from the date on every restore (syncForm).
+ */
+const otherPicked = { arrive: false, depart: false };
+let arrowing = false;  // a radio chip is being selected with the arrow keys (focus stays on the chips)
 
 /**
  * A reloaded chart (Back to the saved ticket, Edit my ticket, a newer saved copy) keeps each card's
@@ -216,9 +227,22 @@ function cleanGuests(list) {
     };
   });
 }
-function cleanSide(s, dates) {
+/**
+ * The day to show in the "Other date" field (v4 §Q) for a side's date, e.g. '7' for '2026-12-07' on
+ * arrival: only for a December date that isn't one of that side's chips and that `customDate` accepts
+ * for the side (arrive 1–11, leave 10–31). '' otherwise.
+ */
+function otherDay(side, iso) {
+  if (!isValidISODate(iso) || CHIP_DATES[side].includes(iso)) return '';
+  const day = String(Number(iso.slice(8)));
+  return customDate(day, side).date === iso ? day : '';
+}
+/** A date this side can hold: one of its chips (or "Not sure yet"), or an allowed "Other date". */
+const dateAllowed = (side, iso) => CHIP_DATES[side].includes(iso) || otherDay(side, iso) !== '';
+/** A side from a draft or a saved answer: chip dates and valid custom December dates stay, anything else goes. */
+function cleanSide(s, side) {
   const v = obj(s);
-  return { date: dates.includes(v.date) ? v.date : '', slot: SLOT_IDS.includes(v.slot) ? v.slot : '' };
+  return { date: dateAllowed(side, v.date) ? v.date : '', slot: SLOT_IDS.includes(v.slot) ? v.slot : '' };
 }
 function cleanTravel(t) {
   const v = obj(t);
@@ -226,8 +250,8 @@ function cleanTravel(t) {
   return {
     mode,
     from: clip(String(v.from ?? ''), NAME_MAX),
-    arrive: cleanSide(v.arrive, CONFIG.arriveDates),
-    depart: cleanSide(v.depart, CONFIG.departDates),
+    arrive: cleanSide(v.arrive, 'arrive'),
+    depart: cleanSide(v.depart, 'depart'),
     via: cleanVia(mode, v.via),
   };
 }
@@ -272,6 +296,9 @@ function saveDraft() {
     travel: state.travel,
     // The plan set aside while "Bhilwara is home" is picked, so switching back after a reload restores it
     awayTravel: isLocal() && awayTravel ? cleanTravel({ ...awayTravel, mode: '' }) : null,
+    // "Other date" fields as typed (v4 §Q), null where it isn't picked: a day still being typed, or a wrong
+    // one, leaves the date '' and would otherwise be lost on a reload
+    otherDays: Object.fromEntries(SIDES.map((s) => [s, otherPicked[s] ? clip(el(`${s}-day`).value, 2) : null])),
     note: state.note,
     keepNote: state.keepNote,
     stop: state.stop,
@@ -296,6 +323,10 @@ function readDraft() {
     guests,
     travel,
     awayTravel: travel.mode === LOCAL && d.awayTravel ? cleanTravel(d.awayTravel) : null,
+    otherDays: Object.fromEntries(SIDES.map((s) => {
+      const text = obj(d.otherDays)[s];
+      return [s, typeof text === 'string' && text.length <= 2 ? text : null];
+    })),
     note: clip(String(d.note ?? ''), NOTE_MAX),
     keepNote: d.keepNote === true,
     // Locals never visit the arrival and departure stops
@@ -660,7 +691,9 @@ function onRadioKey(e) {
   for (const c of items) c.tabIndex = c === target ? 0 : -1;
   target.focus();
   const isRegret = group.dataset.group === 'status' && target.dataset.value === 'regret';
-  if (!isRegret) target.click();
+  if (isRegret) return;
+  arrowing = true; // e.g. "Other date" opens its day field but leaves focus on the chip
+  try { target.click(); } finally { arrowing = false; }
 }
 /** Delegated click handler for a static chip group. */
 function bindGroup(group, onPick) {
@@ -1329,19 +1362,189 @@ function checkPassengers(show) {
 /* Stops 2–4 · Route, arrival, departure                               */
 /* ------------------------------------------------------------------ */
 
+/** Is "Other date" the picked chip? (A local plan's 'unsure' dates never show it.) */
+const isOther = (side) => otherPicked[side] && (state.travel[side].date === '' || isValidISODate(state.travel[side].date));
+
 function syncSide(side) {
-  checkChip(el(`${side}-date-chips`), state.travel[side].date);
+  const other = isOther(side);
+  checkChip(el(`${side}-date-chips`), other ? OTHER : state.travel[side].date);
   checkChip(el(`${side}-slot-chips`), state.travel[side].slot);
+  renderOther(side, other);
+}
+
+/**
+ * "Other date" (v4 §Q): the day field shows while the chip is picked, and the chip itself prints the
+ * typed date like its neighbours ("MON" over "7 Dec") once the day is valid, so the guest sees which
+ * day they picked. A typed day that is one of the chips' own dates (arriving "9") leaves it reading
+ * "Other date", so no second "Wed 9 Dec" chip shows. Its accessible name always starts "Other date".
+ */
+function renderOther(side, other) {
+  el(`${side}-other`).hidden = !other;
+  const chip = $(`[data-value="${OTHER}"]`, el(`${side}-date-chips`));
+  const date = state.travel[side].date;
+  const shown = other && isValidISODate(date) && !CHIP_DATES[side].includes(date) ? formatDate(date) : ''; // 'Mon 7 Dec'
+  const [dow, ...dayMonth] = shown.split(' ');
+  slot(chip, 'kicker').textContent = shown ? dow : '';
+  slot(chip, 'kicker').hidden = !shown;
+  slot(chip, 'label').textContent = shown ? dayMonth.join(' ') : OTHER_LABEL;
+  if (shown) chip.setAttribute('aria-label', `${OTHER_LABEL}, ${shown}`);
+  else chip.removeAttribute('aria-label');
+  if (!other) showDayError(side, '');
+}
+
+/** Show (or with '' clear) the error under a day field; the field points at it only while it shows. */
+function showDayError(side, message) {
+  const err = el(`${side}-day-error`);
+  const input = el(`${side}-day`);
+  if (message && err.textContent !== message) err.textContent = message; // role=alert: say each new message once
+  err.hidden = !message;
+  input.setAttribute('aria-describedby', message ? `${side}-day-hint ${side}-day-error` : `${side}-day-hint`);
+  if (message) input.setAttribute('aria-invalid', 'true');
+  else input.removeAttribute('aria-invalid');
+}
+
+const DEPART_BEFORE_ARRIVAL = 'Your leaving date is before your arrival. Pick a later date.';
+/** Leaving before arriving, for a departure whose dates are both known ('' otherwise). */
+function departsBeforeArrival(departDate) {
+  const a = state.travel.arrive.date;
+  return isValidISODate(a) && isValidISODate(departDate) && departDate < a ? DEPART_BEFORE_ARRIVAL : '';
+}
+
+/** The problem with a picked "Other date" ('' when the day is fine or Other isn't picked). */
+function dayProblem(side) {
+  if (!isOther(side)) return '';
+  const r = customDate(el(`${side}-day`).value, side);
+  if (!r.ok) return r.error;
+  return side === 'depart' ? departsBeforeArrival(r.date) : '';
+}
+
+/**
+ * True while a one-character entry could still become a valid day (a departure "1" on its way to
+ * "15"), so the live check waits for the next digit instead of flashing an error mid-typing.
+ */
+const dayCanGrow = (text, side) => [...text.trim()].length === 1 && [...'0123456789'].some((d) => customDate(text.trim() + d, side).ok);
+
+/**
+ * The error under a day field while the guest types: none for an empty field or for a first digit that
+ * could still become a valid day, else whatever dayProblem says.
+ */
+function showTypingError(side) {
+  const text = el(`${side}-day`).value;
+  const r = customDate(text, side);
+  const problem = dayProblem(side);
+  showDayError(side, !problem || r.empty || (!r.ok && dayCanGrow(text, side)) ? '' : problem);
+}
+
+/** Typing in a day field: a valid day sets the date at once (catches and the draft follow), else ''. */
+function onDayInput(side) {
+  const r = customDate(el(`${side}-day`).value, side);
+  state.travel[side].date = r.ok ? r.date : '';
+  showTypingError(side);
+  el(`${side}-error`).hidden = true;
+  syncSide(side);
+  afterArrivalChange(side);
+  renderCatches();
+  markDirty();
+}
+
+/**
+ * Pasting into a day field: the 2-character limit would cut the text before customDate reads it
+ * (" 7 " → " ", "2026-12-07" → "20"), so a paste that isn't just a one- or two-digit day is read whole by
+ * pastedDay, and the day it finds replaces the field ("2026-12-07" or "7 Dec" → "7"). Text with no day in
+ * it ("2026-11-30", "soon") empties the field, like any wrong entry the date becomes '', and the error says
+ * why. Pasting only spaces changes nothing.
+ */
+function onDayPaste(e, side) {
+  const text = (e.clipboardData && e.clipboardData.getData('text')) || '';
+  if (/^[0-9०-९]{1,2}$/.test(text)) return; // a plain day goes in at the caret, as usual
+  e.preventDefault();
+  if (!text.trim()) return;
+  const day = pastedDay(text);
+  el(`${side}-day`).value = day ?? '';
+  onDayInput(side);
+  const r = customDate(text, side);
+  if (day === null && !r.ok) showDayError(side, r.error);
+}
+
+/** An earlier arrival can settle a "leaving before arriving" error still showing under the leaving day. */
+function afterArrivalChange(side) {
+  if (side === 'arrive' && !el('depart-day-error').hidden && !dayProblem('depart')) showDayError('depart', '');
+}
+
+/**
+ * Enter in a day field ("next" on a phone keyboard): a day with a problem says so and keeps focus; a good
+ * one moves on to the time-of-day chips (the keyboard closes). It never moves to another stop or submits.
+ */
+function onDayKey(e, side) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const problem = dayProblem(side);
+  if (problem) { showDayError(side, problem); return; }
+  const chips = $$('[role="radio"]', el(`${side}-slot-chips`));
+  (chips.find((c) => c.tabIndex === 0) || chips[0]).focus();
 }
 
 function setSide(side, key, value) {
   const s = state.travel[side];
-  s[key] = value;
+  const toOther = key === 'date' && value === OTHER;
+  if (toOther) {
+    otherPicked[side] = true;
+    const r = customDate(el(`${side}-day`).value, side);
+    s.date = r.ok ? r.date : '';
+  } else {
+    if (key === 'date') {
+      // Back to a chip: the typed day goes
+      otherPicked[side] = false;
+      el(`${side}-day`).value = '';
+    }
+    s[key] = value;
+  }
   if (key === 'date' && value === 'unsure' && !s.slot) s.slot = 'unsure';
   syncSide(side);
   el(`${side}-error`).hidden = true;
+  afterArrivalChange(side);
   renderCatches();
   markDirty();
+  // A tap (or Enter/Space) on "Other date" goes straight to its field; arrowing through the chips stays on them
+  if (toOther && !arrowing) el(`${side}-day`).focus();
+}
+
+/** A custom date coming back into state (the away plan after "Bhilwara is home"): "Other date" with its day. */
+function adoptOtherDay(side) {
+  const day = otherDay(side, state.travel[side].date);
+  if (!day) return; // anything else keeps what's there, including a day still being typed
+  otherPicked[side] = true;
+  el(`${side}-day`).value = day;
+}
+
+/** After a restore or reset: "Other date" is picked where the date is a custom one, with its day filled in. */
+function syncOtherDays() {
+  for (const side of SIDES) {
+    const day = otherDay(side, state.travel[side].date);
+    otherPicked[side] = day !== '';
+    el(`${side}-day`).value = day;
+    showDayError(side, '');
+  }
+}
+
+/**
+ * A draft's "Other date" fields (null where it wasn't picked) come back as the guest left them, after
+ * syncForm: also a day still being typed or a wrong one (its date is ''), or one of the chips' own days.
+ * The date follows the field, as when typing. For a local plan the field waits for the away plan (setMode).
+ */
+function restoreOtherDays(days) {
+  for (const side of SIDES) {
+    const text = days[side];
+    if (text === null) continue;
+    otherPicked[side] = true;
+    el(`${side}-day`).value = text;
+    if (isLocal()) continue;
+    const r = customDate(text, side);
+    state.travel[side].date = r.ok ? r.date : '';
+    syncSide(side);
+    showTypingError(side);
+  }
+  renderCatches();
 }
 
 /**
@@ -1359,6 +1562,7 @@ function setMode(value) {
     const back = awayTravel || blankTravel();
     state.travel = { mode: value, from: back.from, arrive: { ...back.arrive }, depart: { ...back.depart }, via: blankVia() };
     awayTravel = null;
+    SIDES.forEach(adoptOtherDay); // a custom date set aside (even across a reload) comes back as "Other date"
   } else {
     state.travel.mode = value;
     if (value !== was) state.travel.via = blankVia();
@@ -1535,11 +1739,35 @@ function checkRoute(show) {
   return okMode && okFrom;
 }
 
-const sideComplete = (side, dates) => dates.includes(state.travel[side].date) && SLOT_IDS.includes(state.travel[side].slot);
+/** A date (a chip, "Not sure yet" or a valid "Other date") and a time of day are picked. */
+const sideComplete = (side) => dateAllowed(side, state.travel[side].date) && SLOT_IDS.includes(state.travel[side].slot);
+
+const PICK_DATE_AND_TIME = 'Pick a rough date and time. "Not sure yet" is fine.';
+const PICK_TIME = 'Pick a rough time of day. "Not sure yet" is fine.';
+
+/**
+ * Next with "Other date" picked and its day empty, invalid or (leaving) before the arrival: the reason
+ * goes under the field (role=alert says it) and the field takes focus. A missing time of day still
+ * shows the stop's own error below, asking only for the time (the date's problem is already said).
+ * Returns false when the day is fine.
+ */
+function flagDay(side) {
+  const problem = dayProblem(side);
+  if (!problem) return false;
+  showDayError(side, problem);
+  if (!SLOT_IDS.includes(state.travel[side].slot)) {
+    const e = el(`${side}-error`);
+    e.textContent = PICK_TIME;
+    e.hidden = false;
+  }
+  el(`${side}-day`).focus();
+  return true;
+}
 
 function checkArrival(show) {
-  const ok = sideComplete('arrive', CONFIG.arriveDates);
-  if (show && !ok) {
+  const ok = sideComplete('arrive');
+  if (show && !ok && !flagDay('arrive')) {
+    el('arrive-error').textContent = PICK_DATE_AND_TIME;
     el('arrive-error').hidden = false;
     const group = state.travel.arrive.date ? el('arrive-slot-chips') : el('arrive-date-chips');
     $('[role="radio"]', group).focus();
@@ -1551,9 +1779,9 @@ function checkArrival(show) {
 /** '' when the departure is fine, otherwise the guest-facing problem. */
 function departProblem() {
   const { arrive: a, depart: d } = state.travel;
-  if (!sideComplete('depart', CONFIG.departDates)) return 'Pick a rough date and time. "Not sure yet" is fine.';
+  if (!sideComplete('depart')) return PICK_DATE_AND_TIME;
   if (isValidISODate(a.date) && isValidISODate(d.date)) {
-    if (d.date < a.date) return 'Your leaving date is before your arrival. Pick a later date.';
+    if (d.date < a.date) return DEPART_BEFORE_ARRIVAL;
     const [ah, dh] = [slotHour(a.slot), slotHour(d.slot)];
     if (d.date === a.date && a.slot !== 'unsure' && d.slot !== 'unsure' && dh !== null && ah !== null && dh < ah) {
       return 'Your leaving time is before your arrival time. Pick a later one.';
@@ -1564,7 +1792,7 @@ function departProblem() {
 
 function checkDeparture(show) {
   const problem = departProblem();
-  if (show && problem) {
+  if (show && problem && !flagDay('depart')) {
     const e = el('depart-error');
     e.textContent = problem;
     e.hidden = false;
@@ -1624,6 +1852,7 @@ function syncTravel() {
 
 /** Push state into every static control (after a restore or reset). */
 function syncForm() {
+  syncOtherDays();
   syncTravel();
   syncNotes();
   if (state.guest && state.guest.unlisted) el('unlisted-name').value = state.guest.label;
@@ -2340,6 +2569,14 @@ function bind() {
   bindGroup(el('arrive-slot-chips'), (v) => setSide('arrive', 'slot', v));
   bindGroup(el('depart-date-chips'), (v) => setSide('depart', 'date', v));
   bindGroup(el('depart-slot-chips'), (v) => setSide('depart', 'slot', v));
+  // "Other date" day fields (v4 §Q)
+  for (const side of SIDES) {
+    const input = el(`${side}-day`);
+    // No check on blur: an error appearing as focus leaves would shift the time chips under a tap
+    input.addEventListener('input', () => onDayInput(side));
+    input.addEventListener('paste', (e) => onDayPaste(e, side));
+    input.addEventListener('keydown', (e) => onDayKey(e, side));
+  }
   for (const id of ['note', 'local-note']) {
     el(id).addEventListener('input', () => {
       state.note = el(id).value.slice(0, NOTE_MAX);
@@ -2389,6 +2626,7 @@ async function restore() {
     state.filledBy = draft.filledBy;
     dirty = true;
     syncForm();
+    restoreOtherDays(draft.otherDays);
     go(draft.stop, { focus: false, say: false, nav: 'replace' });
     return;
   }

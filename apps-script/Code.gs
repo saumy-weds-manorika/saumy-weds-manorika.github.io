@@ -20,7 +20,9 @@
  *   GET  ?action=ping (or no action)  -> {ok, service, version, time}
  *   POST text/plain JSON RSVP         -> {ok:true, id, updated_at} or {ok:false, error, code}
  *        (travel may carry via:{hub, onward}, the airport/station a guest lands at and how they get
- *        on to Bhilwara; older pages leave it out, which is fine)
+ *        on to Bhilwara; older pages leave it out, which is fine. Arrival and departure dates are
+ *        'unsure' or a real YYYY-MM-DD date: the chip dates, or a day typed under "Other date", v4 §Q,
+ *        arriving 1–11 Dec and leaving 10–31 Dec 2026)
  *
  * Functions you run yourself (pick one in the toolbar, then click Run, or use
  * the "Save the Train" menu inside the Sheet):
@@ -128,8 +130,22 @@ const SLOT_LABELS = {
   evening: 'Evening', night: 'Night', unsure: 'Not sure yet',
 };
 const NIGHTS = ['2026-12-09', '2026-12-10', '2026-12-11'];
+/** The morning after the last listed night: anyone leaving after it stays on past NIGHTS (v4 §Q). */
+const NIGHTS_END = '2026-12-12';
+/**
+ * The website's date chips. A guest can also type any other day in December under "Other date" (v4 §Q);
+ * that is stored as a plain YYYY-MM-DD date too, and the Summary grids count it under "Other dates".
+ */
 const ARRIVE_DATES = ['2026-12-09', '2026-12-10', '2026-12-11', 'unsure'];
 const DEPART_DATES = ['2026-12-11', '2026-12-12', 'unsure'];
+/**
+ * The days of December 2026 a guest can give (v4 §Q, the "Other date" range; every chip is inside it):
+ * arriving 1–11 Dec, leaving 10–31 Dec. validatePayload_ refuses anything else, like js/logic.js.
+ */
+const TRAVEL_MONTH = '2026-12';
+const TRAVEL_DAYS = { arrival: [1, 11], departure: [10, 31] };
+/** A YYYY-MM-DD date, as a Sheets REGEXMATCH pattern (the "Other dates" rows). */
+const SHEET_DATE_RE = '^\\d{4}-\\d{2}-\\d{2}$';
 const UNSURE_ARRIVE = '2026-12-09';
 const UNSURE_DEPART = '2026-12-12';
 const MAX_RESPONSES = 5000;
@@ -585,7 +601,11 @@ function checkTravel_(t, errors) {
   [[a, 'arrival'], [d, 'departure']].forEach(function (pair) {
     const side = pair[0];
     const word = pair[1];
+    const days = TRAVEL_DAYS[word];
     if (!(side.date === 'unsure' || isValidISODate_(side.date))) errors.push('Pick a rough ' + word + ' date (or "Not sure yet").');
+    else if (side.date !== 'unsure' && (side.date < travelDay_(days[0]) || side.date > travelDay_(days[1]))) {
+      errors.push('Pick a rough ' + word + ' date from ' + days[0] + ' to ' + days[1] + ' Dec (or "Not sure yet").');
+    }
     if (slotHour_(side.slot) === null) errors.push('Pick a rough ' + word + ' time of day (or "Not sure yet").');
   });
   checkVia_(t.via, errors);
@@ -677,6 +697,11 @@ function cleanPayload_(p) {
     filled_by: str_(p.filled_by),
     client: { ts: str_(client.ts).slice(0, 40), ua: str_(client.ua).slice(0, 300) },
   };
+}
+
+/** Day d of TRAVEL_MONTH as YYYY-MM-DD, e.g. 7 -> '2026-12-07'. */
+function travelDay_(d) {
+  return TRAVEL_MONTH + '-' + (d < 10 ? '0' : '') + d;
 }
 
 function isValidISODate_(s) {
@@ -1540,20 +1565,19 @@ function buildSummary_(sh, tabs) {
   title(r, 1, 'Nights in Bhilwara (travelling guests)');
   r++;
   header(r, 1, ['Night of', 'Confirmed', 'Waitlisted', 'Total']);
-  const arriveExpr = 'IF(' + P('arrive_date') + '="unsure","' + UNSURE_ARRIVE + '",' + P('arrive_date') + ')';
-  const departExpr = 'IF(' + P('depart_date') + '="unsure","' + UNSURE_DEPART + '",' + P('depart_date') + ')';
-  block(r + 1, NIGHTS.map(function (night, i) {
+  const nights = nightRows_(P);
+  block(r + 1, nights.map(function (g, i) {
     const row = r + 1 + i;
-    const here = '(' + arriveExpr + '<="' + night + '")*(' + departExpr + '>"' + night + '")*' + NOT_LOCAL;
+    const here = g.match + '*' + NOT_LOCAL;
     return [
-      text_(dateLabel_(night)), // plain text, so Sheets doesn't turn "Wed 9 Dec" into a date
+      text_(g.label), // plain text, so Sheets doesn't turn "Wed 9 Dec" into a date
       '=ARRAYFORMULA(SUMPRODUCT((' + STATUS + '="confirmed")*' + here + '))',
       '=ARRAYFORMULA(SUMPRODUCT((' + STATUS + '="waitlisted")*' + here + '))',
       '=B' + row + '+C' + row,
     ];
   }));
-  r += NIGHTS.length + 1;
-  sh.getRange(r, 1).setValue('Someone counts for a night if they arrive on or before that date and leave after it. "Not sure yet" counts as arriving 9 Dec and leaving 12 Dec. Locals are not counted here or in the tables below.')
+  r += nights.length + 1;
+  sh.getRange(r, 1).setValue('Someone counts for a night if they arrive on or before that date and leave after it. "Nights before 9 Dec" counts the people who arrive before 9 Dec, and "Nights from 12 Dec on" the people who leave after 12 Dec (people, not nights). "Not sure yet" counts as arriving 9 Dec and leaving 12 Dec. Locals are not counted here or in the tables below.')
     .setFontColor('#555555').setFontStyle('italic');
   r += 2;
 
@@ -1561,6 +1585,10 @@ function buildSummary_(sh, tabs) {
   const active = ACTIVE + '*' + NOT_LOCAL;
   r = dateSlotGrid_(sh, r, 'Arrivals (confirmed + waitlisted, not locals)', ARRIVE_DATES, 'arrive_date', 'arrive_slot', active, title, header, P);
   r = dateSlotGrid_(sh, r, 'Departures (confirmed + waitlisted, not locals)', DEPART_DATES, 'depart_date', 'depart_slot', active, title, header, P);
+  // dateSlotGrid_ leaves one blank row after its Total: the note goes there, with a blank row after it.
+  sh.getRange(r - 1, 1).setValue('"Other dates" counts the guests who typed in a day that isn\'t listed (with "Other date" on the website). The pickup list below shows each of them with their dates.')
+    .setFontColor('#555555').setFontStyle('italic');
+  r += 1;
 
   // Arrivals by hub: where travelling guests land or get off, across all dates (v4 §O3, for pickups)
   title(r, 1, 'Arrivals by hub (confirmed + waitlisted, all dates, not locals)');
@@ -1687,20 +1715,71 @@ function hubTableRows_(P, first) {
   return { header: ['Hub', 'Confirmed', 'Waitlisted', 'Total', 'Then by car/cab'], rows: rows };
 }
 
-/** A date × time-of-day table of people counts. Returns the next free row. */
+/**
+ * A People date column (e.g. People!$L$2:$L) as YYYY-MM-DD text, for the Summary's array formulas. The script
+ * always writes dates as text, but a date typed into People by hand without a leading apostrophe becomes a
+ * date number, and Sheets sorts every number before any text: left as a number it would count as arriving
+ * before 9 Dec (and staying every night) yet match no row of the arrivals or departures grid.
+ */
+function dateText_(col) {
+  return 'IF(ISNUMBER(' + col + '),TEXT(' + col + ',"yyyy-mm-dd"),' + col + ')';
+}
+
+/**
+ * The rows of the "Nights in Bhilwara" table as {label, match}, where match is a 0/1 Sheets array expression
+ * per People row (status and locals are filtered by the caller). One row per listed night (arrive on or before
+ * it, leave after it), between "Nights before 9 Dec" (people who arrive before the first listed night) and
+ * "Nights from 12 Dec on" (people who leave after NIGHTS_END), both from v4 §Q. Those two count people, not
+ * nights, and only people who stay at least one night (leave after the day they arrive).
+ * "Not sure yet" counts as arriving UNSURE_ARRIVE and leaving UNSURE_DEPART. Dates are compared as text (dateText_).
+ */
+function nightRows_(P) {
+  const arrive = 'IF(' + P('arrive_date') + '="unsure","' + UNSURE_ARRIVE + '",' + dateText_(P('arrive_date')) + ')';
+  const depart = 'IF(' + P('depart_date') + '="unsure","' + UNSURE_DEPART + '",' + dateText_(P('depart_date')) + ')';
+  const stays = '(' + depart + '>' + arrive + ')';
+  const dayMonth = function (iso) { return dateLabel_(iso).replace(/^\S+ /, ''); }; // 'Wed 9 Dec' -> '9 Dec'
+  return [{ label: 'Nights before ' + dayMonth(NIGHTS[0]), match: '(' + arrive + '<"' + NIGHTS[0] + '")*' + stays }]
+    .concat(NIGHTS.map(function (night) {
+      return { label: dateLabel_(night), match: '(' + arrive + '<="' + night + '")*(' + depart + '>"' + night + '")' };
+    }))
+    .concat([{ label: 'Nights from ' + dayMonth(NIGHTS_END) + ' on', match: '(' + depart + '>"' + NIGHTS_END + '")*' + stays }]);
+}
+
+/**
+ * The rows of an arrivals or departures grid as {label, match} (match as in nightRows_): one per listed date,
+ * then "Other dates" (any other YYYY-MM-DD date, typed in under "Other date", v4 §Q), then "Not sure yet"
+ * when 'unsure' is listed. Together they count every People row with a date exactly once (dates as text, dateText_).
+ * @param {string} col the People date column range, e.g. People!$L$2:$L
+ * @param {string[]} dates ARRIVE_DATES or DEPART_DATES
+ */
+function dateRows_(col, dates) {
+  const date = dateText_(col);
+  const rows = dates.filter(function (d) { return d !== 'unsure'; }).map(function (d) {
+    return { label: dateLabel_(d), match: '(' + date + '="' + d + '")' };
+  });
+  rows.push({
+    label: 'Other dates',
+    match: 'REGEXMATCH(""&' + date + ',"' + SHEET_DATE_RE + '")*ISNA(MATCH(' + date + ',{"' + dates.join('","') + '"},0))',
+  });
+  if (dates.indexOf('unsure') >= 0) rows.push({ label: dateLabel_('unsure'), match: '(' + col + '="unsure")' });
+  return rows;
+}
+
+/** A date × time-of-day table of people counts (rows from dateRows_, then a Total row). Returns the next free row. */
 function dateSlotGrid_(sh, r, heading, dates, dateCol, slotCol, active, title, header, P) {
   title(r, 1, heading);
   r++;
   header(r, 1, ['Date'].concat(SLOTS.map(function (s) { return SLOT_LABELS[s]; })).concat(['Total']));
   const lastSlotCol = colLetter_(1 + SLOTS.length);
   const totalCol = 2 + SLOTS.length;
-  const rows = dates.map(function (date, i) {
+  const groups = dateRows_(P(dateCol), dates);
+  const rows = groups.map(function (g, i) {
     const row = r + 1 + i;
-    return [text_(dateLabel_(date))].concat(SLOTS.map(function (slot) {
-      return '=ARRAYFORMULA(SUMPRODUCT((' + P(dateCol) + '="' + date + '")*(' + P(slotCol) + '="' + slot + '")*' + active + '))';
+    return [text_(g.label)].concat(SLOTS.map(function (slot) {
+      return '=ARRAYFORMULA(SUMPRODUCT(' + g.match + '*(' + P(slotCol) + '="' + slot + '")*' + active + '))';
     })).concat(['=SUM(B' + row + ':' + lastSlotCol + row + ')']);
   });
-  const totalRow = r + 1 + dates.length;
+  const totalRow = r + 1 + rows.length;
   const totals = ['Total'];
   for (let c = 2; c <= totalCol; c++) {
     const L = colLetter_(c);

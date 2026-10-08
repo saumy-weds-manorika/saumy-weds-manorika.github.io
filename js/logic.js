@@ -46,6 +46,87 @@ export function formatDate(iso) {
   return `${DOW[t.getUTCDay()]} ${t.getUTCDate()} ${MON[t.getUTCMonth()]}`;
 }
 
+/* "Other date" (v4 §Q): the guest types only the day; the month is always December 2026. */
+const CUSTOM_MONTH = '2026-12';
+const CUSTOM_DAYS = 31;
+/** Allowed days per side: arrive on or before the 11th, leave on or after the 10th. */
+const CUSTOM_RANGE = { arrive: [1, 11], depart: [10, CUSTOM_DAYS] };
+const CUSTOM_EXAMPLE = { arrive: 7, depart: 13 };
+/** Devanagari digits (०–९, from Hindi keyboards) read as 0–9. */
+const asciiDigits = (s) => s.replace(/[०-९]/g, (c) => String(c.charCodeAt(0) - 0x0966));
+
+/**
+ * Reads a typed "Other date" day as a standard December 2026 date (v4 §Q). Whole numbers only,
+ * surrounding spaces and leading zeros are fine (`' 07 '` → 7), and Devanagari digits count.
+ * - `kind` `'arrive'` (anything other than `'depart'` reads as arrival): day 1–11; a later day gives
+ *   "Arrival has to be on or before 11 Dec.", and 0 gives "Type a day from 1 to 11.";
+ * - `kind` `'depart'`: day 10–31; an earlier day gives "Departure has to be on or after 10 Dec.", and a day
+ *   past 31 gives "December only has 31 days.";
+ * - empty: "Type the day you arrive, e.g. 7." / "Type the day you leave, e.g. 13." with `empty: true`;
+ * - not a whole number: "Type just the day as a number, e.g. 7." (13 for departures).
+ * The date is the same `YYYY-MM-DD` string the date chips use, so it goes into the payload and the Sheet as is.
+ * @param {string} text what the guest typed
+ * @param {'arrive'|'depart'} kind
+ * @returns {{ok:true, date:string} | {ok:false, error:string, empty?:true}}
+ */
+export function customDate(text, kind) {
+  const side = kind === 'depart' ? 'depart' : 'arrive';
+  const example = CUSTOM_EXAMPLE[side];
+  const t = asciiDigits(str(text));
+  if (!t) return { ok: false, empty: true, error: side === 'depart' ? `Type the day you leave, e.g. ${example}.` : `Type the day you arrive, e.g. ${example}.` };
+  if (!/^\d+$/.test(t)) return { ok: false, error: `Type just the day as a number, e.g. ${example}.` };
+  const day = Number(t);
+  const [min, max] = CUSTOM_RANGE[side];
+  if (side === 'arrive') {
+    if (day > max) return { ok: false, error: `Arrival has to be on or before ${max} Dec.` };
+    if (day < min) return { ok: false, error: `Type a day from ${min} to ${max}.` };
+  } else {
+    if (day < min) return { ok: false, error: `Departure has to be on or after ${min} Dec.` };
+    if (day > max) return { ok: false, error: `December only has ${CUSTOM_DAYS} days.` };
+  }
+  return { ok: true, date: customISO(day) };
+}
+
+/** Day `d` of December 2026 as `YYYY-MM-DD`. */
+const customISO = (d) => `${CUSTOM_MONTH}-${String(d).padStart(2, '0')}`;
+/**
+ * True when a real `YYYY-MM-DD` date is one a guest can give for this side (arrive 1–11 Dec, leave
+ * 10–31 Dec 2026: the "Other date" range, which every date chip is inside). validatePayload checks it too.
+ */
+const inCustomRange = (iso, kind) => {
+  const [min, max] = CUSTOM_RANGE[kind === 'depart' ? 'depart' : 'arrive'];
+  return iso >= customISO(min) && iso <= customISO(max);
+};
+
+/* What a paste into an "Other date" field may look like: a day, then a December 2026 date written out. */
+const PASTE_DAY = '0*(\\d{1,2})';
+const PASTE_MONTH = 'dec(?:ember)?\\.?';
+const PASTE_FORMS = [
+  `^${PASTE_DAY}$`, // ' 07 '
+  `^2026[-/.]12[-/.]${PASTE_DAY}$`, // '2026-12-07'
+  `^${PASTE_DAY}[-/.]12(?:[-/.](?:20)?26)?$`, // '7/12/2026', '07-12'
+  `^${PASTE_DAY}(?:st|nd|rd|th)?(?: ?${PASTE_MONTH}(?:,? ?(?:20)?26)?)?$`, // '7th', '7 Dec', '7 December 2026'
+  `^${PASTE_MONTH} ?${PASTE_DAY}(?:st|nd|rd|th)?(?:,? ?(?:20)?26)?$`, // 'Dec 7', 'December 7th, 2026'
+].map((re) => new RegExp(re, 'i'));
+
+/**
+ * The day in text pasted into an "Other date" field (v4 §Q), read whole, before the field's 2-character
+ * limit cuts it: a day with spaces or leading zeros (' 07 ' → '7'), or a December 2026 date written out
+ * ('2026-12-07', '7/12/2026', '7 Dec', 'Dec 7th', '7 December 2026' → '7'). Devanagari digits count.
+ * Anything else (another month, '12/07/2026', words) gives null; customDate then says what's wrong.
+ * The day isn't range-checked here: customDate does that once it is in the field.
+ * @param {string} text
+ * @returns {string|null}
+ */
+export function pastedDay(text) {
+  const t = asciiDigits(str(text)).replace(/\s+/g, ' ');
+  for (const re of PASTE_FORMS) {
+    const m = re.exec(t);
+    if (m) return String(Number(m[1]));
+  }
+  return null;
+}
+
 /** Train booking window: journey date minus 60 days, opening at 08:00 IST.
  * @param {string} journeyISO `YYYY-MM-DD` or `'unsure'`
  * @returns {{date:string, label:string, iso:string, ms:number} | null} `ms` is UTC epoch ms */
@@ -126,8 +207,12 @@ function checkTravel(t, errors) {
     return local ? { date: unsureIfEmpty(o.date), slot: unsureIfEmpty(o.slot) } : o;
   };
   const [a, d] = [side(t.arrive), side(t.depart)];
-  [[a, 'arrival'], [d, 'departure']].forEach(([s, word]) => {
+  [[a, 'arrival', 'arrive'], [d, 'departure', 'depart']].forEach(([s, word, kind]) => {
     if (!(s.date === 'unsure' || isValidISODate(s.date))) errors.push(`Pick a rough ${word} date (or "Not sure yet").`);
+    else if (s.date !== 'unsure' && !inCustomRange(s.date, kind)) {
+      const [min, max] = CUSTOM_RANGE[kind];
+      errors.push(`Pick a rough ${word} date from ${min} to ${max} Dec (or "Not sure yet").`);
+    }
     if (slotHour(s.slot) === null) errors.push(`Pick a rough ${word} time of day (or "Not sure yet").`);
   });
   checkVia(t.via, errors);
@@ -162,6 +247,8 @@ function buildVia(t) {
  * Per guest, `gender` is optional but must be `'M'`, `'F'` or `''`; `added` and `partner` are optional booleans.
  * `filled_by` is an optional string of up to 100 characters. `travel.mode` is `local`, `train`, `flight`, `bus`
  * or `car`; for `local` the city is optional and missing or empty dates/slots count as `'unsure'`.
+ * A travel date is `'unsure'` or a real `YYYY-MM-DD` date the page can send: arriving 1–11 Dec 2026, leaving
+ * 10–31 Dec 2026 (the chips, or a day typed under "Other date", v4 §Q).
  * `travel.via` (v4 §O3) is optional for old clients; when present, `hub` is `''`, `'unsure'` or a 2–5 letter
  * uppercase code and `onward` is `''`, `'car'`, `'train'`, `'bus'` or `'unsure'`.
  * @param {object} p

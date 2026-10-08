@@ -521,7 +521,20 @@
             <button class="chip chip--date" type="button" role="radio" aria-checked="false" data-value="2026-12-09" data-preview-check><span class="chip__kicker">Wed</span><span class="chip__label">9 Dec</span></button>
             <button class="chip chip--date" type="button" role="radio" aria-checked="false" data-value="2026-12-10"><span class="chip__kicker">Thu</span><span class="chip__label">10 Dec</span></button>
             <button class="chip chip--date" type="button" role="radio" aria-checked="false" data-value="2026-12-11"><span class="chip__kicker">Fri</span><span class="chip__label">11 Dec</span></button>
+            <button class="chip chip--date chip--other" type="button" role="radio" aria-checked="false" data-value="other" aria-controls="arrive-other"><span class="chip__kicker" data-slot="kicker" hidden></span><span class="chip__label" data-slot="label">Other date</span></button>
             <button class="chip chip--date chip--unsure" type="button" role="radio" aria-checked="false" data-value="unsure"><span class="chip__label">Not sure yet</span></button>
+          </div>
+          <!-- "Other date" (v4 §Q): shown while that chip is picked; December is fixed, the guest types the day -->
+          <div class="other-date" id="arrive-other" hidden data-preview>
+            <label class="field__label" for="arrive-day">Day in December</label>
+            <div class="other-date__row">
+              <span class="other-date__box">
+                <input class="input other-date__input" id="arrive-day" type="text" inputmode="numeric" maxlength="2" autocomplete="off" enterkeyhint="next" aria-describedby="arrive-day-hint">
+                <span class="other-date__month" aria-hidden="true">Dec</span>
+              </span>
+              <p class="field__hint other-date__hint" id="arrive-day-hint">e.g. 7</p>
+            </div>
+            <p class="field__error" id="arrive-day-error" role="alert" hidden data-preview>Arrival has to be on or before 11 Dec.</p>
           </div>
         </div>
 
@@ -556,7 +569,19 @@
           <div class="chips chips--date" id="depart-date-chips" role="radiogroup" aria-labelledby="depart-date-label" data-group="depart-date">
             <button class="chip chip--date" type="button" role="radio" aria-checked="false" data-value="2026-12-11"><span class="chip__kicker">Fri</span><span class="chip__label">11 Dec</span></button>
             <button class="chip chip--date" type="button" role="radio" aria-checked="false" data-value="2026-12-12" data-preview-check><span class="chip__kicker">Sat</span><span class="chip__label">12 Dec</span></button>
+            <button class="chip chip--date chip--other" type="button" role="radio" aria-checked="false" data-value="other" aria-controls="depart-other"><span class="chip__kicker" data-slot="kicker" hidden></span><span class="chip__label" data-slot="label">Other date</span></button>
             <button class="chip chip--date chip--unsure" type="button" role="radio" aria-checked="false" data-value="unsure"><span class="chip__label">Not sure yet</span></button>
+          </div>
+          <div class="other-date" id="depart-other" hidden data-preview>
+            <label class="field__label" for="depart-day">Day in December</label>
+            <div class="other-date__row">
+              <span class="other-date__box">
+                <input class="input other-date__input" id="depart-day" type="text" inputmode="numeric" maxlength="2" autocomplete="off" enterkeyhint="next" aria-describedby="depart-day-hint">
+                <span class="other-date__month" aria-hidden="true">Dec</span>
+              </span>
+              <p class="field__hint other-date__hint" id="depart-day-hint">e.g. 13</p>
+            </div>
+            <p class="field__error" id="depart-day-error" role="alert" hidden>Departure has to be on or after 10 Dec.</p>
           </div>
           <p class="teaser" id="trip-teaser"><svg class="teaser__pin" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><g fill="#F6A609"><circle cx="8" cy="4.6" r="2.6"/><circle cx="11.4" cy="8" r="2.6"/><circle cx="8" cy="11.4" r="2.6"/><circle cx="4.6" cy="8" r="2.6"/></g><circle cx="8" cy="8" r="2.4" fill="#E07B00"/></svg><span id="trip-teaser-text">Staying on for the weekend? We've mapped some escapes for you. They're waiting at the end of your journey.</span></p>
         </div>

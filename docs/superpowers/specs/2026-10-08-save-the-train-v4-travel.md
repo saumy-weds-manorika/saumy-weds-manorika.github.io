@@ -82,3 +82,36 @@ This replaces the page-wide counter from the original spec §3.1. Each guest car
 - Airports, nearest first: Udaipur UDR 145 km, Kishangarh KQH 160 km, Jaipur JAI 255 km, Ahmedabad AMD 410 km.
 - Junctions, nearest first: Chittaurgarh COR 55 km, Ajmer AII 135 km, Udaipur City UDZ 155 km, Kota KOTA 160 km, Jaipur JP 250 km, Ratlam RTM 265 km.
 - Bhilwara has no commercial airport, and its station is BHL.
+
+## Q. Custom travel dates: "Other date" (Saumy, 2026-10-08)
+
+Guests can type a date that isn't one of the chips. December is fixed; they type only the day.
+
+**The chip.** Both date chip groups (`#arrive-date-chips` and `#depart-date-chips`) get an **"Other date"** radio chip, placed before "Not sure yet". Selecting it reveals an inline field right under the chips:
+- a small numeric input (`inputmode="numeric"`, at most 2 characters) labelled "Day in December", followed by a fixed **"Dec"** suffix;
+- a hint line: "e.g. 7".
+
+**Rules.** These live in `js/logic.js` as `customDate(text, kind)` → `{ok:true, date:'2026-12-DD'}` or `{ok:false, error, empty?}`; see `tests/logic.custom.test.mjs`.
+- **Arrival:** day 1–11. Message: "Arrival has to be on or before 11 Dec."
+- **Departure:** day 10–31. Message: "Departure has to be on or after 10 Dec."
+- **Anything else:** whole numbers only. Empty input gives "Type the day you arrive, e.g. 7." or "Type the day you leave, e.g. 13."
+- **Format:** the stored value is always the standard `YYYY-MM-DD` string, the same as the chip dates. It goes into the payload and the Sheet unchanged.
+- **Validation:** the existing departure-before-arrival check still applies. `validatePayload` (logic.js) and `validatePayload_` (Code.gs) also refuse a real date outside these ranges (only a stale or hand-made page could send one): "Pick a rough arrival date from 1 to 11 Dec (or "Not sure yet")." / "Pick a rough departure date from 10 to 31 Dec (or "Not sure yet")." Every chip date is inside them.
+
+**State and UI.**
+- While "Other date" is selected and the day is empty or invalid, the side's date is `''`. The stop then counts as incomplete, and Next shows the customDate error inline under the field.
+- Typing a valid day sets the date immediately, so catches, the timetable, riders and drafts update live.
+- When a saved draft, an "Edit my ticket", or a booked prefill has a December date that isn't one of the chips, the "Other date" chip is selected and the input is filled with the day. `cleanSide` must keep valid December dates that aren't chips, and still drop anything invalid.
+- A draft also keeps each "Other date" field as typed, so a reload brings back a day still being typed, a wrong one, or a chip's own day typed under "Other date", exactly as the guest left it.
+- A typed day that is one of that side's chip dates (arriving "9") keeps the "Other date" chip on its plain label, so no second "Wed 9 Dec" chip shows. Edit my ticket and a booked prefill show that date on its own chip.
+- A paste is read whole before the 2-character limit cuts it (`pastedDay` in logic.js): " 7 ", "2026-12-07" or "7 Dec" put "7" in the field. Text with no December day in it empties the field and the error says why.
+- Next with a bad day and no time of day: the day's error shows under the field, and the stop's error asks only for the time ("Pick a rough time of day. "Not sure yet" is fine.").
+- The slot chips work the same as before.
+- **Accessibility:** the input has a visible label; errors use `aria-describedby` and `role="alert"`.
+- **Styling:** the field follows the existing form styling on mobile.
+
+**Sheet (Code.gs Summary).**
+- The arrival and departure date × slot grids add an **"Other dates"** row: people whose date is a real date but isn't one of the listed chip dates.
+- The per-night stay table adds two rows: **"Nights before 9 Dec"** (people arriving before 9 Dec) and **"Nights from 12 Dec on"** (people leaving after 12 Dec).
+- People rows keep `arrive_date` and `depart_date` as plain `YYYY-MM-DD` text, the same as today. The Summary formulas read a date number (a date typed into People by hand) as that same text, so it lands in the right rows.
+- The pickup list already includes everyone, sorted by date.
