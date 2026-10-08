@@ -173,7 +173,9 @@ v4 adds two People columns, `hub` and `onward`, and an **Arrivals by hub** table
 - **Forgot step 3?** The v4 script adds the two People columns by itself on the next answer, but Summary only gets the new table when you run **Set up / repair tabs**.
 - **Publish the v4 script before, or together with, the v4 website.** The v3 script accepts answers from the v4 website, but it drops the hub and onward answers.
 
-You **don't** need to redeploy when you edit **First List** or **Second List**. New guests, name fixes and nicknames are live within a minute (search remembers the list for up to 60 seconds). Just run **Fill in missing guest ids** for new rows.
+You **don't** need to redeploy when you edit **First List** or **Second List**. New guests, name fixes and nicknames are live straight away: editing a list tab clears the script's memory of the list. Just run **Fill in missing guest ids** for new rows. (If an edit ever doesn't show up in search, run **Set up / repair tabs**.)
+
+**Keep search fast (recommended while invites are out):** Google puts an unused script to sleep, and the first search after that can take 10–20 seconds. Click **Save the Train** → **Keep search fast (wake every 5 minutes)** once. Google asks for one extra permission (to run on a timer). Turn it off later with **Stop keeping search fast**.
 
 ## Part 8: Personal links and ready-to-send messages
 

@@ -137,9 +137,12 @@ const MAX_BODY_CHARS = 20000;
 const MAX_MATCHES = 5;
 const UNLISTED_RE = /^u-[a-z0-9]{8}$/;
 
-/** The parsed guest list is cached for 60s so search stays fast; editing a list tab clears it (see onEdit). */
+/**
+ * The parsed guest list is cached for up to 6 hours so search stays fast. Editing a list tab clears it
+ * straight away (see onEdit), and so do setup and "Fill in missing guest ids".
+ */
 const CACHE_KEY = 'stt.guests.v3';
-const CACHE_SECONDS = 60;
+const CACHE_SECONDS = 6 * 60 * 60; // CacheService maximum
 const CACHE_CHUNK = 30000; // characters per cache entry (each entry must stay under 100KB)
 
 /* =========================================================================
@@ -207,6 +210,9 @@ function onOpen() {
     .addItem('Fill personal links & messages', 'fillPersonalLinks')
     .addItem('Show personal links', 'listPersonalLinks')
     .addItem('Rebuild People from Responses', 'rebuildPeople')
+    .addSeparator()
+    .addItem('Keep search fast (wake every 5 minutes)', 'startKeepWarm')
+    .addItem('Stop keeping search fast', 'stopKeepWarm')
     .addToUi();
 }
 
@@ -216,7 +222,7 @@ function onEdit(e) {
     const name = e && e.range ? e.range.getSheet().getName() : '';
     if (listOf_(name)) clearGuestCache_();
   } catch (err) {
-    // The cache simply expires within 60 seconds instead.
+    // Run "Set up / repair tabs" to clear the cache by hand if an edit ever doesn't show up.
   }
 }
 
@@ -315,6 +321,40 @@ function listPersonalLinks() {
   } catch (err) {
     // No Sheet window to show a dialog in (e.g. run from the editor): the Execution log has the list.
   }
+}
+
+/**
+ * Google puts a script to sleep when nobody has used it for a while, and waking it can take 10-20s,
+ * which a guest feels on their first search. This runs every 5 minutes (via startKeepWarm) to keep the
+ * script awake and the guest list cached. It is tiny: a few seconds of trigger time a day.
+ */
+function keepWarm() {
+  cachedGuests_();
+}
+
+/** Turns on keepWarm every 5 minutes. Safe to run again (it never adds a second timer). */
+function startKeepWarm() {
+  stopKeepWarm_();
+  ScriptApp.newTrigger('keepWarm').timeBased().everyMinutes(5).create();
+  keepWarm();
+  notify_('Search will stay fast: the script now wakes itself every 5 minutes. Use "Stop keeping search fast" to turn this off after the RSVPs are in.');
+}
+
+/** Turns keepWarm off. */
+function stopKeepWarm() {
+  const n = stopKeepWarm_();
+  notify_(n ? 'Stopped keeping search fast.' : 'Keeping search fast was already off.');
+}
+
+function stopKeepWarm_() {
+  let n = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'keepWarm') {
+      ScriptApp.deleteTrigger(t);
+      n++;
+    }
+  });
+  return n;
 }
 
 /** Rewrites the People tab from the Responses log (latest answer per ticket). Safe: Responses is never changed. */
@@ -865,7 +905,7 @@ function lookupList_(entries) {
   return out;
 }
 
-/** The lookup list, from CacheService when fresh (60s), otherwise read from the Sheet and cached. */
+/** The lookup list, from CacheService when fresh, otherwise read from the Sheet and cached. */
 function cachedGuests_() {
   const cache = scriptCache_();
   if (cache) {
@@ -905,7 +945,7 @@ function clearGuestCache_() {
   try {
     cache.remove(CACHE_KEY);
   } catch (err) {
-    // It expires within 60 seconds anyway.
+    // Setup clears it as well.
   }
 }
 

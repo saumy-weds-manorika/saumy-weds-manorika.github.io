@@ -16,6 +16,7 @@ import {
 import { findGuests, getGuest, submitRsvp, newUnlistedId, local, warmUp } from './api.js';
 import { createRegretController } from './regret.js';
 import { createBaaja } from './audio.js';
+import { createBand } from './band.js';
 import { renderPass, passFilename, downloadPass, sharePass, passBlob } from './pass.js';
 import { mountTrip, spokenDrive } from './trip.js';
 import { ORIGIN, DESTINATIONS, TRIP_COPY } from './trip-data.js';
@@ -1214,8 +1215,6 @@ function setGender(g, value) {
 function renderAddGuest() {
   const left = maxGuests() - state.guests.length;
   el('add-guest').hidden = left <= 0;
-  el('add-guest-hint').hidden = left <= 0;
-  el('add-guest-hint').textContent = `You can bring ${left} more.`;
 }
 
 function setStatus(g, value) {
@@ -2198,7 +2197,7 @@ async function openSaved(kind) {
 /* Boot                                                                */
 /* ------------------------------------------------------------------ */
 
-/* Baaja nudge: sound is off by default, so point at the toggle once. */
+/* Baaja nudge: the band plays by default, so point once at the button that mutes it. */
 
 let nudgeTimer = 0;
 let nudgeHideTimer = 0;
@@ -2208,7 +2207,7 @@ function scheduleBaajaNudge() {
   try { seen = localStorage.getItem(NUDGE_KEY) === '1'; } catch { seen = false; }
   if (seen) return;
   nudgeTimer = setTimeout(() => {
-    if (state.stop !== 'platform' || el('baaja-toggle').getAttribute('aria-pressed') === 'true') return;
+    if (state.stop !== 'platform' || el('baaja-toggle').getAttribute('aria-pressed') !== 'true') return;
     el('baaja-nudge').hidden = false;
     try { localStorage.setItem(NUDGE_KEY, '1'); } catch { /* shown once per visit then */ }
     nudgeHideTimer = setTimeout(() => hideBaajaNudge(false), 6000);
@@ -2226,20 +2225,19 @@ function hideBaajaNudge(remember) {
 }
 
 function bind() {
-  // Journey bar: Baaja
-  const baaja = createBaaja({
-    onChange: (on) => {
-      el('baaja-toggle').setAttribute('aria-pressed', String(on));
-      document.body.classList.toggle('is-baaja-on', on);
-    },
-  });
-  el('baaja-toggle').addEventListener('click', () => {
-    hideBaajaNudge(true);
-    const on = baaja.toggle();
+  // Journey bar: Baaja = Saumy's band recording. On by default (it starts with the guest's first
+  // touch, since browsers block sound until then); the first tap on Baaja mutes it.
+  const showBand = (on) => {
     el('baaja-toggle').setAttribute('aria-pressed', String(on));
     document.body.classList.toggle('is-baaja-on', on);
-    if (!on && baaja.state === 'unsupported') toast("This browser can't play the baaja.");
+  };
+  const band = createBand({ src: 'assets/band-audio.m4a', toggle: el('baaja-toggle'), onChange: showBand });
+  el('baaja-toggle').addEventListener('click', () => {
+    hideBaajaNudge(true);
+    showBand(band.toggle());
   });
+  // The tappable dhol and shehnai at the junction keep their synthesised sounds.
+  const baaja = createBaaja();
   let dholTap = 0;
   el('tap-dhol').addEventListener('click', () => { baaja.dholHit(DHOL_TAPS[dholTap++ % DHOL_TAPS.length]); });
   el('tap-shehnai').addEventListener('click', () => { baaja.shehnaiPhrase(); });

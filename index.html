@@ -176,12 +176,12 @@
      ================================================================ -->
 <header class="journey-bar" id="journey-bar">
   <div class="journey-bar__inner">
-    <button class="baaja" id="baaja-toggle" type="button" aria-pressed="false" aria-label="Baaja: wedding band sound">
+    <button class="baaja" id="baaja-toggle" type="button" aria-pressed="true" aria-label="Baaja: wedding band music">
       <svg class="baaja__icon" aria-hidden="true" focusable="false"><use class="baaja__dhol" href="#i-dhol"/><use class="baaja__off" href="#i-slash"/></svg>
       <span class="baaja__label" aria-hidden="true">Baaja</span>
     </button>
     <!-- One-time hint that the sound toggle exists (shown by app.js, decorative) -->
-    <p class="baaja-nudge" id="baaja-nudge" hidden aria-hidden="true">Tap for dhol &amp; shehnai</p>
+    <p class="baaja-nudge" id="baaja-nudge" hidden aria-hidden="true">Tap to mute the baaja</p>
 
     <div class="journey" id="journey" style="--progress:0" aria-hidden="true">
       <span class="journey__rail"></span>
@@ -383,7 +383,6 @@
         </ol>
 
         <button class="btn btn--add" id="add-guest" type="button"><svg class="btn__icon" aria-hidden="true"><use href="#i-plus"/></svg>Add guest</button>
-        <p class="add-guest__hint" id="add-guest-hint">You can bring 1 more.</p>
         <p class="field__error" id="passengers-error" role="alert" hidden data-preview>Pick a status for every passenger.</p>
       </div>
     </div>

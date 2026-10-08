@@ -94,7 +94,6 @@ This document is the contract between the static UI shell (`index.html`, `css/st
 |---|---|
 | `#guest-list` (`ol`) | `replaceChildren()`, then one `#tpl-guest` clone per guest. |
 | `#add-guest` | Show it while `guests.length < max_guests`. Clicking it appends a card with an empty name and focuses its input. |
-| `#add-guest-hint` | e.g. "You can bring 1 more." Hide it when `#add-guest` is hidden. |
 | `#passengers-error` (`role=alert`, **hidden**) | A stop-level error, e.g. "Pick a status for every passenger." |
 | `#booked` (**hidden**) | Shown when the ticket was already saved (`getGuest(...).booked`, amendments §C). `#booked-text` gets the message ("Priya already booked seats for you both on Fri 9 Oct. …" for a couple when someone else filled it in, else "Your seats are already booked (updated …). …"). `#booked-view-pass` shows the saved ticket at the junction. |
 

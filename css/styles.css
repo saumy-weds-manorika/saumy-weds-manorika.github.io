@@ -898,11 +898,11 @@ body.is-busy .main { pointer-events: none; }
   will-change: transform;
 }
 .vehicle {
-  /* Where the two riders sit, per vehicle (see the per-mode overrides below) */
-  --rider-h: 15px;
-  --rider-b: 11px;
-  --rider-x0: 30%;
-  --rider-x1: 46%;
+  /* Riders: two round face badges riding on top of the vehicle (see .rider below) */
+  --rider-d: 24px;
+  --rider-b: 16px;
+  --rider-x0: -2px;
+  --rider-x1: 21px;
   position: absolute;
   left: 0;
   bottom: 0;
@@ -931,36 +931,31 @@ body[data-mode="local"] .vehicle__svg[data-mode="train"] { display: none; }
 body[data-mode="flight"] .vehicle { bottom: 9px; }
 body[data-mode="flight"] :is(.vehicle__svg, .riders) { transform: rotate(-7deg); }
 
-/* Riders: up to two guest busts peeking out of the vehicle (app.js keeps it to two). On the
-   train they sit behind the boiler with their heads above it; in the others they sit in front,
-   cut off at the window sill (--rider-sill, px from the vehicle's top), so they look out of it. */
+/* Riders: up to two guests (app.js keeps it to two), shown as round face badges riding on top
+   of whichever vehicle they chose, in front of it, so their faces are clearly visible. */
 .riders {
   position: absolute;
-  z-index: var(--rider-z, 0);
+  z-index: 2;
   inset: 0;
-  clip-path: var(--rider-clip, none);
   pointer-events: none;
 }
 .rider {
   position: absolute;
   bottom: var(--rider-b);
-  width: auto;
+  width: var(--rider-d);
+  height: var(--rider-d);
   max-width: none;
-  height: var(--rider-h);
+  object-fit: cover;
+  object-position: 50% 4%;
+  border-radius: 50%;
+  border: 2px solid var(--genda);
+  background: var(--kagaz);
+  box-shadow: 0 2px 5px rgb(0 0 0 / .45);
   transform-origin: 50% 100%;
-  filter: drop-shadow(0 1px 1px rgb(0 0 0 / .45));
 }
 .rider[data-rider="0"] { left: var(--rider-x0); }
-.rider[data-rider="1"] { left: var(--rider-x1); }
-body:is([data-mode="flight"], [data-mode="bus"], [data-mode="car"], [data-mode="local"]) .vehicle {
-  --rider-z: 2;
-  --rider-clip: inset(-14px 0 calc(100% - var(--rider-sill)) 0);
-  --rider-h: 13px;
-}
-body[data-mode="flight"] .vehicle { --rider-sill: 14px; --rider-b: 9px; --rider-x0: 36%; --rider-x1: 54%; }
-body[data-mode="bus"] .vehicle { --rider-sill: 12px; --rider-b: 11px; --rider-x0: 9%; --rider-x1: 27%; }
-body[data-mode="car"] .vehicle { --rider-sill: 11.5px; --rider-b: 11px; --rider-x0: 31%; --rider-x1: 52%; }
-body[data-mode="local"] .vehicle { --rider-sill: 15px; --rider-h: 14px; --rider-b: 10px; --rider-x0: 22%; --rider-x1: 39%; }
+.rider[data-rider="1"] { left: var(--rider-x1); z-index: 1; }
+body[data-mode="flight"] .vehicle { --rider-b: 13px; }
 
 /* Locals jump from Route straight to Bhilwara: the travel stops fade on the track */
 body[data-mode="local"] .journey__station:is([data-stop="arrival"], [data-stop="departure"]) { opacity: .3; }
