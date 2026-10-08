@@ -898,11 +898,12 @@ body.is-busy .main { pointer-events: none; }
   will-change: transform;
 }
 .vehicle {
-  /* Riders: two round face badges riding on top of the vehicle (see .rider below) */
-  --rider-d: 24px;
-  --rider-b: 16px;
-  --rider-x0: -2px;
-  --rider-x1: 21px;
+  /* Riders: two guest bobblehead busts standing in the vehicle, heads up above its roof
+     (see .rider below and the per-mode positions after it) */
+  --rider-h: 28px;
+  --rider-b: 12px;
+  --rider-x0: 24%;
+  --rider-x1: 46%;
   position: absolute;
   left: 0;
   bottom: 0;
@@ -931,31 +932,29 @@ body[data-mode="local"] .vehicle__svg[data-mode="train"] { display: none; }
 body[data-mode="flight"] .vehicle { bottom: 9px; }
 body[data-mode="flight"] :is(.vehicle__svg, .riders) { transform: rotate(-7deg); }
 
-/* Riders: up to two guests (app.js keeps it to two), shown as round face badges riding on top
-   of whichever vehicle they chose, in front of it, so their faces are clearly visible. */
+/* Riders: up to two guests (app.js keeps it to two), as bobblehead cut-outs standing behind the
+   vehicle's body: shoulders hidden by it, heads popping up clearly above its roof. */
 .riders {
   position: absolute;
-  z-index: 2;
+  z-index: 0;
   inset: 0;
   pointer-events: none;
 }
 .rider {
   position: absolute;
   bottom: var(--rider-b);
-  width: var(--rider-d);
-  height: var(--rider-d);
+  width: auto;
   max-width: none;
-  object-fit: cover;
-  object-position: 50% 4%;
-  border-radius: 50%;
-  border: 2px solid var(--genda);
-  background: var(--kagaz);
-  box-shadow: 0 2px 5px rgb(0 0 0 / .45);
+  height: var(--rider-h);
   transform-origin: 50% 100%;
+  filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / .55));
 }
 .rider[data-rider="0"] { left: var(--rider-x0); }
-.rider[data-rider="1"] { left: var(--rider-x1); z-index: 1; }
-body[data-mode="flight"] .vehicle { --rider-b: 13px; }
+.rider[data-rider="1"] { left: var(--rider-x1); }
+body[data-mode="flight"] .vehicle { --rider-b: 10px; --rider-x0: 30%; --rider-x1: 50%; }
+body[data-mode="bus"] .vehicle { --rider-b: 13px; --rider-x0: 12%; --rider-x1: 36%; }
+body[data-mode="car"] .vehicle { --rider-b: 10px; --rider-x0: 26%; --rider-x1: 48%; }
+body[data-mode="local"] .vehicle { --rider-b: 12px; --rider-x0: 20%; --rider-x1: 42%; }
 
 /* Locals jump from Route straight to Bhilwara: the travel stops fade on the track */
 body[data-mode="local"] .journey__station:is([data-stop="arrival"], [data-stop="departure"]) { opacity: .3; }
