@@ -162,7 +162,7 @@ test('parseListRows_: names, genders, partner, labels, couple, aliases, NA handl
     { ...base, id: '', label: 'Sara Thomas', names: ['Sara Thomas'], genders: ['F'] },
     { ...base, id: 'n3g4', label: 'Neha Gupta & partner', names: ['Neha Gupta'], genders: ['F'], partner: { title: 'Ms', gender: 'F' } },
     { ...base, id: 'f5a6', label: 'Farhan Ali & Zoya', names: ['Farhan Ali', 'Zoya'], genders: ['M', ''], couple: true },
-    { ...base, id: 'p0n1', label: 'Pooja Nair & partner', names: ['Pooja Nair'], genders: ['F'], partner: { title: 'Mr', gender: 'M' } },
+    { ...base, id: 'p0n1', label: 'Mrs Pooja Nair & Mr Nair', names: ['Pooja Nair'], genders: ['F'], partner: { title: 'Mr', gender: 'M' } },
     // Title and "nothing here" variants: "Mrs ." / "Smt" / "Miss", "N.A" / "--" / "N / A" / "n.a"
     { ...base, id: 'k1s2', label: 'Mr & Mrs Karan Shah', names: ['Karan Shah'], genders: ['M'], partner: { title: 'Mrs', gender: 'F' } },
     { ...base, id: 'a2j3', label: 'Mr & Mrs Amit Joshi', names: ['Amit Joshi'], genders: [''], partner: { title: 'Mrs', gender: 'F' } },

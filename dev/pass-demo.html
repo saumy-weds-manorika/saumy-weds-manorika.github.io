@@ -84,10 +84,16 @@ const VARIANTS = [
     heads,
   },
   {
-    title: 'Waitlisted solo by flight',
+    title: 'Waitlisted solo by flight, landing at Udaipur, then car (v4 via)',
     label: 'Ananya Iyer', passId: 'A1B2',
     guests: [{ name: 'Ananya Iyer', status: 'waitlisted' }],
-    travel: { mode: 'flight', from: 'Bengaluru', arrive: { date: '2026-12-10', slot: 'morning' }, depart: { date: 'unsure', slot: 'unsure' } },
+    travel: { mode: 'flight', from: 'Bengaluru', arrive: { date: '2026-12-10', slot: 'morning' }, depart: { date: 'unsure', slot: 'unsure' }, via: { hub: 'UDR', onward: 'car' } },
+  },
+  {
+    title: 'Train to Udaipur City, then bus (v4 via, long hub name)',
+    label: 'Isha Agarwal', passId: 'Q2W8',
+    guests: [{ name: 'Isha Agarwal', status: 'confirmed' }],
+    travel: { mode: 'train', from: 'Thiruvananthapuram', arrive: { date: '2026-12-09', slot: 'night' }, depart: { date: '2026-12-12', slot: 'evening' }, via: { hub: 'UDZ', onward: 'bus' } },
   },
   {
     title: 'All regret',

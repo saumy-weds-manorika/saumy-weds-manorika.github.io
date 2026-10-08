@@ -789,11 +789,17 @@ function parseGuestRow_(row, col, list) {
 
 /**
  * The ticket label for Guest 1 plus an invited partner whose name the list doesn't know (§A):
- * "Mr & Mrs Kabir Khan" for the usual husband-and-wife row (Guest 1 not marked F, partner not marked M).
- * Any other pairing, e.g. Guest 1 = F with Guest 2 = "Mr", would read "Mr & Mrs <her name>", so it
- * becomes "Neha Gupta & partner" instead (the partner's card asks for "Your partner's name").
+ * - "Mr & Mrs Kabir Khan" when Guest 1 is not marked F and the partner is not marked M (Guest 2 "Mrs");
+ * - "Mrs Pooja Nair & Mr Nair" when Guest 1 is F and the partner is M (Guest 2 "Mr"), as Saumy asked;
+ *   the surname is Guest 1's last word (a one-word name falls back to "Pooja & partner");
+ * - "<Guest 1> & partner" for any other pairing.
+ * The partner's own card still asks for "Your partner's name".
  */
 function unnamedPartnerLabel_(guest1, gender1, partnerGender) {
+  if (gender1 === 'F' && partnerGender === 'M') {
+    const words = String(guest1).trim().split(/\s+/);
+    return words.length > 1 ? 'Mrs ' + guest1 + ' & Mr ' + words[words.length - 1] : guest1 + ' & partner';
+  }
   return gender1 !== 'F' && partnerGender !== 'M' ? 'Mr & Mrs ' + guest1 : guest1 + ' & partner';
 }
 
@@ -1417,7 +1423,7 @@ function buildSummary_(sh, tabs) {
 
 /**
  * Labels of a list tab's invites whose ID has no row in People yet ("Mr & Mrs Kabir Khan",
- * "Meera Kapoor & Dev Malhotra", "Neha Gupta & partner"), built like parseGuestRow_ does:
+ * "Meera Kapoor & Dev Malhotra", "Mrs Pooja Nair & Mr Nair", "Neha Gupta & partner"), built like parseGuestRow_ does:
  * EMPTY_CELL_RE, TITLE_RE and unnamedPartnerLabel_ in Sheet-formula form. Element-wise logic
  * uses + and * because OR/AND would collapse the whole column inside ARRAYFORMULA.
  */
@@ -1431,7 +1437,8 @@ function pendingFormula_(t, T) {
     const g1F = '(' + sex('gender1') + '="F")';
     // The partner's gender: Gender Guest 2 when it says M or F, otherwise from the title (Mr = M)
     const partnerM = '((' + sex('gender2') + '="M")+(' + sex('gender2') + '<>"F")*REGEXMATCH(' + g2l + ',"^mr ?\\.?$")>0)';
-    const partnerLabel = 'IF(' + g1F + '+' + partnerM + ',' + g1 + '&" & partner","Mr & Mrs "&' + g1 + ')';
+    const partnerLabel = 'IF((' + g1F + ')*(' + partnerM + '),IF(REGEXMATCH(' + g1 + '," "),"Mrs "&' + g1 + '&" & Mr "&REGEXEXTRACT(' + g1 +
+      ',"(\\S+)$"),' + g1 + '&" & partner"),IF(' + g1F + '+' + partnerM + ',' + g1 + '&" & partner","Mr & Mrs "&' + g1 + '))';
     label = 'IFERROR(IF(REGEXMATCH(' + g2l + ',"^(n ?/? ?a\\.?|n\\.a\\.?|-+)?$"),' + g1 +
       ',IF(REGEXMATCH(' + g2l + ',"^(mr|mrs|ms|miss|smt) ?\\.?$"),' + partnerLabel + ',' + g1 + '&" & "&' + g2 + ')),' + g1 + ')';
   }

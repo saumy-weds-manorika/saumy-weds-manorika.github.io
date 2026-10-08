@@ -10,6 +10,7 @@
  * Exports: renderPass, passFilename, downloadPass, sharePass, passBlob.
  */
 import { formatDate } from './logic.js';
+import { AIRPORTS, JUNCTIONS, BHILWARA_STATION } from './travel-data.js';
 
 const W = 1080;
 const H = 1350;
@@ -63,12 +64,14 @@ const Y = {
  * @param {{
  *   config: object, label: string, passId: string,
  *   guests: {name:string, status:'confirmed'|'waitlisted'|'regret'}[],
- *   travel: {mode:string, from:string, arrive:{date:string,slot:string}, depart:{date:string,slot:string}} | null,
+ *   travel: {mode:string, from:string, arrive:{date:string,slot:string}, depart:{date:string,slot:string},
+ *     via?:{hub?:string, onward?:string}} | null,
  *   catches?: {id:string, name:string, caught:boolean}[],
  *   heads?: {a?: HTMLImageElement|null, b?: HTMLImageElement|null},
- * }} data  `travel.mode === 'local'` prints the home-platform variant (amendments §L). `heads` are
- *   the couple's bobblehead busts (assets/bobble/*-bust.webp, preloaded by app.js); without them a
- *   BHILWARA JN postmark is printed instead.
+ * }} data  `travel.mode === 'local'` prints the home-platform variant (amendments §L). For train and
+ *   flight, a `via.hub` other than Bhilwara itself is printed under FROM, e.g. "BY FLIGHT · VIA UDAIPUR
+ *   (UDR) · CAR" (v4 §O3). `heads` are the couple's bobblehead busts (assets/bobble/*-bust.webp,
+ *   preloaded by app.js); without them a BHILWARA JN postmark is printed instead.
  * @returns {Promise<HTMLCanvasElement>} a 1080×1350 canvas
  */
 export async function renderPass(data) {
@@ -778,10 +781,17 @@ function drawRoute(ctx, d) {
   text(ctx, tf.text, R, Y.city, { size: tf.size, color: C.syahi, align: 'right' });
 
   const by = d.local ? 'BY AUTO-RICKSHAW' : t ? `BY ${modeLabel(cfg, t.mode).toUpperCase()}` : 'TBC';
-  text(ctx, by, L, Y.routeSub, { size: 20, color: MUTED, ls: 1.5 });
   const code = cfg.station || 'BHL';
   const sub = d.local ? 'CARNIVAL TO PHERA' : `(${code}) ${(cfg.state || '').toUpperCase()}`.trim();
   text(ctx, sub, R, Y.routeSub, { size: 20, color: MUTED, align: 'right', ls: 1.5 });
+  // "BY FLIGHT · VIA UDAIPUR (UDR) · CAR", or just the code when the name won't fit beside the TO line
+  const via = d.local || d.allRegret ? null : viaOf(t, code);
+  font(ctx, 20, F.dot, 400, 1.5);
+  const room = R - ctx.measureText(sub).width - 40 - L;
+  const lines = via ? [`${by} · VIA ${via.name} (${via.code})${via.on}`, `${by} · VIA ${via.code}${via.on}`] : [by];
+  const line = lines.find((x) => ctx.measureText(x).width <= room) || lines[lines.length - 1];
+  const lf = fit(ctx, line, { fam: F.dot, max: 20, min: 15, width: room, ls: 1.5 });
+  text(ctx, lf.text, L, Y.routeSub, { size: lf.size, color: MUTED, ls: 1.5 });
 
   if (d.allRegret) return; // the REGRET stamp takes this space
   // Route line with the vehicle riding it.
@@ -797,6 +807,25 @@ function drawRoute(ctx, d) {
   ctx.lineWidth = 3;
   ctx.stroke();
   drawVehicle(ctx, t ? t.mode : 'train', MID, gy, 1.12);
+}
+
+/* Hub names for the route row (v4 §O3), and how the guest goes on from there. */
+const HUB_NAMES = new Map([...AIRPORTS, ...JUNCTIONS, BHILWARA_STATION].map((h) => [h.code, h.name]));
+const ONWARD = { car: 'CAR', train: 'TRAIN', bus: 'BUS' };
+
+/**
+ * The hub a train or flight guest lands at or gets off at, e.g. {code:'UDR', name:'UDAIPUR', on:' · CAR'},
+ * or null: no hub, "Not sure yet", or Bhilwara itself (the TO side already says BHL).
+ */
+function viaOf(t, home) {
+  const via = t && (t.mode === 'train' || t.mode === 'flight') && t.via && typeof t.via === 'object' ? t.via : null;
+  const hub = via ? String(via.hub || '').trim().toUpperCase() : '';
+  if (!/^[A-Z]{2,5}$/.test(hub) || hub === home) return null;
+  return {
+    code: hub,
+    name: String(HUB_NAMES.get(hub) || hub).toUpperCase(),
+    on: ONWARD[via.onward] ? ` · ${ONWARD[via.onward]}` : '',
+  };
 }
 
 function whenValue(cfg, side) {

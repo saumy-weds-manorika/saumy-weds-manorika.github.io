@@ -8,7 +8,7 @@
 
 .trip {
   --trip-sand: #F7DCB8;
-  --trip-sea: #EFE2D2;
+  --trip-sea: #F3EBE1;      /* the neighbouring states: paler and plain, so Rajasthan reads first */
   --trip-notch: 12px;
   display: block;
   color: var(--syahi);
@@ -105,6 +105,14 @@
   vector-effect: non-scaling-stroke;
   opacity: .7;
 }
+/* Tint band just inside the border (the outer half is clipped away by the state shape) */
+.trip__border-band {
+  fill: none;
+  stroke: rgb(214 36 110 / .13);
+  stroke-width: 9px;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
 .trip__dot { fill: rgb(27 27 47 / .09); }
 .trip__rule {
   fill: none;
@@ -142,12 +150,14 @@
 .trip__cartouche-hi { font: 15px/1 var(--font-display); fill: var(--rani-ink); }
 .trip__cartouche-en { font: 7.5px/1 var(--font-dm); letter-spacing: .34em; fill: var(--ink-muted); }
 
+.trip__scale-bg { fill: var(--kagaz-hi); } /* fill-opacity .82 is set on the element */
 .trip__scale-dark { fill: var(--syahi); }
 .trip__scale-light { fill: var(--kagaz-hi); stroke: var(--syahi); stroke-width: .8; }
 
 .trip__locator-bg { fill: var(--kagaz-hi); stroke: rgb(27 27 47 / .35); stroke-width: .8; }
 .trip__locator-land { fill: var(--trip-sand); stroke: var(--rani-ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .trip__locator-view { fill: rgb(214 36 110 / .14); stroke: var(--rani); stroke-width: 1.2; }
+.trip__locator-home { fill: var(--haldi); stroke: var(--syahi); stroke-width: 1; }
 
 /* Railway line: the classic map symbol, a solid casing with paper-coloured dashes */
 .trip__route { opacity: 0; }
@@ -233,6 +243,8 @@
   stroke-linejoin: round;
 }
 .trip__label.is-selected { stroke: var(--haldi); stroke-width: 0; }
+/* A name that has to sit over the state border gets a small paper backing, so the border runs behind it */
+.trip__back { fill: var(--trip-sand); stroke: rgb(168 23 79 / .28); stroke-width: .8; }
 .trip__plate {
   fill: var(--haldi);
   stroke: var(--syahi);

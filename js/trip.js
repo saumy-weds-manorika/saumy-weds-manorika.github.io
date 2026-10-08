@@ -11,9 +11,14 @@
 // Geometry: an equirectangular projection with cos(mid-latitude) x-scaling. By default it is
 // fitted to the pins' bounds; on a phone the whole state would squeeze Kumbhalgarh and
 // Ranakpur (12 km apart) into one 4px blob. When js/rajasthan-outline.js supplies OUTLINE,
-// its border is drawn through that view with a small whole-state locator in the corner, and
-// `fit: 'outline'` fits the map to the outline's bbox instead. With no OUTLINE, a plainly
+// its border is drawn through that view (paper dots and a soft tint band stay inside the state,
+// so the neighbours recede) with a small whole-state locator in the corner that marks Bhilwara,
+// and `fit: 'outline'` fits the map to the outline's bbox instead. With no OUTLINE, a plainly
 // decorative rounded frame (degree grid, compass, scale bar) stands in. Nothing is guessed.
+//
+// Name labels keep clear of pins, each other and the map furniture, stay off the state border
+// (or get a small paper backing where they can't), keep out of the stretch where their own
+// railway comes in, and always sit clearly nearer their own marigold than any other.
 //
 // Options: { origin, destinations, outline = OUTLINE, fit = 'points' | 'outline', reducedMotion }
 // Returns: { select(id), clear(), relayout(), destroy(), get selected() }
@@ -32,6 +37,13 @@ const MIN_SEP = 15;         // pins closer than this are nudged apart (display o
 const KM_PER_DEG = 111.32;  // km per degree of latitude
 const PAD_POINTS = { t: 48, r: 30, b: 42, l: 30 };
 const PAD_OUTLINE = { t: 16, r: 16, b: 16, l: 16 };
+// Label placement costs, in the same units as box overlap (a label sitting on a pin costs ~250)
+const BORDER_COST = 140;    // the state border runs under the label (it then gets a paper backing)
+const BORDER_VERTEX = 2;    // ...plus this per border vertex, so a shorter crossing wins
+const APPROACH_COST = 30;   // per sample of the place's own incoming railway under its label
+const AMBIGUOUS_COST = 400; // the label isn't clearly nearer its own pin than another, so it may read as that one's
+const AMBIGUOUS_GAP = 4;    // "clearly nearer": by at least this many map units
+const LOCATOR = 66;         // whole-state inset, map units
 let instances = 0;
 
 /* Pure helpers (exported for tests and app.js) ------------------------------------------- */
@@ -105,6 +117,14 @@ export function declutter(pts, minSep) {
   return pts;
 }
 
+/** The outline's vertices as [lon, lat] pairs (its path is "M lon,-lat L lon,-lat ..."). */
+export function outlinePoints(d) {
+  const nums = String(d ?? '').match(/-?\d+(?:\.\d+)?/g) || [];
+  const pts = [];
+  for (let i = 0; i + 1 < nums.length; i += 2) pts.push([Number(nums[i]), -Number(nums[i + 1])]);
+  return pts;
+}
+
 const boundsOf = (pts) => [
   Math.min(...pts.map((p) => p.lon)), Math.min(...pts.map((p) => p.lat)),
   Math.max(...pts.map((p) => p.lon)), Math.max(...pts.map((p) => p.lat)),
@@ -164,8 +184,22 @@ export function mountTrip(container, { origin, destinations, outline = OUTLINE, 
     : fitProjection(boundsOf([origin, ...places]), PAD_POINTS);
   const H = proj.height;
   const home = { x: proj.x(origin.lon), y: proj.y(origin.lat) };
+  // The state border in map units (only the stretch inside the map): labels keep off it
+  const borderPts = hasOutline
+    ? outlinePoints(outline.d).map(([lon, lat]) => ({ x: proj.x(lon), y: proj.y(lat) }))
+      .filter((q) => q.x > -20 && q.x < W + 20 && q.y > -20 && q.y < H + 20)
+    : [];
   for (const p of places) { p.x = proj.x(p.lon); p.y = proj.y(p.lat); }
   declutter(places, MIN_SEP);
+  // Where each railway comes in: a fan around the direction of Bhilwara, as wide as the arc's bow
+  // can turn it (about 26 degrees either way), for the last 40 units before the pin
+  for (const p of places) {
+    const a = Math.atan2(home.y - p.y, home.x - p.x);
+    p.approach = [];
+    for (const da of [-0.45, -0.22, 0, 0.22, 0.45]) {
+      for (const r of [11, 18, 25, 32, 40]) p.approach.push({ x: p.x + Math.cos(a + da) * r, y: p.y + Math.sin(a + da) * r });
+    }
+  }
 
   container.classList.add('trip');
   container.classList.toggle('trip--still', reducedMotion === true);
@@ -192,6 +226,8 @@ export function mountTrip(container, { origin, destinations, outline = OUTLINE, 
   const clip = s('clipPath', { id: `${uid}-clip` }, defs);
   if (fitOutline) s('path', { d: outline.d, transform: outlineMatrix }, clip);
   else s('rect', { x: frame.x, y: frame.y, width: frame.w, height: frame.h, rx: 14 }, clip);
+  // Rajasthan itself, for the dotted paper and the tint band just inside the border
+  if (hasOutline) s('path', { d: outline.d, transform: outlineMatrix }, s('clipPath', { id: `${uid}-land` }, defs));
   const mask = s('mask', { id: `${uid}-reveal`, maskUnits: 'userSpaceOnUse', x: 0, y: 0, width: W, height: H }, defs);
   const reveal = s('path', { class: 'trip__reveal', fill: 'none', stroke: '#fff', 'stroke-width': 14 }, mask);
 
@@ -204,19 +240,25 @@ export function mountTrip(container, { origin, destinations, outline = OUTLINE, 
   }
   const inner = s('g', { 'clip-path': `url(#${uid}-clip)` }, bg);
   if (hasOutline && !fitOutline) s('path', { class: 'trip__land', d: outline.d, transform: outlineMatrix }, inner);
-  s('rect', { x: 0, y: 0, width: W, height: H, fill: `url(#${uid}-dots)` }, inner);
+  // With the real outline the paper dots stay on Rajasthan, so the neighbouring states recede
+  const onLand = hasOutline ? s('g', { 'clip-path': `url(#${uid}-land)` }, inner) : inner;
+  s('rect', { x: 0, y: 0, width: W, height: H, fill: `url(#${uid}-dots)` }, onLand);
   drawGraticule(inner, bg);
-  if (hasOutline) s('path', { class: 'trip__border', d: outline.d, transform: outlineMatrix }, inner);
+  if (hasOutline) {
+    // A soft rani band just inside the border, as on old political maps, then the dash-dot line
+    s('path', { class: 'trip__border-band', d: outline.d, transform: outlineMatrix, fill: 'none' }, onLand);
+    s('path', { class: 'trip__border', d: outline.d, transform: outlineMatrix }, inner);
+  }
   if (!fitOutline) {
     s('rect', { class: 'trip__rule', x: frame.x + 5, y: frame.y + 5, width: frame.w - 10, height: frame.h - 10, rx: 10 }, bg);
     s('rect', { class: 'trip__edge', x: frame.x, y: frame.y, width: frame.w, height: frame.h, rx: 14 }, bg);
   }
   const locator = hasOutline && !fitOutline ? drawLocator(bg) : null;
-  drawCompass(bg, locator ? 92 : 27, 27);
+  drawCompass(bg, locator ? 98 : 27, 27);
   drawScale(bg);
   if (!fitOutline) drawCartouche(bg);
 
-  /* Route (masked so it can draw itself), home, pins, engine, labels */
+  /* Route (masked so it can draw itself), engine (moved under the home board below), home, pins, labels */
   const routeG = s('g', { class: 'trip__route', mask: `url(#${uid}-reveal)`, 'aria-hidden': 'true' }, map);
   const rail = s('path', { class: 'trip__rail' }, routeG);
   const ties = s('path', { class: 'trip__ties' }, routeG);
@@ -252,8 +294,12 @@ export function mountTrip(container, { origin, destinations, outline = OUTLINE, 
   s('rect', { class: 'trip__engine-boiler', x: -3, y: -3.8, width: 10.5, height: 5.4, rx: 2.7 }, engineBody);
   s('rect', { class: 'trip__engine-stack', x: 3.6, y: -7.6, width: 2.6, height: 4.4, rx: 0.7 }, engineBody);
   for (const cx of [-5.5, -0.6, 4.3]) s('circle', { class: 'trip__engine-wheel', cx, cy: 2.6, r: 1.9 }, engineBody);
+  // Under the BHILWARA board, like the rail: a northbound train (Pushkar, Jaipur) pulls out from
+  // behind the board instead of driving across its name
+  map.insertBefore(engine, homeG);
 
   const labelsG = s('g', { class: 'trip__labels', 'aria-hidden': 'true' }, map);
+  const backsG = s('g', { class: 'trip__backs' }, labelsG); // paper backings for labels over the border
   const plate = s('rect', { class: 'trip__plate', rx: 3 }, labelsG);
   for (const p of places) {
     p.text = s('text', { class: 'trip__label', 'data-id': p.id }, labelsG);
@@ -290,6 +336,9 @@ export function mountTrip(container, { origin, destinations, outline = OUTLINE, 
     for (const p of places) blocked.push(box(p.x - PIN_R - 1.5, p.y - PIN_R - 1.5, 2 * PIN_R + 3, 2 * PIN_R + 3));
     const area = box(frame.x + 6, frame.y + 6, frame.w - 12, frame.h - 12);
     const placed = [];
+    const within = (q, b, m = 0) => q.x > b.x - m && q.x < b.x + b.w + m && q.y > b.y - m && q.y < b.y + b.h + m;
+    const gapTo = (b, q) => Math.hypot(Math.max(0, b.x - q.x, q.x - (b.x + b.w)), Math.max(0, b.y - q.y, q.y - (b.y + b.h)));
+    backsG.replaceChildren();
     for (const p of places) {
       const w = textWidth(p.text, p.name, LABEL_FS) + 4;
       let best = null;
@@ -299,7 +348,14 @@ export function mountTrip(container, { origin, destinations, outline = OUTLINE, 
         let cost = outside(b, area) * 6;
         for (const o of blocked) cost += overlap(b, o);
         for (const o of placed) cost += overlap(b, o) * 3;
-        if (!best || cost < best.cost - 0.01) best = { c, b, cost };
+        const crossings = borderPts.filter((q) => within(q, b, 1)).length;
+        if (crossings) cost += BORDER_COST + crossings * BORDER_VERTEX;
+        // Keep off the stretch where this place's own railway comes in
+        for (const q of p.approach) if (within(q, b)) cost += APPROACH_COST;
+        // A name must sit clearly nearer its own marigold than any other, or it names the wrong place
+        const own = gapTo(b, p);
+        if (places.some((q) => q !== p && gapTo(b, q) < own + AMBIGUOUS_GAP)) cost += AMBIGUOUS_COST;
+        if (!best || cost < best.cost - 0.01) best = { c, b, cost, crossings };
         if (cost === 0) break;
       }
       p.text.setAttribute('x', r1(p.x + best.c.dx));
@@ -308,6 +364,10 @@ export function mountTrip(container, { origin, destinations, outline = OUTLINE, 
       p.box = best.b;
       p.labelCost = best.cost;
       placed.push(best.b);
+      // Where the border can't be avoided, the name gets a paper backing and the border runs behind it
+      if (best.crossings) {
+        s('rect', { class: 'trip__back', x: r1(best.b.x - 1.5), y: r1(best.b.y - 1), width: r1(best.b.w + 3), height: r1(best.b.h + 2), rx: 3, fill: '#F7DCB8' }, backsG);
+      }
     }
     placePlate();
   }
@@ -408,8 +468,10 @@ export function mountTrip(container, { origin, destinations, outline = OUTLINE, 
   }
 
   // A gentle arc from Bhilwara, bowing upward (or east, for a north-south hop) unless that would
-  // run the rail over other pins, labels or the BHILWARA board (it would read as if the line stops
-  // there): then the flatter or opposite bow that crosses the fewest of them wins.
+  // run the rail over other pins, name labels, the BHILWARA board (it would read as if the line
+  // stops there) or the map furniture: then the flatter or opposite bow that does least harm wins.
+  // A pin costs most, then a label; the board and furniture only break ties (a northbound line
+  // can't help starting under the board).
   function routePath(p) {
     const dx = p.x - home.x;
     const dy = p.y - home.y;
@@ -420,9 +482,11 @@ export function mountTrip(container, { origin, destinations, outline = OUTLINE, 
     const mx = (home.x + p.x) / 2;
     const my = (home.y + p.y) / 2;
     const others = places.filter((q) => q !== p);
-    const boxes = [...others.map((q) => q.box).filter(Boolean), ...board.boxes().slice(0, 2)];
+    const labels = places.map((q) => q.box).filter(Boolean);
+    const furniture = [...board.boxes().slice(0, 2), ...obstacles];
+    const inside = (b, x, y) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
     let best = null;
-    for (const [side, size] of [[1, 0.24], [1, 0.12], [-1, 0.24], [-1, 0.12]]) {
+    for (const [side, size] of [[1, 0.24], [1, 0.12], [-1, 0.24], [-1, 0.12], [1, 0.05], [-1, 0.05]]) {
       const c = { x: mx + side * nx * size * len, y: my + side * ny * size * len };
       let hits = 0;
       for (let i = 2; i <= 18; i++) {
@@ -430,8 +494,9 @@ export function mountTrip(container, { origin, destinations, outline = OUTLINE, 
         const u = 1 - t;
         const x = u * u * home.x + 2 * u * t * c.x + t * t * p.x;
         const y = u * u * home.y + 2 * u * t * c.y + t * t * p.y;
-        for (const q of others) if (Math.hypot(q.x - x, q.y - y) < PIN_R + 4) hits++;
-        for (const b of boxes) if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) hits++;
+        for (const q of others) if (Math.hypot(q.x - x, q.y - y) < PIN_R + 4) hits += 4;
+        for (const b of labels) if (inside(b, x, y)) hits += 2;
+        for (const b of furniture) if (inside(b, x, y)) hits += 1;
       }
       if (!best || hits < best.hits) best = { c, hits };
       if (hits === 0) break;
@@ -628,6 +693,7 @@ export function mountTrip(container, { origin, destinations, outline = OUTLINE, 
     const x1 = x2 - len;
     const y = H - 19;
     const g = s('g', { class: 'trip__scale' }, parent);
+    s('rect', { class: 'trip__scale-bg', x: r1(x1 - 6), y: y - 13, width: r1(len + 12), height: 20, rx: 4, fill: '#FFF6EC', 'fill-opacity': 0.82 }, g);
     s('rect', { class: 'trip__scale-dark', x: r1(x1), y, width: r1(len / 2), height: 3.2 }, g);
     s('rect', { class: 'trip__scale-light', x: r1(x1 + len / 2), y, width: r1(len / 2), height: 3.2 }, g);
     const lab = s('text', { x: r1(x1 + len / 2), y: y - 4.5, 'text-anchor': 'middle' }, g);
@@ -675,7 +741,7 @@ export function mountTrip(container, { origin, destinations, outline = OUTLINE, 
 
   // Whole-state silhouette with the shown area boxed (only when real outline data exists).
   function drawLocator(parent) {
-    const size = 62;
+    const size = LOCATOR;
     const [minLon, minLat, maxLon, maxLat] = outline.bbox;
     const lp = fitProjection(outline.bbox, { t: 5, r: 5, b: 5, l: 5 }, size);
     const g = s('g', { class: 'trip__locator', transform: 'translate(12 12)' }, parent);
@@ -686,6 +752,7 @@ export function mountTrip(container, { origin, destinations, outline = OUTLINE, 
     const lat0 = Math.max(minLat, proj.lat(H));
     const lat1 = Math.min(maxLat, proj.lat(0));
     s('rect', { class: 'trip__locator-view', x: r1(lp.x(lon0)), y: r1(lp.y(lat1)), width: r1(lp.x(lon1) - lp.x(lon0)), height: r1(lp.y(lat0) - lp.y(lat1)) }, g);
+    s('circle', { class: 'trip__locator-home', cx: r1(lp.x(origin.lon)), cy: r1(lp.y(origin.lat)), r: 2.3 }, g);
     obstacles.push(box(8, 8, size + 8, lp.height + 8));
     return g;
   }

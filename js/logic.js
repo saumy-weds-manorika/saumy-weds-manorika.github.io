@@ -259,6 +259,20 @@ function flightLine(hub, airports) {
 }
 
 /**
+ * The bus line: the verified fact that names the guest's own city (a fact names each place as
+ * "{Place} (~…h)", e.g. Indore's overnight sleepers), else the first fact. Only picks between the
+ * facts as given, never rewrites them.
+ */
+function busLine(from, busFacts) {
+  const facts = asList(busFacts).map(oneLine).filter(Boolean);
+  if (!facts.length) return '';
+  const words = new Set(splitWords(normalizeName(from)));
+  const places = (fact) => [...fact.matchAll(/(\p{Lu}\p{L}+) \(~/gu)].map((m) => normalizeName(m[1]));
+  const own = words.size ? facts.find((f) => places(f).some((place) => words.has(place))) : null;
+  return `🚌 ${own || facts[0]}`;
+}
+
+/**
  * The junction stop's single travel line for a guest's mode (v4 §O1). Pure: the travel data from
  * `js/travel-data.js` is passed in, and the clock matters only when `now` is given.
  * - `train`: the §K booking line from `bookingOpens`/`formatDate`, e.g. "🎟️ Trains for Wed 9 Dec open for
@@ -267,10 +281,11 @@ function flightLine(hub, airports) {
  * - `flight`: "✈️ From {airport name}, Bhilwara is about {km} km by road ({drive})." for the airport whose
  *   `code` is `travel.via.hub`; when the hub is empty, `'unsure'` or not an airport, "✈️ Nearest airports:
  *   {names, nearest first}."
- * - `bus`: `'🚌 ' + busFacts[0]`; `car`: `'🚗 Road trip! ' + highways[0]`;
+ * - `bus`: `'🚌 '` + the bus fact naming the guest's `from` city (e.g. Indore: the overnight sleepers),
+ *   else `busFacts[0]`; `car`: `'🚗 Road trip! ' + highways[0]`;
  * - `local`: "🏡 Home platform! No train to catch. Just follow the dhol." (amendments §L).
  * Any other mode, or a bus/flight line with no data to show, gives `''`. The result never contains a newline.
- * @param {{mode:string, arrive?:{date?:string, slot?:string}, via?:{hub?:string, onward?:string}} | null} travel
+ * @param {{mode:string, from?:string, arrive?:{date?:string, slot?:string}, via?:{hub?:string, onward?:string}} | null} travel
  * @param {{airports?:{code:string, name:string, km:number, drive:string}[], junctions?:{code:string, name:string,
  *   km:number, drive:string}[], highways?:string[], busFacts?:string[], now?:number}} [data] `junctions` is
  *   accepted for symmetry with the travel data but no line uses it today
@@ -281,7 +296,7 @@ export function arrivalLine(travel, { airports = [], highways = [], busFacts = [
   switch (t.mode) {
     case 'train': return trainLine(t.arrive?.date, now);
     case 'flight': return flightLine(t.via?.hub, airports);
-    case 'bus': { const fact = oneLine(asList(busFacts)[0]); return fact ? `🚌 ${fact}` : ''; }
+    case 'bus': return busLine(t.from, busFacts);
     case 'car': { const road = oneLine(asList(highways)[0]); return road ? `🚗 Road trip! ${road}` : '🚗 Road trip!'; }
     case 'local': return LOCAL_LINE;
     default: return '';

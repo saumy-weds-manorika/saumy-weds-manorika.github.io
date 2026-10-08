@@ -41,3 +41,13 @@ test('arrivalLine: exactly one friendly line per travel mode', () => {
   assert.ok(arrivalLine({ mode: 'local' }, DATA).includes('Home platform'));
   for (const m of ['train', 'flight', 'bus', 'car', 'local']) assert.ok(!arrivalLine({ mode: m, ...when }, DATA).includes('\n'));
 });
+
+test('arrivalLine: a bus guest gets the verified bus fact for their own city, else the first one', () => {
+  const bus = (from) => arrivalLine({ mode: 'bus', from, ...when }, DATA);
+  assert.equal(bus('Indore'), `🚌 ${BUS_FACTS[1]}`);
+  assert.equal(bus('New Delhi'), `🚌 ${BUS_FACTS[1]}`);
+  assert.equal(bus('Jaipur'), `🚌 ${BUS_FACTS[0]}`);
+  assert.equal(bus('Pune'), `🚌 ${BUS_FACTS[0]}`);
+  assert.equal(bus(''), `🚌 ${BUS_FACTS[0]}`);
+  assert.equal(arrivalLine({ mode: 'bus', from: 'Indore', ...when }, { ...DATA, busFacts: [] }), '');
+});

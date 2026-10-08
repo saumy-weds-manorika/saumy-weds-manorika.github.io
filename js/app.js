@@ -17,9 +17,9 @@ import { findGuests, getGuest, submitRsvp, newUnlistedId, local } from './api.js
 import { createRegretController } from './regret.js';
 import { createBaaja } from './audio.js';
 import { renderPass, passFilename, downloadPass, sharePass, passBlob } from './pass.js';
-import { mountTrip } from './trip.js';
+import { mountTrip, spokenDrive } from './trip.js';
 import { ORIGIN, DESTINATIONS, TRIP_COPY } from './trip-data.js';
-import { AIRPORTS, HIGHWAYS, BUS_FACTS } from './travel-data.js';
+import { AIRPORTS, JUNCTIONS, BHILWARA_STATION, HIGHWAYS, BUS_FACTS } from './travel-data.js';
 
 /* ------------------------------------------------------------------ */
 /* Constants                                                           */
@@ -41,6 +41,19 @@ const UNLISTED_RE = /^u-[a-z0-9]{8}$/;
 const SEARCH_DEBOUNCE_MS = 250;
 const IST_MS = 5.5 * 3600000;
 const LOCAL = 'local';           // "Bhilwara is home" (amendments §L)
+const HOME_STATION = BHILWARA_STATION.code; // getting off at Bhilwara itself: no onward leg (v4 §O3)
+const nearestFirst = (list) => [...list].sort((a, b) => (Number(a.km) || 0) - (Number(b.km) || 0));
+/**
+ * Hub chips per mode (v4 §O3), nearest first: where a flight lands, or where a train guest gets off
+ * (Bhilwara itself first). Bus, car and local guests aren't asked.
+ */
+const HUBS = {
+  flight: nearestFirst(AIRPORTS),
+  train: [{ ...BHILWARA_STATION, km: 0 }, ...nearestFirst(JUNCTIONS)],
+};
+/** "Then on to Bhilwara by", in each mode's order (a train guest is likelier to take a bus than another train). */
+const ONWARD_ORDER = { flight: ['car', 'train', 'bus', 'unsure'], train: ['car', 'bus', 'train', 'unsure'] };
+const ONWARD_LABEL = { car: 'Car/cab', train: 'Train', bus: 'Bus', unsure: 'Not sure yet' };
 const RIDER_OUT_MS = 300;        // matches .rider.is-out in styles.css
 
 /** Bobblehead art (amendments §E): the couple's busts for the pass, guest busts for the riders. */
@@ -64,7 +77,7 @@ const WEDDING = (() => {
 const STOPS = {
   platform: { progress: 0, title: 't-platform', say: "Platform. Who's boarding?" },
   passengers: { progress: 0.2, title: 't-passengers', say: 'Stop 1 of 4: Passenger chart', sayHome: 'Stop 1 of 2: Passenger chart' },
-  route: { progress: 0.4, title: 't-route', say: 'Stop 2 of 4: How you are travelling', sayHome: 'Last stop: How you are travelling' },
+  route: { progress: 0.4, title: 't-route', say: 'Stop 2 of 4: Getting to Bhilwara', sayHome: 'Last stop: Getting to Bhilwara' },
   arrival: { progress: 0.6, title: 't-arrival', say: 'Stop 3 of 4: Arrival' },
   departure: { progress: 0.8, title: 't-departure', say: 'Stop 4 of 4: Departure' },
   junction: { progress: 1, title: 't-junction', say: 'Bhilwara Junction. Your ticket is saved.' },
@@ -121,9 +134,10 @@ const topInset = () => ($('.toran') || el('journey-bar')).getBoundingClientRect(
 /* State                                                               */
 /* ------------------------------------------------------------------ */
 
-const blankTravel = () => ({ mode: '', from: '', arrive: { date: '', slot: '' }, depart: { date: '', slot: '' } });
+const blankVia = () => ({ hub: '', onward: '' });
+const blankTravel = () => ({ mode: '', from: '', arrive: { date: '', slot: '' }, depart: { date: '', slot: '' }, via: blankVia() });
 /** A local guest's travel: home is Bhilwara, so there is nothing to plan (amendments §L). */
-const localTravel = () => ({ mode: LOCAL, from: CONFIG.city, arrive: { date: 'unsure', slot: 'unsure' }, depart: { date: 'unsure', slot: 'unsure' } });
+const localTravel = () => ({ mode: LOCAL, from: CONFIG.city, arrive: { date: 'unsure', slot: 'unsure' }, depart: { date: 'unsure', slot: 'unsure' }, via: blankVia() });
 const isLocal = () => state.travel.mode === LOCAL;
 
 let keySeq = 0;
@@ -207,12 +221,27 @@ function cleanSide(s, dates) {
 }
 function cleanTravel(t) {
   const v = obj(t);
+  const mode = MODE_IDS.includes(v.mode) ? v.mode : '';
   return {
-    mode: MODE_IDS.includes(v.mode) ? v.mode : '',
+    mode,
     from: clip(String(v.from ?? ''), NAME_MAX),
     arrive: cleanSide(v.arrive, CONFIG.arriveDates),
     depart: cleanSide(v.depart, CONFIG.departDates),
+    via: cleanVia(mode, v.via),
   };
+}
+/** True when `hub` is one this mode offers (or "Not sure yet"). */
+const isHubFor = (mode, hub) => !!HUBS[mode] && (hub === 'unsure' || HUBS[mode].some((h) => h.code === hub));
+/**
+ * Is "Then on to Bhilwara by" asked? Flights: once any landing answer is picked. Trains: only for a
+ * junction (Bhilwara itself needs no onward leg, and "Not sure yet" has nothing to go on from).
+ */
+const asksOnward = (mode, hub) => (mode === 'flight' ? isHubFor(mode, hub) : isHubFor(mode, hub) && hub !== 'unsure' && hub !== HOME_STATION);
+/** travel.via from a draft or a saved answer: only hubs this mode offers, and an onward leg only where it's asked. */
+function cleanVia(mode, via) {
+  const v = obj(via);
+  const hub = isHubFor(mode, v.hub) ? v.hub : '';
+  return { hub, onward: asksOnward(mode, hub) && ONWARD_ORDER[mode].includes(v.onward) ? v.onward : '' };
 }
 
 const maxGuests = () => Math.min(10, Math.max(1, (state.guest && state.guest.max_guests) || 1));
@@ -1130,7 +1159,8 @@ function buildCard(g, i) {
         return;
       }
       if (g.status === 'regret') return; // already chosen: nothing to joke about
-      // The stable per-guest key lets each card run its own joke (regret.js may ignore it)
+      // Each card runs its own joke, counted by the guest's stable key, so re-rendering the card
+      // (Back/Next, Edit my ticket, Add guest) neither restarts nor shares it (v4 §P)
       regret.handle(chip, () => setStatus(g, 'regret'), g.key);
     });
   }
@@ -1190,6 +1220,8 @@ function addGuest() {
   const gender = otherGender(state.guests[0] && state.guests[0].gender);
   state.guests.push({ name: '', status: '', gender, added: true, partner: false, key: newKey() });
   renderGuests();
+  updateParty(); // the newcomer has no status yet, so "Send my regrets" no longer fits
+  updateCta();
   renderRiders();
   markDirty();
   const ref = cards[cards.length - 1];
@@ -1200,6 +1232,9 @@ function addGuest() {
 function removeGuest(g) {
   const i = state.guests.indexOf(g);
   if (i < 0) return;
+  // Their Regret joke goes with them (v4 §P); a chip on the run goes home first. Never call
+  // reset() without a key: that would restart every other card's joke too.
+  if (g.key) regret.reset(g.key);
   state.guests.splice(i, 1);
   renderGuests();
   updateParty();
@@ -1290,6 +1325,7 @@ function setSide(side, key, value) {
 /**
  * Pick a travel mode. "Bhilwara is home" (amendments §L) fills in a local plan and skips the
  * arrival and departure stops; the away plan is kept aside so switching back restores it.
+ * A different mode always starts its hub and onward answers afresh (v4 §O3).
  */
 function setMode(value) {
   if (!MODE_IDS.includes(value)) return;
@@ -1299,24 +1335,163 @@ function setMode(value) {
     state.travel = localTravel();
   } else if (value !== LOCAL && was === LOCAL) {
     const back = awayTravel || blankTravel();
-    state.travel = { mode: value, from: back.from, arrive: { ...back.arrive }, depart: { ...back.depart } };
+    state.travel = { mode: value, from: back.from, arrive: { ...back.arrive }, depart: { ...back.depart }, via: blankVia() };
     awayTravel = null;
   } else {
     state.travel.mode = value;
+    if (value !== was) state.travel.via = blankVia();
   }
   el('mode-error').hidden = true;
   syncTravel();
   renderCatches();
   updateCta();
   markDirty();
+  // The optional question that just opened below "Travelling from"
+  if (value !== was && HUBS[value]) announce(`Optional, just below: ${hubQuestion(value)}`);
 }
 
 /** Route stop for locals: every function lit, and the note to the couple (amendments §L). */
 function renderLocalExtras() {
   const home = isLocal();
   el('from-field').hidden = home;
+  el('getting-there').hidden = home;
   el('local-extras').hidden = !home;
   if (home) renderCatches(el('local-catches'));
+}
+
+/*
+ * Hub and onward (v4 §O3): flight and train guests get two optional questions after "Travelling from",
+ * one at a time: where they land or get off, then (for an airport or a junction) how they go on to
+ * Bhilwara. Neither ever blocks Next. The chips are rebuilt only when the mode changes, so focus and
+ * the roving tab stop survive every other update.
+ */
+let viaMode = ''; // the mode whose chips are in #hub-chips / #onward-chips
+
+const hubQuestion = (mode) => (mode === 'flight' ? 'Landing at (best guess)' : 'Getting off at');
+
+/** A small span, e.g. a station code set in the body face (DotGothic's capital I reads as an l: "AII"). */
+function span(cls, text) {
+  const node = document.createElement('span');
+  node.className = cls;
+  node.textContent = text;
+  return node;
+}
+
+/**
+ * The better-known city a hub serves, when its own name hides it: 'Ajmer' for Kishangarh airport
+ * (AIRPORTS city "Kishangarh (Ajmer)"), else ''. Friends booking a flight search for Ajmer.
+ */
+function servesCity(h) {
+  const city = String(h.city || '').trim();
+  if (!city || city === h.name) return '';
+  const inner = /\(([^)]+)\)/.exec(city);
+  return (inner ? inner[1] : city).trim();
+}
+
+/** One radio chip from #tpl-chip. `hint` is text or nodes; `note` is a small line under the label. */
+function viaChip(value, label, { hint = '', spoken = '', extra = '', note = '' } = {}) {
+  const chip = tpl('tpl-chip');
+  chip.dataset.value = value;
+  slot(chip, 'label').textContent = label;
+  if (note) slot(chip, 'label').after(span('chip__for', note));
+  const parts = [].concat(hint).filter(Boolean);
+  if (parts.length) {
+    slot(chip, 'hint').replaceChildren(...parts);
+    slot(chip, 'hint').hidden = false;
+  }
+  if (spoken) chip.setAttribute('aria-label', spoken);
+  if (extra) chip.className += ` ${extra}`;
+  return chip;
+}
+
+function buildViaChips(mode) {
+  const flight = mode === 'flight';
+  el('hub-label-text').textContent = flight ? 'Landing at' : 'Getting off at';
+  el('hub-label-note').textContent = flight ? '(best guess)' : '(optional)';
+  const hubs = HUBS[mode].map((h) => {
+    const code = span('hub-code', h.code);
+    if (h.code === HOME_STATION) {
+      return viaChip(h.code, h.name, { hint: [code, ' · in town'], spoken: `${h.name} station (${h.code}), in town`, extra: 'chip--hub chip--hub-home' });
+    }
+    const serves = servesCity(h);
+    return viaChip(h.code, h.name, {
+      hint: [code, ` · ${h.km} km`],
+      note: serves ? `for ${serves}` : '',
+      spoken: `${h.name}${flight ? ' airport' : ''}${serves ? `, for ${serves}` : ''} (${h.code}), ${h.km} km by road`,
+      extra: 'chip--hub',
+    });
+  });
+  hubs.push(viaChip('unsure', 'Not sure yet', { extra: 'chip--hub chip--unsure' }));
+  el('hub-chips').replaceChildren(...hubs);
+  el('onward-chips').replaceChildren(...ONWARD_ORDER[mode].map((id) => viaChip(id, ONWARD_LABEL[id], { extra: id === 'unsure' ? 'chip--unsure' : '' })));
+  viaMode = mode;
+}
+
+/** Show the hub question for flight and train, and the onward one once it applies; tick the answers. */
+function renderVia() {
+  const t = state.travel;
+  if (!t.via) t.via = blankVia();
+  const asked = !!HUBS[t.mode];
+  el('via').hidden = !asked;
+  if (!asked) return;
+  if (viaMode !== t.mode) buildViaChips(t.mode);
+  checkChip(el('hub-chips'), t.via.hub);
+  el('onward-group').hidden = !asksOnward(t.mode, t.via.hub);
+  checkChip(el('onward-chips'), t.via.onward);
+}
+
+function setHub(value) {
+  const t = state.travel;
+  if (!isHubFor(t.mode, value)) return;
+  const opened = !asksOnward(t.mode, t.via.hub) && asksOnward(t.mode, value);
+  t.via.hub = value;
+  if (!asksOnward(t.mode, value)) t.via.onward = ''; // Bhilwara (BHL) itself: nothing to go on by
+  renderVia();
+  markDirty();
+  if (opened) announce('Optional, just below: Then on to Bhilwara by');
+}
+
+function setOnward(value) {
+  const t = state.travel;
+  if (!asksOnward(t.mode, t.via.hub) || !ONWARD_ORDER[t.mode].includes(value)) return;
+  t.via.onward = value;
+  checkChip(el('onward-chips'), value);
+  markDirty();
+}
+
+/*
+ * "Getting to Bhilwara" (v4 §O2): the reference panel on the route stop, filled once from
+ * js/travel-data.js. Each row reads as one sentence to screen readers ("Udaipur (UDR): 145 km,
+ * about 2 hours 30 minutes by road."); the visual columns are hidden from them.
+ */
+function gtRow(h) {
+  const { code, name, km, drive } = h;
+  const serves = servesCity(h);
+  const li = document.createElement('li');
+  li.className = 'gt-row';
+  // name (code) · km · drive (v4 §O2); "for Ajmer" under Kishangarh
+  const place = span('gt-row__place', '');
+  place.append(span('gt-row__name', name), ' ', span('gt-row__code hub-code', `(${code})`));
+  if (serves) place.append(span('gt-row__for', `for ${serves}`));
+  const cells = [place, span('gt-row__km', keepTogether(`${km} km`)), span('gt-row__drive', keepTogether(String(drive)))];
+  for (const cell of cells) {
+    cell.setAttribute('aria-hidden', 'true');
+    li.appendChild(cell);
+  }
+  li.appendChild(span('sr-only', `${name}${serves ? `, for ${serves}` : ''} (${code}): ${km} km, ${spokenDrive(drive)} by road.`));
+  return li;
+}
+
+function renderGettingThere() {
+  el('gt-airports').replaceChildren(...nearestFirst(AIRPORTS).map(gtRow));
+  el('gt-junctions').replaceChildren(...nearestFirst(JUNCTIONS).map(gtRow));
+  el('gt-rail-lede').textContent = `${BHILWARA_STATION.name} (${BHILWARA_STATION.code}) has its own station. Big junctions nearby:`;
+  const road = [HIGHWAYS[0], BUS_FACTS[0]].filter((x) => typeof x === 'string' && x.trim());
+  el('gt-road').replaceChildren(...road.map((line) => {
+    const li = document.createElement('li');
+    li.textContent = keepTogether(line.trim());
+    return li;
+  }));
 }
 
 function checkRoute(show) {
@@ -1421,6 +1596,7 @@ function syncTravel() {
   el('from-city').value = isLocal() ? (awayTravel ? awayTravel.from : '') : t.from;
   syncSide('arrive');
   syncSide('depart');
+  renderVia();
   renderLocalExtras();
 }
 
@@ -1641,14 +1817,32 @@ function weddingDates() {
   return m1 === m2 ? `${d1}${d1 === d2 ? '' : `–${d2}`} ${mon} ${y1}` : `${formatDate(WEDDING.first)} – ${formatDate(WEDDING.last)} ${y1}`;
 }
 
+/** The guest's own vehicle for the share caption: the Shaadi Express is the theme, not the transport. */
+const MODE_EMOJI = { train: '🚂', flight: '✈️', bus: '🚌', car: '🚗' };
+
+/**
+ * The caption shared with the pass. Travellers' captions end with the every-mode line (v4 §O1), so
+ * friends who see it don't read the trip as train-only; it carries no booking line (amendments §K).
+ */
 function shareText() {
   const wl = party() === 'waitlisted';
   const line = wl
     ? `On the waitlist for the ${CONFIG.train.name} to ${CONFIG.city} for ${CONFIG.couple.joined}'s wedding. Will confirm soon!`
     : isLocal()
       ? `Home platform! I'll be at every function of ${CONFIG.couple.joined}'s wedding in ${CONFIG.city}. 🛺`
-      : `Booked on the ${CONFIG.train.name} to ${CONFIG.city} for ${CONFIG.couple.joined}'s wedding! 🚂`;
-  return `${line} ${weddingDates()}.${CONFIG.siteUrl ? `\n${CONFIG.siteUrl}` : ''}`;
+      : `Booked on the ${CONFIG.train.name} to ${CONFIG.city} for ${CONFIG.couple.joined}'s wedding! ${MODE_EMOJI[state.travel.mode] || '🚂'}`;
+  const routes = isLocal() ? '' : `\nTrain, bus, car or flight, every route ends at ${CONFIG.city}.`;
+  return `${line} ${weddingDates()}.${routes}${CONFIG.siteUrl ? `\n${CONFIG.siteUrl}` : ''}`;
+}
+
+/** " via Udaipur (UDR), then car/cab" / " to Bhilwara (BHL)" for the WhatsApp text, or '' (v4 §O3). */
+function viaPhrase(t) {
+  const via = obj(t.via);
+  const hub = (HUBS[t.mode] || []).find((h) => h.code === via.hub);
+  if (!hub) return '';
+  if (hub.code === HOME_STATION) return ` to ${hub.name} (${hub.code})`;
+  const on = via.onward && via.onward !== 'unsure' ? `, then ${ONWARD_LABEL[via.onward].toLowerCase()}` : '';
+  return ` via ${hub.name} (${hub.code})${on}`;
 }
 
 /** wa.me link to Saumy, or '' when CONFIG.hostWhatsApp isn't set. */
@@ -1661,7 +1855,7 @@ function waLink() {
   if (!everyoneRegrets() && t.mode === LOCAL) {
     text += ` ${CONFIG.city} is home, so I'll be at every function.`;
   } else if (!everyoneRegrets() && t.mode) {
-    text += ` Rough plan: ${modeLabel(t.mode)} from ${t.from.trim()}, arriving ${formatDate(t.arrive.date)} (${slotLabel(t.arrive.slot)}),`
+    text += ` Rough plan: ${modeLabel(t.mode)} from ${t.from.trim()}${viaPhrase(t)}, arriving ${formatDate(t.arrive.date)} (${slotLabel(t.arrive.slot)}),`
       + ` leaving ${formatDate(t.depart.date)} (${slotLabel(t.depart.slot)}).`;
   }
   text += ' Sending my boarding pass next!';
@@ -2027,7 +2221,7 @@ function bind() {
   el('tap-dhol').addEventListener('click', () => { baaja.dholHit(DHOL_TAPS[dholTap++ % DHOL_TAPS.length]); });
   el('tap-shehnai').addEventListener('click', () => { baaja.shehnaiPhrase(); });
 
-  // Regret controller (one per page: the dodge count is shared by every card)
+  // Regret controller: one per page, with a separate dodge count per guest key (v4 §P)
   regret = createRegretController({
     messages: CONFIG.regret.dodges,
     finalMessage: CONFIG.regret.final,
@@ -2108,6 +2302,8 @@ function bind() {
 
   // Route
   bindGroup(el('mode-chips'), setMode);
+  bindGroup(el('hub-chips'), setHub);
+  bindGroup(el('onward-chips'), setOnward);
   el('from-city').addEventListener('input', () => {
     state.travel.from = el('from-city').value.slice(0, NAME_MAX);
     el('from-error').hidden = true;
@@ -2195,7 +2391,8 @@ function boot() {
   if (document.body.classList.contains('preview-all')) return;
   try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch { /* ignore */ }
   searchErrorDefault = el('search-error').textContent;
-  for (const id of ['search-results', 'guest-list', 'catches', 'local-catches']) el(id).replaceChildren();
+  for (const id of ['search-results', 'guest-list', 'catches', 'local-catches', 'hub-chips', 'onward-chips']) el(id).replaceChildren();
+  renderGettingThere();
   // Long-weekend copy lives with the map data (js/trip-data.js)
   el('trip-title').textContent = TRIP_COPY.title;
   el('trip-intro').textContent = TRIP_COPY.intro;

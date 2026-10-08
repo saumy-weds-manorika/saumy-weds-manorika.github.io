@@ -41,6 +41,7 @@
   <link rel="modulepreload" href="js/pass.js">
   <link rel="modulepreload" href="js/trip.js">
   <link rel="modulepreload" href="js/trip-data.js">
+  <link rel="modulepreload" href="js/travel-data.js">
   <link rel="modulepreload" href="js/rajasthan-outline.js">
   <!-- The couple's busts: the cover, the BHILWARA board and the boarding pass all use them -->
   <link rel="preload" as="image" href="assets/bobble/saumy-bust.webp" type="image/webp">
@@ -267,6 +268,7 @@
           <span class="cover__name">Manorika</span>
         </h1>
         <p class="cover__when">10–11 Dec 2026 · Bhilwara, Rajasthan</p>
+        <p class="cover__routes">Train, bus, car or flight, every route ends at Bhilwara.</p>
       </div>
       <div class="ticket__part ticket__part--stub cover__stub">
         <h2 class="dm cover__tt-label">Timetable</h2>
@@ -393,8 +395,8 @@
     <div class="ticket form-card">
       <div class="ticket__strip"><span>Shaadi Express · 1011</span><span><span class="v-away">Stop 2 of 4</span><span class="v-home">Last stop</span></span></div>
       <div class="form-card__body">
-        <h2 class="stop__title" id="t-route" tabindex="-1"><span class="v-cnf">How are you travelling?</span><span class="v-wl">If your ticket confirms, how would you travel?</span></h2>
-        <p class="stop__lede">Your best guess is perfect. You can change this anytime.</p>
+        <h2 class="stop__title" id="t-route" tabindex="-1"><span class="v-cnf">How are you getting to Bhilwara?</span><span class="v-wl">If your ticket confirms, how would you get to Bhilwara?</span></h2>
+        <p class="stop__lede">Train, bus, car, or a flight plus a short ride: tell us your best guess.</p>
 
         <div class="group">
           <p class="group__label" id="mode-label">Mode</p>
@@ -422,6 +424,66 @@
           <p class="field__hint" id="from-hint">Pick from the list or type your own.</p>
           <p class="field__error" id="from-error" hidden data-preview>Tell us roughly where you're coming from.</p>
         </div>
+
+        <!-- Flight and train only (v4 §O3): two optional legs after "Travelling from", revealed one at a time,
+             so the itinerary reads from → landing at / getting off at → then on by. app.js renders the chips
+             from js/travel-data.js; the samples below only show in ?preview=all (tests/travel.test.mjs keeps
+             their numbers in step with travel-data.js). -->
+        <div class="via" id="via" hidden data-preview>
+          <div class="group via__leg" id="hub-group">
+            <p class="group__label" id="hub-label"><span id="hub-label-text">Landing at</span> <span class="field__optional" id="hub-label-note">(best guess)</span></p>
+            <div class="chips chips--hub" id="hub-chips" role="radiogroup" aria-labelledby="hub-label" data-group="hub">
+              <button class="chip chip--hub" data-sample type="button" role="radio" aria-checked="true" data-value="UDR"><span class="chip__label">Udaipur</span><span class="chip__hint"><span class="hub-code">UDR</span> · 145 km</span></button>
+              <button class="chip chip--hub" data-sample type="button" role="radio" aria-checked="false" data-value="KQH"><span class="chip__label">Kishangarh</span><span class="chip__for">for Ajmer</span><span class="chip__hint"><span class="hub-code">KQH</span> · 160 km</span></button>
+              <button class="chip chip--hub chip--unsure" data-sample type="button" role="radio" aria-checked="false" data-value="unsure"><span class="chip__label">Not sure yet</span></button>
+            </div>
+          </div>
+          <div class="group via__leg" id="onward-group" hidden data-preview>
+            <p class="group__label" id="onward-label">Then on to Bhilwara by <span class="field__optional">(optional)</span></p>
+            <div class="chips chips--onward" id="onward-chips" role="radiogroup" aria-labelledby="onward-label" data-group="onward">
+              <button class="chip" data-sample type="button" role="radio" aria-checked="true" data-value="car"><span class="chip__label">Car/cab</span></button>
+              <button class="chip" data-sample type="button" role="radio" aria-checked="false" data-value="train"><span class="chip__label">Train</span></button>
+              <button class="chip" data-sample type="button" role="radio" aria-checked="false" data-value="bus"><span class="chip__label">Bus</span></button>
+              <button class="chip chip--unsure" data-sample type="button" role="radio" aria-checked="false" data-value="unsure"><span class="chip__label">Not sure yet</span></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Getting to Bhilwara (v4 §O2): reference panel, closed by default. app.js fills the lists from
+             js/travel-data.js (nearest first); the sample rows only show in ?preview=all, and
+             tests/travel.test.mjs keeps their numbers in step with travel-data.js. -->
+        <details class="getting" id="getting-there">
+          <summary class="getting__summary">
+            <svg class="getting__pin" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><g fill="#F6A609"><circle cx="8" cy="4.6" r="2.6"/><circle cx="11.4" cy="8" r="2.6"/><circle cx="8" cy="11.4" r="2.6"/><circle cx="4.6" cy="8" r="2.6"/></g><circle cx="8" cy="8" r="2.4" fill="#E07B00"/></svg>
+            <span class="getting__title">Getting to Bhilwara<span class="getting__sub">: airports, junctions, roads</span></span>
+            <svg class="getting__chev" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </summary>
+          <div class="getting__body">
+            <div class="getting__part">
+              <h3 class="getting__head" id="gt-air-title"><svg class="getting__icon" viewBox="0 0 48 28" aria-hidden="true" focusable="false"><use href="#v-flight"/></svg>Nearest airports</h3>
+              <ol class="gt-list" id="gt-airports">
+                <li class="gt-row" data-sample><span class="gt-row__place"><span class="gt-row__name">Udaipur</span> <span class="gt-row__code hub-code">(UDR)</span></span><span class="gt-row__km">145 km</span><span class="gt-row__drive">~2h 30m</span></li>
+                <li class="gt-row" data-sample><span class="gt-row__place"><span class="gt-row__name">Kishangarh</span> <span class="gt-row__code hub-code">(KQH)</span><span class="gt-row__for">for Ajmer</span></span><span class="gt-row__km">160 km</span><span class="gt-row__drive">~2h 30m</span></li>
+              </ol>
+              <p class="getting__note" id="gt-air-note">Bhilwara itself has no commercial airport.</p>
+            </div>
+            <div class="getting__part">
+              <h3 class="getting__head" id="gt-rail-title"><svg class="getting__icon" viewBox="0 0 48 28" aria-hidden="true" focusable="false"><use href="#v-train"/></svg>Railway</h3>
+              <p class="getting__lede" id="gt-rail-lede">Bhilwara (BHL) has its own station. Big junctions nearby:</p>
+              <ol class="gt-list" id="gt-junctions">
+                <li class="gt-row" data-sample><span class="gt-row__place"><span class="gt-row__name">Chittaurgarh</span> <span class="gt-row__code hub-code">(COR)</span></span><span class="gt-row__km">55 km</span><span class="gt-row__drive">~1h</span></li>
+                <li class="gt-row" data-sample><span class="gt-row__place"><span class="gt-row__name">Udaipur City</span> <span class="gt-row__code hub-code">(UDZ)</span></span><span class="gt-row__km">155 km</span><span class="gt-row__drive">~2h 45m</span></li>
+              </ol>
+            </div>
+            <div class="getting__part">
+              <h3 class="getting__head" id="gt-road-title"><svg class="getting__icon" viewBox="0 0 48 28" aria-hidden="true" focusable="false"><use href="#v-car"/></svg>By road</h3>
+              <ul class="gt-road" id="gt-road">
+                <li data-sample>Bhilwara sits just off NH48, the Delhi–Jaipur–Ajmer–Chittaurgarh–Udaipur–Ahmedabad highway.</li>
+              </ul>
+            </div>
+            <p class="getting__foot">Road distances to Bhilwara station, rounded. Drive times are rough.</p>
+          </div>
+        </details>
 
         <!-- Locals only: they skip the arrival and departure stops, so their stops and note live here -->
         <div class="local-extras" id="local-extras" hidden data-preview>

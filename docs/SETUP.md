@@ -20,7 +20,7 @@ You send **the same message and the same link to everyone**. The page personalis
 2. **From then on, the ticket is theirs.** The names from your list are already on it. If Guest 2 on your list is just `Mrs`, `Mr` or `Ms`, they type their partner's name. Anyone can tap **Add guest** (up to 4 people per ticket). Added people are marked in the **People** tab and listed in **Summary** under **Extra guests added**, so you'll always see them.
 3. **Couples share one ticket.** When **Both Primary?** is `Y`, either of them can open the link. If one has already booked, the other sees that ticket ("Priya already booked seats for you both…") and can check or change it. The latest answer wins, and a phone that saved an older copy picks up the newer one before showing it. Notes to you stay private: whoever opens the ticket sees the passengers and travel plan, but not the note, and the note is kept unless they write a new one.
 4. **Friends from Bhilwara** tap **Bhilwara is home** and skip all the travel questions. Summary counts them as **Locals** and leaves them out of the stay and pickup tables.
-   **Everyone else** picks Train, Bus, Car or Flight, says roughly where they're coming from, and picks rough arrival and departure dates. At the end of the journey they get one handy line for their mode: when train bookings open, the nearest airports, the bus routes or the highway.
+   **Everyone else** picks Train, Bus, Car or Flight, says roughly where they're coming from, and picks rough arrival and departure dates. Flight guests can also say where they'll land (Udaipur, Kishangarh, Jaipur or Ahmedabad), and train guests where they'll get off (Bhilwara itself or a nearby junction), plus how they'll go on to Bhilwara from there. Both questions are optional and "Not sure yet" is always there. A fold-out **Getting to Bhilwara** panel lists the nearest airports and junctions, nearest first, with road distances. At the end of the journey they get one handy line for their mode: when train bookings open, how far their airport is by road, the bus routes or the highway.
 5. **Their phone remembers them.** Next time they open the link, it says "Welcome back, Rahul" with **View my pass** and **Edit my ticket**.
 6. **Someone you forgot to list** can tap **Not on the list? Board anyway** and type their name. They show up in Summary under **Unlisted guests**, so you can check them.
 
@@ -30,9 +30,11 @@ You send **the same message and the same link to everyone**. The page personalis
 
 > 🚂 The Shaadi Express is boarding! Saumy & Manorika · 10–11 Dec 2026 · Bhilwara.
 > Tap the link, type your name and grab your seat (it takes a minute): <your website link>
-> Train, bus, car or flight, every route ends at Bhilwara.
+> Train, bus, car or flight, every route ends at Bhilwara:
+> ✈️ Flying? Udaipur and Kishangarh airports are each about 2½ hours away by road.
+> 🚌 🚗 Bus or car? Bhilwara is just off NH48, with buses from Jaipur, Udaipur and Kota.
+> 🎟️ Train? Bookings for Wed 9 Dec open Sat 10 Oct, 8 AM.
 > It's a Thursday and Friday, so stay on and make it a Rajasthan long weekend!
-> 🎟️ Trains for Wed 9 Dec open for booking Sat 10 Oct, 8 AM.
 
 ---
 
@@ -55,7 +57,7 @@ You send **the same message and the same link to everyone**. The page personalis
 
     What each row puts on the ticket:
     - **Guest 2 is a name:** "Meera Kapoor & Dev Malhotra". Both names are already filled in.
-    - **Guest 2 is `Mrs`, `Mr` or `Ms`** (`Mrs.`, `Smt` and `Miss` work too): "Mr & Mrs Kabir Khan". Kabir is filled in, plus a card where they type their partner's name. When that wouldn't read right, for example Guest 1 is `F` and Guest 2 is `Mr`, the ticket says "Neha Gupta & partner" instead.
+    - **Guest 2 is `Mrs`, `Mr` or `Ms`** (`Mrs.`, `Smt` and `Miss` work too): "Mr & Mrs Kabir Khan". Kabir is filled in, plus a card where they type their partner's name. When Guest 1 is `F` and Guest 2 is `Mr`, the ticket says "Mrs Pooja Nair & Mr Nair" (the surname is taken from Guest 1). Any other pairing says "Neha Gupta & partner".
     - **Guest 2 is `NA`:** just "Ananya Iyer".
     - Every ticket can hold **up to 4 people** using **Add guest**, so you don't need to mark plus-ones anywhere.
     - `NA`, `N/A`, `N.A.`, `-`, `--` and empty cells all mean "nothing here". Rows with an empty **Guest 1** are skipped. One row is one invite, which is one ticket.
@@ -189,7 +191,7 @@ The Summary tab updates by itself. Don't type in it. If it ever looks broken, ru
 - **Invites:** for each list, how many invites (rows) there are, how many have replied, how many haven't, and rows still missing an ID.
 - **Nights in Bhilwara:** how many travelling guests are in town each night, from 8 to 13 Dec, for planning stays. Someone counts for a night if they arrive on or before that date and leave after it. "Not sure yet" counts as arriving 9 Dec and leaving 12 Dec. Locals aren't counted.
 - **Arrivals / Departures:** travelling guests per date and time of day, for pickups and drop-offs.
-- **Arrivals by hub:** Confirmed and Waitlisted travelling guests per hub, across all dates. A hub is the airport they land at or the station they get off at: Bhilwara (BHL), the nearby junctions (COR, AII, UDZ, KOTA, JP, RTM) or the airports (UDR, KQH, JAI, AMD). Each row also shows **Then by car/cab**, the guests going on to Bhilwara by road. Bus and car travellers, and anyone who skipped the question, are under **None given**. (The website doesn't ask train and flight guests where they get off or land yet, so for now everyone is under **None given**.)
+- **Arrivals by hub:** Confirmed and Waitlisted travelling guests per hub, across all dates, for planning pickups. A hub is where a guest leaves the train or the plane: on the route page, flight guests pick the airport they'll land at (UDR Udaipur, KQH Kishangarh, JAI Jaipur, AMD Ahmedabad) and train guests the station they'll get off at (BHL Bhilwara itself, or the junctions COR Chittaurgarh, AII Ajmer, UDZ Udaipur City, KOTA Kota, JP Jaipur, RTM Ratlam). Flight guests (even if they're not sure yet where they'll land) and train guests who get off at a junction then say how they'll go on to Bhilwara: car/cab, train, bus or not sure yet (getting off at Bhilwara, or a train guest who isn't sure where, isn't asked). **Then by car/cab** counts the ones coming on by road in a car or cab, so you can see how many might need a ride. Both questions are optional: **Not sure yet** has its own row, and bus and car travellers, guests who skipped the question and answers saved before v4 are under **None given**. An **Other code** row catches anything hand-edited in People that isn't one of these hubs (normally 0).
 - **Pickup list:** every travelling guest who is Confirmed or Waitlisted, sorted by arrival date and time of day, with where they're coming from and how, plus **Via** (their hub) and **Then by** (how they get on to Bhilwara).
 - **To the right:** **Not replied yet** for First List and for Second List (the invite names, ready for a reminder), **Unlisted guests**, **Extra guests added**, and **Notes from guests**.
 

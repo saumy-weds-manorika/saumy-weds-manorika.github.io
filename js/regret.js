@@ -9,6 +9,9 @@
  * of the sticky bars. A dashed ghost holds its slot and a speech bubble shows the
  * joke. The fourth tap sends it home and selects. From then on, that key's Regret
  * selects at once; other keys keep their own count (a new key starts at 0).
+ * A fixed chip doesn't scroll with the page, so once the page scrolls more than a
+ * little (or any scroll slides another control under it) it goes home: a stray tap
+ * must never land on a runaway chip and pick Regret for the wrong guest.
  *
  * Self-styled (.rj-* classes, one injected <style id="rj-style">). No dependencies.
  */
@@ -28,6 +31,7 @@ const FINAL_MS = 4200;      // final message is longer, so it stays a little lon
 const REPEAT_GUARD_MS = 180;
 const SPRING = 'cubic-bezier(.34,1.56,.64,1)';
 const GHOST_TEXT = 'Regret ran away →';
+const SCROLL_SLACK = 24;    // page scroll (px) a runaway chip rides out before it goes home
 const OBSTACLES = 'button, a[href], input, select, textarea, summary, [role="radio"], [role="button"], [role="checkbox"], [tabindex]:not([tabindex="-1"])';
 
 const CSS = `
@@ -129,7 +133,7 @@ export function createRegretController({
   let named = new Map();
   let byObject = new WeakMap();
   let total = 0;               // dodges across every key (debugging)
-  let moved = null;            // { btn, ghost, x, y, joke } while a chip is out of its slot
+  let moved = null;            // { btn, ghost, x, y, sx, sy, joke } while a chip is out of its slot (sx/sy: page scroll at the dodge)
   let bubbleJoke = null;       // the joke state the visible bubble belongs to
   let lastDodgeAt = 0;
   let calls = 0;               // handle() call counter (for the delegated-click fallback)
@@ -308,8 +312,26 @@ export function createRegretController({
 
   // ---------- viewport tracking ----------
 
+  /**
+   * The page scrolled under a runaway chip: true once it has scrolled more than SCROLL_SLACK, or
+   * when any scroll at all has slid another control under the chip (a tap meant for that control
+   * would hit the chip instead). Resizes alone don't count; the chip is just kept on screen.
+   */
+  function strayed(m) {
+    const dx = Math.abs((window.scrollX || 0) - m.sx);
+    const dy = Math.abs((window.scrollY || 0) - m.sy);
+    if (!dx && !dy) return false;
+    if (Math.max(dx, dy) > SCROLL_SLACK) return true;
+    const r = m.btn.getBoundingClientRect();
+    return obstacleRects(m.btn).some((o) => overlaps(r.left, r.top, r.width, r.height, o));
+  }
+
   function onViewport() {
     rafId = 0;
+    if (moved && strayed(moved)) {
+      settle(true, false);
+      hideBubble();
+    }
     if (moved) {
       const { btn } = moved;
       const { w, h } = boxSize(btn);
@@ -387,16 +409,22 @@ export function createRegretController({
 
   // ---------- moving the chip ----------
 
-  function pickSpot(w, h, prev, bsize, btn) {
-    const reg = region(w, h);
-    const obstacles = [];
+  /** Rects of every other control on screen (optionally only those reaching into `reg`). */
+  function obstacleRects(btn, reg) {
+    const out = [];
     for (const el of document.querySelectorAll(OBSTACLES)) {
       if (el === btn || (bubble && bubble.contains(el))) continue;
       const r = el.getBoundingClientRect();
       if (!r.width || !r.height) continue;
-      if (r.bottom < reg.top || r.top > reg.bottom || r.right < reg.left || r.left > reg.right) continue;
-      obstacles.push(r);
+      if (reg && (r.bottom < reg.top || r.top > reg.bottom || r.right < reg.left || r.left > reg.right)) continue;
+      out.push(r);
     }
+    return out;
+  }
+
+  function pickSpot(w, h, prev, bsize, btn) {
+    const reg = region(w, h);
+    const obstacles = obstacleRects(btn, reg);
     const x0 = Math.ceil(reg.minX);
     const x1 = Math.max(x0, Math.floor(reg.maxX));
     const y0 = Math.ceil(reg.minY);
@@ -460,6 +488,9 @@ export function createRegretController({
     const spot = pickSpot(w, h, m, size, btn);
     m.x = spot.x;
     m.y = spot.y;
+    // The spot was picked against the page as it is now; see strayed()
+    m.sx = window.scrollX || 0;
+    m.sy = window.scrollY || 0;
     const still = rm();
     pin(btn, spot.x, spot.y, !still);
     btn.classList.toggle('rj-rm', still);
