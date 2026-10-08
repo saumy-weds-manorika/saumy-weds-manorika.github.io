@@ -94,7 +94,7 @@ export const DESTINATIONS = [
 // Section copy for the junction stop and the departure-stop teaser (§M). No dates here: the
 // wedding is Thursday and Friday, and the trip is "the weekend that follows".
 export const TRIP_COPY = {
-  title: 'Make it a Rajasthan long weekend',
-  intro: 'The shaadi takes Thursday and Friday. Give the weekend that follows to Rajasthan: lakes, forts and temples, all within a day\'s drive.',
-  teaser: "Staying on for the weekend? We've mapped some escapes for you. They're waiting at the end of your journey.",
+  title: 'Make a royal vacay of it',
+  intro: 'Once the baraat has danced its last, Rajasthan\'s palaces, lakes and forts are only a drive away. If you\'d like to stretch your trip into the weekend, here are our favourite getaways near Bhilwara. Tap a pin to plan your escape.',
+  teaser: "Fancy turning the trip into a royal Rajasthani getaway? We've picked a few weekend escapes near Bhilwara for you. They're waiting at the end of your journey.",
 };

@@ -127,9 +127,9 @@ const SLOT_LABELS = {
   early: 'Early morning', morning: 'Morning', afternoon: 'Afternoon',
   evening: 'Evening', night: 'Night', unsure: 'Not sure yet',
 };
-const NIGHTS = ['2026-12-08', '2026-12-09', '2026-12-10', '2026-12-11', '2026-12-12', '2026-12-13'];
-const ARRIVE_DATES = ['2026-12-08', '2026-12-09', '2026-12-10', '2026-12-11', 'unsure'];
-const DEPART_DATES = ['2026-12-11', '2026-12-12', '2026-12-13', '2026-12-14', 'unsure'];
+const NIGHTS = ['2026-12-09', '2026-12-10', '2026-12-11'];
+const ARRIVE_DATES = ['2026-12-09', '2026-12-10', '2026-12-11', 'unsure'];
+const DEPART_DATES = ['2026-12-11', '2026-12-12', 'unsure'];
 const UNSURE_ARRIVE = '2026-12-09';
 const UNSURE_DEPART = '2026-12-12';
 const MAX_RESPONSES = 5000;

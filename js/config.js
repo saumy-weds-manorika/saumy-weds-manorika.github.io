@@ -24,8 +24,8 @@ export const CONFIG = {
     { id: 'baraat',   name: 'Baraat & Reception', date: '2026-12-11', when: 'Evening', at: '2026-12-11T18:00' },
     { id: 'phera',    name: 'Phera',    date: '2026-12-12', when: '3 AM. Yes, AM.', at: '2026-12-12T03:00' },
   ],
-  arriveDates: ['2026-12-08', '2026-12-09', '2026-12-10', '2026-12-11', 'unsure'],
-  departDates: ['2026-12-11', '2026-12-12', '2026-12-13', '2026-12-14', 'unsure'],
+  arriveDates: ['2026-12-09', '2026-12-10', '2026-12-11', 'unsure'],
+  departDates: ['2026-12-11', '2026-12-12', 'unsure'],
   slots: [
     { id: 'early', label: 'Early morning', hint: 'before 8 AM' },
     { id: 'morning', label: 'Morning', hint: '8 AM – noon' },

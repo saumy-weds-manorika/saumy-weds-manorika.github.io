@@ -971,62 +971,11 @@ function drawFooter(ctx, d, seed) {
   const nf = fit(ctx, note, { fam: F.body, weight: 600, max: 30, min: 26, width: R - 252 - L });
   text(ctx, nf.text, L, Y.foot, { size: nf.size, fam: F.body, weight: 600, color: 'rgba(27,27,47,0.72)' });
 
-  const heads = [d.heads.a, d.heads.b].filter(drawable);
-  if (heads.length) drawHeads(ctx, d.heads);
-  else drawPostmark(ctx, d, seed);
+  // Saumy asked for no face portraits on the pass: the corner always carries the postmark stamp.
+  drawPostmark(ctx, d, seed);
 }
 
-function drawable(img) {
-  return !!img && ((img.naturalWidth || img.width || 0) > 0) && img.complete !== false;
-}
-
-/**
- * Bobblehead portraits in garlanded circles, leaning in towards each other. The busts are
- * portrait cut-outs (head and shoulders), so they are sized by width and lifted until the face
- * sits in the middle of the circle.
- */
-function drawHeads(ctx, heads) {
-  const cy = 1214;
-  const rad = 60;
-  const spots = [
-    { img: heads.a, x: R - 168, tilt: -6, ring: C.rani },
-    { img: heads.b, x: R - 56, tilt: 6, ring: C.genda },
-  ].filter((s) => drawable(s.img));
-  if (spots.length === 1) spots[0].x = R - 112;
-  for (const s of spots) {
-    ctx.save();
-    ctx.translate(s.x, cy);
-    ctx.rotate((s.tilt * Math.PI) / 180);
-    ctx.shadowColor = 'rgba(27,27,47,0.28)';
-    ctx.shadowBlur = 12;
-    ctx.shadowOffsetY = 5;
-    circle(ctx, 0, 0, rad + 8, s.ring);
-    ctx.shadowColor = 'transparent';
-    const bg = ctx.createRadialGradient(0, -10, 6, 0, 0, rad);
-    bg.addColorStop(0, '#FFF6EA');
-    bg.addColorStop(1, '#F9D9A8');
-    circle(ctx, 0, 0, rad, bg);
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(0, 0, rad, 0, Math.PI * 2);
-    ctx.clip();
-    const iw = s.img.naturalWidth || s.img.width;
-    const ih = s.img.naturalHeight || s.img.height;
-    const portrait = ih > iw * 1.1;
-    const k = portrait ? (rad * BUST_ZOOM) / iw : (rad * 2.15) / Math.max(iw, ih);
-    const top = portrait ? -ih * k * BUST_FACE_Y : (-ih * k) / 2 + 6;
-    ctx.drawImage(s.img, (-iw * k) / 2, top, iw * k, ih * k);
-    ctx.restore();
-    ctx.beginPath();
-    ctx.arc(0, 0, rad + 8, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(27,27,47,0.25)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    ctx.restore();
-  }
-}
-
-/** Round "BHILWARA JN" cancellation postmark, used when there are no head photos. */
+/** Round "BHILWARA JN" cancellation postmark in the bottom-right corner of the pass. */
 function drawPostmark(ctx, d, seed) {
   const cfg = d.config;
   const rad = 74;
