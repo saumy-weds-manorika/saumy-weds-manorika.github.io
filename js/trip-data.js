@@ -95,6 +95,6 @@ export const DESTINATIONS = [
 // wedding is Thursday and Friday, and the trip is "the weekend that follows".
 export const TRIP_COPY = {
   title: 'Make a royal vacay of it',
-  intro: 'Once the baraat has danced its last, Rajasthan\'s palaces, lakes and forts are only a drive away. If you\'d like to stretch your trip into the weekend, here are our favourite getaways near Bhilwara. Tap a pin to plan your escape.',
-  teaser: "Fancy turning the trip into a royal Rajasthani getaway? We've picked a few weekend escapes near Bhilwara for you. They're waiting at the end of your journey.",
+  intro: 'Once the baraat has danced its last, Rajasthan\'s palaces, lakes and forts are only a drive away. If you\'d like to stretch your trip into the weekend, here are our recommendations for getaways near Bhilwara. Tap a pin to plan your escape.',
+  teaser: "Fancy turning the trip into a royal Rajasthani getaway? We've put together our recommendations for weekend escapes near Bhilwara. They're waiting at the end of your journey.",
 };
