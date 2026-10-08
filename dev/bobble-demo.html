@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bobblehead wobble demo</title>
+<style>
+  body { margin: 0; background: #1A2260; display: flex; gap: 8px; justify-content: center; align-items: flex-end; min-height: 100vh; padding: 16px; box-sizing: border-box; flex-wrap: wrap; }
+  .fig { position: relative; height: 420px; }
+  .fig img { position: absolute; inset: 0; height: 100%; width: auto; }
+  .fig .body { position: relative; }
+  .fig .head { animation: bob 1.6s cubic-bezier(.45,.05,.55,.95) infinite; }
+  .fig.static .head { animation: none; transform: rotate(var(--r)); }
+  @keyframes bob { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+  .busts { display: flex; gap: 8px; }
+  .busts img { height: 120px; }
+</style>
+</head>
+<body>
+  <div class="fig" id="s"><img class="body" src="../assets/bobble/saumy-body.webp" alt=""><img class="head" src="../assets/bobble/saumy-head.webp" alt="" style="transform-origin: 49.64% 29.52%"></div>
+  <div class="fig" id="m"><img class="body" src="../assets/bobble/manorika-body.webp" alt=""><img class="head" src="../assets/bobble/manorika-head.webp" alt="" style="transform-origin: 45.96% 24.88%; animation-delay: -.4s"></div>
+  <div class="fig static" style="--r:-5deg"><img class="body" src="../assets/bobble/saumy-body.webp" alt=""><img class="head" src="../assets/bobble/saumy-head.webp" alt="" style="transform-origin: 49.64% 29.52%"></div>
+  <div class="fig static" style="--r:5deg"><img class="body" src="../assets/bobble/manorika-body.webp" alt=""><img class="head" src="../assets/bobble/manorika-head.webp" alt="" style="transform-origin: 45.96% 24.88%"></div>
+  <div class="busts"><img src="../assets/bobble/saumy-bust.webp" alt=""><img src="../assets/bobble/manorika-bust.webp" alt=""><img src="../assets/bobble/guest-m-bust.webp" alt=""><img src="../assets/bobble/guest-f-bust.webp" alt=""></div>
+</body>
+</html>

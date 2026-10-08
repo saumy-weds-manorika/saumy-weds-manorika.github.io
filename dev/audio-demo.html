@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Baaja audio demo</title>
+<style>
+  :root { --neel: #1A2260; --neel-deep: #10164A; --genda: #F6A609; --rani: #D6246E; --kagaz: #FCE9D6; --syahi: #1B1B2F; --haldi: #FFD23F; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; background: var(--neel); color: var(--kagaz); font: 16px/1.45 Mukta, system-ui, sans-serif; }
+  main { max-width: 480px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
+  button {
+    min-height: 48px; padding: 0 14px; border: 2px solid var(--kagaz); border-radius: 12px;
+    background: var(--neel-deep); color: var(--kagaz); font: 600 16px Mukta, system-ui, sans-serif; cursor: pointer;
+  }
+  button[aria-pressed="true"] { background: var(--rani); border-color: var(--rani); color: #fff; }
+  #toggle { grid-column: 1 / -1; background: var(--genda); color: var(--syahi); border-color: var(--genda); }
+  #toggle[aria-pressed="true"] { background: var(--rani); color: #fff; border-color: var(--rani); }
+  button:focus-visible { outline: 3px solid var(--haldi); outline-offset: 2px; }
+  #status { font: 14px/1.4 ui-monospace, monospace; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Baaja demo</h1>
+  <p>Synthesised dhol and shehnai. Nothing plays until you tap.</p>
+  <div class="grid">
+    <button type="button" id="toggle" aria-pressed="false">Baaja: off</button>
+    <button type="button" data-hit="dha">Dha</button>
+    <button type="button" data-hit="ge">Ge (bass)</button>
+    <button type="button" data-hit="na">Na (treble)</button>
+    <button type="button" id="shehnai">Shehnai phrase</button>
+    <button type="button" id="stop">Stop</button>
+  </div>
+  <p id="status" aria-live="polite">state: idle</p>
+</main>
+<script type="module">
+  // Cache-busted so the demo always tests the file on disk (python http.server sends no cache headers).
+  const { createBaaja } = await import(`../js/audio.js?v=${Date.now()}`);
+
+  const toggleBtn = document.getElementById('toggle');
+  const statusEl = document.getElementById('status');
+  const baaja = createBaaja({
+    onChange: (on) => {
+      toggleBtn.setAttribute('aria-pressed', String(on));
+      toggleBtn.textContent = `Baaja: ${on ? 'on' : 'off'}`;
+    },
+  });
+  window.baaja = baaja;
+
+  const show = (what) => {
+    const line = `${what} | on=${baaja.on} state=${baaja.state}`;
+    statusEl.textContent = line;
+    console.log(line);
+  };
+  // the context resumes asynchronously; refresh the readout shortly after each action
+  const showSoon = (what) => { show(what); setTimeout(() => show(what), 200); };
+
+  toggleBtn.addEventListener('click', () => showSoon(`toggle -> ${baaja.toggle()}`));
+  document.querySelectorAll('[data-hit]').forEach((b) =>
+    b.addEventListener('click', () => { baaja.dholHit(b.dataset.hit); showSoon(`dholHit(${b.dataset.hit})`); }));
+  document.getElementById('shehnai').addEventListener('click', () => showSoon(`shehnaiPhrase -> ${baaja.shehnaiPhrase()}`));
+  document.getElementById('stop').addEventListener('click', () => { baaja.stop(); showSoon('stop'); });
+  window.addEventListener('baaja:change', (e) => console.log('baaja:change', e.detail));
+  show('ready');
+</script>
+</body>
+</html>

@@ -1,0 +1,822 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#10164A">
+  <meta name="color-scheme" content="dark">
+  <title>Saumy &amp; Manorika · Shaadi Express to Bhilwara</title>
+  <meta name="description" content="Your ticket to Saumy &amp; Manorika's wedding in Bhilwara, 10–12 Dec 2026. RSVP for everyone on your ticket and share your rough travel plan.">
+
+  <!-- Link previews (WhatsApp, etc.) need ABSOLUTE URLs. If the site moves, update og:url,
+       og:image and twitter:image together (docs/SETUP.md, Part 5). -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://saumy-weds-manorika.github.io/">
+  <meta property="og:site_name" content="Shaadi Express">
+  <meta property="og:title" content="Your ticket to Saumy &amp; Manorika's wedding 🚂">
+  <meta property="og:description" content="10–12 Dec 2026 · Bhilwara. RSVP and plan your journey.">
+  <meta property="og:image" content="https://saumy-weds-manorika.github.io/assets/og.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="A Shaadi Express ticket to Saumy and Manorika's wedding in Bhilwara">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Your ticket to Saumy &amp; Manorika's wedding 🚂">
+  <meta name="twitter:description" content="10–12 Dec 2026 · Bhilwara. RSVP and plan your journey.">
+  <meta name="twitter:image" content="https://saumy-weds-manorika.github.io/assets/og.png">
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23E07B00'/%3E%3Cg fill='%23F6A609'%3E%3Ccircle cx='16' cy='7' r='6'/%3E%3Ccircle cx='25' cy='16' r='6'/%3E%3Ccircle cx='16' cy='25' r='6'/%3E%3Ccircle cx='7' cy='16' r='6'/%3E%3C/g%3E%3Ccircle cx='16' cy='16' r='5' fill='%23D6246E'/%3E%3C/svg%3E">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&amp;family=Mukta:wght@400;600&amp;family=Yatra+One&amp;display=swap">
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- Fetch app.js's imports in parallel instead of after app.js has been parsed -->
+  <link rel="modulepreload" href="js/config.js">
+  <link rel="modulepreload" href="js/logic.js">
+  <link rel="modulepreload" href="js/api.js">
+  <link rel="modulepreload" href="js/regret.js">
+  <link rel="modulepreload" href="js/audio.js">
+  <link rel="modulepreload" href="js/pass.js">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body data-stop="platform" data-mode="train" data-party="confirmed" data-heads="svg">
+
+<!-- ================================================================
+     SVG sprite: vehicles, icons, diya, bobblehead bodies.
+     Referenced with <use href="#id">. Never displayed directly.
+     ================================================================ -->
+<svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <!-- Vehicles: all face right, viewBox 0 0 48 28 -->
+  <symbol id="v-train" viewBox="0 0 48 28">
+    <rect x="1.5" y="3.5" width="16" height="3" rx="1.2" fill="#FFD23F"/>
+    <rect x="3" y="6" width="13" height="15" rx="1.5" fill="#D6246E"/>
+    <rect x="6" y="8.5" width="7" height="5.5" rx="1" fill="#FCE9D6"/>
+    <rect x="15" y="10" width="25" height="11" rx="4" fill="#D6246E"/>
+    <rect x="15" y="16" width="25" height="2" fill="#A8174F"/>
+    <rect x="32.5" y="3" width="5.5" height="8" rx="1" fill="#F6A609"/>
+    <rect x="31.5" y="2" width="7.5" height="2.4" rx="1" fill="#FFD23F"/>
+    <circle cx="24" cy="9.6" r="2.2" fill="#FFD23F"/>
+    <path d="M40 20.5l6.5 3.5h-9z" fill="#FFD23F"/>
+    <g fill="#F6A609"><circle cx="35.6" cy="12" r="1.5"/><circle cx="37.6" cy="14.2" r="1.5"/><circle cx="38.6" cy="16.9" r="1.5"/></g>
+    <g fill="#E07B00"><circle cx="36.6" cy="13" r="1.1"/><circle cx="38.2" cy="15.5" r="1.1"/></g>
+    <circle cx="10" cy="22.5" r="4.4" fill="#FCE9D6"/><circle cx="10" cy="22.5" r="1.6" fill="#10164A"/>
+    <circle cx="22" cy="23.4" r="3.5" fill="#FCE9D6"/><circle cx="22" cy="23.4" r="1.2" fill="#10164A"/>
+    <circle cx="31.5" cy="23.4" r="3.5" fill="#FCE9D6"/><circle cx="31.5" cy="23.4" r="1.2" fill="#10164A"/>
+    <path d="M10 22.5H31.5" stroke="#FFD23F" stroke-width="1.4" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="v-flight" viewBox="0 0 48 28">
+    <path d="M6 9 3.5 3H8.5L15 11.5z" fill="#D6246E"/>
+    <path d="M4 15.5c0-3 3-4.5 9-4.5h25c5.5 0 9 2 9 4.5s-3.5 4.5-9 4.5H11c-4.5 0-7-1.5-7-4.5z" fill="#FCE9D6"/>
+    <path d="M40 11.6c3.5.6 6.4 2 7 3.9h-6.2c-1 0-1.6-.6-1.6-1.6z" fill="#10164A"/>
+    <path d="M18 16.5h11l-8.5 9.5H16.5z" fill="#D6246E"/>
+    <path d="M7 14l-4.5 2.5H9z" fill="#A8174F"/>
+    <g fill="#10164A"><circle cx="16" cy="14.2" r="1.1"/><circle cx="20" cy="14.2" r="1.1"/><circle cx="24" cy="14.2" r="1.1"/><circle cx="28" cy="14.2" r="1.1"/><circle cx="32" cy="14.2" r="1.1"/><circle cx="36" cy="14.2" r="1.1"/></g>
+    <path d="M4.5 17.6H44" stroke="#F6A609" stroke-width="1.2"/>
+  </symbol>
+  <symbol id="v-bus" viewBox="0 0 48 28">
+    <rect x="4" y="2.5" width="36" height="2" rx="1" fill="#FFD23F"/>
+    <rect x="2" y="4.5" width="44" height="17" rx="3.5" fill="#F6A609"/>
+    <rect x="2" y="15" width="44" height="2.6" fill="#D6246E"/>
+    <g fill="#FCE9D6"><rect x="5" y="7.5" width="6" height="5.5" rx="1"/><rect x="13" y="7.5" width="6" height="5.5" rx="1"/><rect x="21" y="7.5" width="6" height="5.5" rx="1"/><rect x="29" y="7.5" width="6" height="5.5" rx="1"/></g>
+    <path d="M37.5 7.5h6.2c.9 0 1.3.6 1.3 1.4V15h-7.5z" fill="#10164A"/>
+    <circle cx="44.6" cy="19" r="1.2" fill="#FFD23F"/>
+    <circle cx="12" cy="22.5" r="4" fill="#1B1B2F" stroke="#FCE9D6" stroke-width="1.4"/>
+    <circle cx="36" cy="22.5" r="4" fill="#1B1B2F" stroke="#FCE9D6" stroke-width="1.4"/>
+  </symbol>
+  <symbol id="v-car" viewBox="0 0 48 28">
+    <path d="M12 13c1.5-5 5-7.5 11-7.5h6.5c4.5 0 7.5 2.5 9.5 7.5z" fill="#FCE9D6"/>
+    <path d="M15.5 12.5c1.2-3.4 3.6-4.8 7.5-4.8v4.8zM25 7.7h4.5c2.8 0 4.8 1.6 6.2 4.8H25z" fill="#10164A"/>
+    <path d="M3 15.5c0-2 1.5-3 4-3h33c4 0 6 1.5 6 4.5v2.5c0 1.2-.8 2-2 2H5c-1.2 0-2-.8-2-2z" fill="#FCE9D6"/>
+    <path d="M3 18h43" stroke="#E07B00" stroke-width="1"/>
+    <g fill="#F6A609"><circle cx="31" cy="13.6" r="1.5"/><circle cx="34" cy="15" r="1.5"/><circle cx="37.2" cy="15.6" r="1.5"/><circle cx="40.4" cy="15.2" r="1.5"/><circle cx="43.2" cy="14" r="1.5"/></g>
+    <g fill="#D6246E"><circle cx="32.5" cy="14.4" r="1"/><circle cx="35.6" cy="15.4" r="1"/><circle cx="38.8" cy="15.5" r="1"/><circle cx="41.8" cy="14.7" r="1"/></g>
+    <circle cx="45" cy="16.5" r="1.1" fill="#FFD23F"/>
+    <circle cx="12.5" cy="21.5" r="4" fill="#1B1B2F" stroke="#FCE9D6" stroke-width="1.4"/>
+    <circle cx="36.5" cy="21.5" r="4" fill="#1B1B2F" stroke="#FCE9D6" stroke-width="1.4"/>
+  </symbol>
+
+  <!-- Icons: 24px grid, 2px stroke, currentColor -->
+  <symbol id="i-dhol" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 7.6c4.6-1.7 9.4-1.7 14 0v8.8c-4.6 1.7-9.4 1.7-14 0z"/><ellipse cx="5" cy="12" rx="1.9" ry="4.4"/><ellipse cx="19" cy="12" rx="1.9" ry="4.4"/><path d="M7.6 8.2l2.2 7.6 2.2-7.6 2.2 7.6 2.2-7.6" stroke-width="1.3"/><path d="M5.2 7.2C7 2.8 17 2.8 18.8 7.2" stroke-width="1.4"/></g></symbol>
+  <symbol id="i-slash" viewBox="0 0 24 24"><path d="M3.5 3.5l17 17" stroke="#10164A" stroke-width="5.5" stroke-linecap="round"/><path d="M3.5 3.5l17 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+  <symbol id="i-waves" viewBox="0 0 24 24"><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9.5 9.5 0 0 1 0 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-mute" viewBox="0 0 24 24"><path d="m16 9.5 5 5m0-5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5m6 6-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14m-6 6 6-6-6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 21h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4m0-11-6.8 4"/></g></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-12.6 7.3L3 21l2.2-5.3A8.4 8.4 0 1 1 21 11.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4.5" width="18" height="17" rx="2.5"/><path d="M16 2.5v4M8 2.5v4M3 10h18"/></g></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 4 3h9a1.5 1.5 0 0 1 1.5 1.5V5"/></g></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="2.5" y="4.5" width="19" height="15" rx="2"/><path d="m21.5 6.5-9.5 7-9.5-7"/></g></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h13A2.5 2.5 0 0 1 21 7.5V9a3 3 0 0 0 0 6v1.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 16.5V15a3 3 0 0 0 0-6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 5v2.5m0 3v3m0 3V19" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-wheel" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M12 3v7m0 4v7M3 12h7m4 0h7M5.6 5.6l5 5m2.8 2.8 5 5m0-12.8-5 5m-2.8 2.8-5 5"/></g></symbol>
+
+  <!-- Diya: bowl and flame are separate so the flame can flicker -->
+  <symbol id="diya-bowl" viewBox="0 0 40 40">
+    <path d="M3 25c3.5 8.5 11 12 17 12s13.5-3.5 17-12c-5 2.4-10.6 3.4-17 3.4S8 27.4 3 25z" fill="#E07B00"/>
+    <path d="M3 25c5 2.4 10.6 3.4 17 3.4s12-1 17-3.4" fill="none" stroke="#FFD23F" stroke-width="1.6" stroke-linecap="round"/>
+    <path d="M7 31c4 2.4 8.4 3.4 13 3.4s9-1 13-3.4" fill="none" stroke="#C62828" stroke-width="1.6" stroke-linecap="round"/>
+    <g fill="#FFD23F"><circle cx="12" cy="30.6" r="1"/><circle cx="20" cy="32" r="1"/><circle cx="28" cy="30.6" r="1"/></g>
+    <path d="M20 22.5v4" stroke="#7A3E00" stroke-width="1.4" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="diya-flame" viewBox="0 0 40 40">
+    <path d="M20 4c4.4 6.4 6.6 10.6 6.6 14.4a6.6 6.6 0 0 1-13.2 0C13.4 14.6 15.6 10.4 20 4z" fill="#F6A609"/>
+    <path d="M20 11.5c2.2 3.2 3.2 5.2 3.2 7.2a3.2 3.2 0 0 1-6.4 0c0-2 1-4 3.2-7.2z" fill="#FFD23F"/>
+  </symbol>
+
+  <!-- Bobblehead bodies, viewBox 0 0 100 124. Arms are separate symbols so they can wave. -->
+  <symbol id="body-saumy" viewBox="0 0 100 124">
+    <path d="M74 18c6 10 10 24 10 40" fill="none" stroke="#EAD3BB" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="84" cy="62" r="5" fill="#C98B5E"/>
+    <path d="M36 102h11v16H36zM53 102h11v16H53z" fill="#EAD3BB"/>
+    <path d="M31 118c0-3 2-4.5 6-4.5h9v6H34c-2 0-3-.5-3-1.5zM69 118c0-3-2-4.5-6-4.5h-9v6h12c2 0 3-.5 3-1.5z" fill="#E07B00"/>
+    <path d="M27 14c8-5 38-5 46 0l8 90c-16 4-46 4-62 0z" fill="#FCE9D6"/>
+    <path d="M27 14l-8 90c4 1 8 1.6 12 2l4-88z" fill="#EAD3BB"/>
+    <path d="M19 100c16 4 46 4 62 0l.4 4c-16 4-46 4-62.8 0z" fill="#F6A609"/>
+    <path d="M50 16v88" stroke="#F6A609" stroke-width="2"/>
+    <g fill="#F6A609"><circle cx="50" cy="40" r="1.8"/><circle cx="50" cy="52" r="1.8"/><circle cx="50" cy="64" r="1.8"/><circle cx="50" cy="76" r="1.8"/></g>
+    <path d="M38 11c5 3.6 19 3.6 24 0v6c-5 3.6-19 3.6-24 0z" fill="#F6A609"/>
+    <path d="M30 14l9-2 44 58-6 8z" fill="#D6246E"/>
+    <g fill="#FFD23F"><circle cx="40" cy="20" r="1.1"/><circle cx="50" cy="33" r="1.1"/><circle cx="60" cy="46" r="1.1"/><circle cx="70" cy="59" r="1.1"/></g>
+    <g fill="#F6A609"><circle cx="36" cy="18" r="3.4"/><circle cx="38" cy="25" r="3.4"/><circle cx="41" cy="32" r="3.4"/><circle cx="45" cy="38" r="3.4"/><circle cx="55" cy="38" r="3.4"/><circle cx="59" cy="32" r="3.4"/><circle cx="62" cy="25" r="3.4"/><circle cx="64" cy="18" r="3.4"/></g>
+    <g fill="#E07B00"><circle cx="37" cy="21.5" r="2.2"/><circle cx="39.5" cy="28.5" r="2.2"/><circle cx="43" cy="35" r="2.2"/><circle cx="57" cy="35" r="2.2"/><circle cx="60.5" cy="28.5" r="2.2"/><circle cx="63" cy="21.5" r="2.2"/></g>
+    <circle cx="50" cy="41.5" r="3.8" fill="#D6246E"/>
+  </symbol>
+  <symbol id="arm-saumy" viewBox="0 0 100 124">
+    <path d="M28 18 13 30l-4-15" fill="none" stroke="#FCE9D6" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M6.5 17.5l5.5-1.6" stroke="#F6A609" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="8.5" cy="11" r="5.2" fill="#C98B5E"/>
+  </symbol>
+  <symbol id="arm-saumy-down" viewBox="0 0 100 124">
+    <path d="M27 18c-5 12-8 26-9 40" fill="none" stroke="#FCE9D6" stroke-width="10" stroke-linecap="round"/>
+    <path d="M14.6 56.5l6.4.8" stroke="#F6A609" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="17.5" cy="62" r="5" fill="#C98B5E"/>
+  </symbol>
+  <symbol id="body-manorika" viewBox="0 0 100 124">
+    <path d="M28 16c-5 10-8 22-9 36" fill="none" stroke="#D79A6E" stroke-width="8" stroke-linecap="round"/>
+    <path d="M28 16c-2.4 4-4 8-5 12" fill="none" stroke="#E07B00" stroke-width="10" stroke-linecap="round"/>
+    <g stroke-width="2.4" stroke-linecap="round"><path d="M16.5 44l6.2 1.4" stroke="#C62828"/><path d="M16.2 47l6.2 1.4" stroke="#FCE9D6"/><path d="M16 50l6.2 1.4" stroke="#C62828"/></g>
+    <circle cx="19" cy="55" r="4.6" fill="#D79A6E"/>
+    <path d="M30 13c8-5 32-5 40 0l-2 24H32z" fill="#E07B00"/>
+    <path d="M32 36h36l24 80c-28 6-56 6-84 0z" fill="#D6246E"/>
+    <path d="M42 37 28 115M50 37v80M58 37l14 78" stroke="#A8174F" stroke-width="1.4"/>
+    <path d="M8 110c28 6 56 6 84 0l1.6 5.6c-28 6-59 6-87.2 0z" fill="#F6A609"/>
+    <g fill="#FFD23F"><circle cx="24" cy="70" r="1.2"/><circle cx="40" cy="62" r="1.2"/><circle cx="62" cy="64" r="1.2"/><circle cx="76" cy="74" r="1.2"/><circle cx="32" cy="92" r="1.2"/><circle cx="52" cy="86" r="1.2"/><circle cx="70" cy="96" r="1.2"/><circle cx="20" cy="102" r="1.2"/><circle cx="84" cy="104" r="1.2"/></g>
+    <path d="M64 12l10 4-42 68-12-4z" fill="#F6A609" opacity=".88"/>
+    <path d="M74 16 32 84" stroke="#FFD23F" stroke-width="1.6" stroke-dasharray="0 3.4" stroke-linecap="round"/>
+    <g fill="#F6A609"><circle cx="40" cy="15" r="2.4"/><circle cx="43" cy="20.5" r="2.4"/><circle cx="50" cy="23" r="2.6"/><circle cx="57" cy="20.5" r="2.4"/><circle cx="60" cy="15" r="2.4"/></g>
+    <circle cx="50" cy="23" r="1.2" fill="#2F7D32"/>
+  </symbol>
+  <symbol id="arm-manorika" viewBox="0 0 100 124">
+    <path d="M71 16l15 11 5-14" fill="none" stroke="#D79A6E" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M71 16l6 4.4" stroke="#E07B00" stroke-width="10" stroke-linecap="round"/>
+    <g stroke-width="2.4" stroke-linecap="round"><path d="M86.6 20.6l5.6 1.8" stroke="#C62828"/><path d="M87.6 17.8l5.6 1.8" stroke="#FCE9D6"/></g>
+    <circle cx="91.5" cy="10" r="4.8" fill="#D79A6E"/>
+  </symbol>
+  <symbol id="arm-manorika-down" viewBox="0 0 100 124">
+    <path d="M72 16c5 10 8 22 9 36" fill="none" stroke="#D79A6E" stroke-width="8" stroke-linecap="round"/>
+    <path d="M72 16c2.4 4 4 8 5 12" fill="none" stroke="#E07B00" stroke-width="10" stroke-linecap="round"/>
+    <g stroke-width="2.4" stroke-linecap="round"><path d="M77.3 45.4l6.2-1.4" stroke="#C62828"/><path d="M77.6 48.4l6.2-1.4" stroke="#FCE9D6"/></g>
+    <circle cx="81" cy="55" r="4.6" fill="#D79A6E"/>
+  </symbol>
+</svg>
+
+<!-- ================================================================
+     Decor layer: fixed, behind content, never interactive.
+     ================================================================ -->
+<div class="decor" aria-hidden="true">
+  <span class="ladi ladi--l1"></span>
+  <span class="ladi ladi--r1"></span>
+  <span class="ladi ladi--l2"></span>
+  <span class="ladi ladi--r2"></span>
+  <span class="ladi ladi--l3"></span>
+  <span class="ladi ladi--r3"></span>
+</div>
+
+<!-- Screen-reader announcements (stop changes, regret dodges, copy confirmations) -->
+<p id="announce" class="sr-only" aria-live="polite" aria-atomic="true"></p>
+
+<!-- ================================================================
+     Sticky journey bar: Baaja toggle, track with vehicle, BHILWARA board
+     ================================================================ -->
+<header class="journey-bar" id="journey-bar">
+  <div class="journey-bar__inner">
+    <button class="baaja" id="baaja-toggle" type="button" aria-pressed="false" aria-label="Baaja: wedding band sound">
+      <svg class="baaja__icon" aria-hidden="true" focusable="false"><use class="baaja__dhol" href="#i-dhol"/><use class="baaja__off" href="#i-slash"/></svg>
+      <span class="baaja__label" aria-hidden="true">Baaja</span>
+    </button>
+    <!-- One-time hint that the sound toggle exists (shown by app.js, decorative) -->
+    <p class="baaja-nudge" id="baaja-nudge" hidden aria-hidden="true">Tap for dhol &amp; shehnai</p>
+
+    <div class="journey" id="journey" style="--progress:0" aria-hidden="true">
+      <span class="journey__rail"></span>
+      <span class="journey__lit"></span>
+      <span class="journey__station" data-stop="platform" style="--at:0"></span>
+      <span class="journey__station" data-stop="passengers" style="--at:.2"></span>
+      <span class="journey__station" data-stop="route" style="--at:.4"></span>
+      <span class="journey__station" data-stop="arrival" style="--at:.6"></span>
+      <span class="journey__station" data-stop="departure" style="--at:.8"></span>
+      <span class="journey__runner">
+        <span class="vehicle">
+          <span class="vehicle__puffs"><i></i><i></i><i></i></span>
+          <svg class="vehicle__svg" data-mode="train" viewBox="0 0 48 28" focusable="false"><use href="#v-train"/></svg>
+          <svg class="vehicle__svg" data-mode="flight" viewBox="0 0 48 28" focusable="false"><use href="#v-flight"/></svg>
+          <svg class="vehicle__svg" data-mode="bus" viewBox="0 0 48 28" focusable="false"><use href="#v-bus"/></svg>
+          <svg class="vehicle__svg" data-mode="car" viewBox="0 0 48 28" focusable="false"><use href="#v-car"/></svg>
+        </span>
+      </span>
+    </div>
+
+    <div class="mini-board" aria-hidden="true">
+      <span class="mini-board__heads">
+        <img class="mini-board__head" data-head="a" src="assets/couple/saumy-head.svg" data-png="assets/couple/saumy-head.png" alt="" width="26" height="26">
+        <img class="mini-board__head" data-head="b" src="assets/couple/manorika-head.svg" data-png="assets/couple/manorika-head.png" alt="" width="26" height="26">
+      </span>
+      <span class="mini-board__plate"><span class="mini-board__hi" lang="hi">भीलवाड़ा</span><span class="mini-board__en">BHILWARA</span></span>
+    </div>
+  </div>
+  <div class="toran" aria-hidden="true"><svg class="toran__svg" viewBox="0 0 480 30" preserveAspectRatio="xMidYMin meet" focusable="false"><path d="M0 3.2H480" stroke="#7A3E00" stroke-width="1.2" opacity=".55"/><g class="toran__swag"><circle cx="6.7" cy="8.1" r="3.3" fill="#F6A609"/><circle cx="13.3" cy="11.6" r="3.3" fill="#E07B00"/><circle cx="20.0" cy="13.8" r="3.3" fill="#F6A609"/><circle cx="26.7" cy="15.0" r="3.3" fill="#E07B00"/><circle cx="33.3" cy="15.0" r="3.3" fill="#F6A609"/><circle cx="40.0" cy="13.8" r="3.3" fill="#E07B00"/><circle cx="46.7" cy="11.6" r="3.3" fill="#F6A609"/><circle cx="53.3" cy="8.1" r="3.3" fill="#E07B00"/></g><g class="toran__swag"><circle cx="66.7" cy="8.1" r="3.3" fill="#F6A609"/><circle cx="73.3" cy="11.6" r="3.3" fill="#E07B00"/><circle cx="80.0" cy="13.8" r="3.3" fill="#F6A609"/><circle cx="86.7" cy="15.0" r="3.3" fill="#E07B00"/><circle cx="93.3" cy="15.0" r="3.3" fill="#F6A609"/><circle cx="100.0" cy="13.8" r="3.3" fill="#E07B00"/><circle cx="106.7" cy="11.6" r="3.3" fill="#F6A609"/><circle cx="113.3" cy="8.1" r="3.3" fill="#E07B00"/></g><g class="toran__swag"><circle cx="126.7" cy="8.1" r="3.3" fill="#F6A609"/><circle cx="133.3" cy="11.6" r="3.3" fill="#E07B00"/><circle cx="140.0" cy="13.8" r="3.3" fill="#F6A609"/><circle cx="146.7" cy="15.0" r="3.3" fill="#E07B00"/><circle cx="153.3" cy="15.0" r="3.3" fill="#F6A609"/><circle cx="160.0" cy="13.8" r="3.3" fill="#E07B00"/><circle cx="166.7" cy="11.6" r="3.3" fill="#F6A609"/><circle cx="173.3" cy="8.1" r="3.3" fill="#E07B00"/></g><g class="toran__swag"><circle cx="186.7" cy="8.1" r="3.3" fill="#F6A609"/><circle cx="193.3" cy="11.6" r="3.3" fill="#E07B00"/><circle cx="200.0" cy="13.8" r="3.3" fill="#F6A609"/><circle cx="206.7" cy="15.0" r="3.3" fill="#E07B00"/><circle cx="213.3" cy="15.0" r="3.3" fill="#F6A609"/><circle cx="220.0" cy="13.8" r="3.3" fill="#E07B00"/><circle cx="226.7" cy="11.6" r="3.3" fill="#F6A609"/><circle cx="233.3" cy="8.1" r="3.3" fill="#E07B00"/></g><g class="toran__swag"><circle cx="246.7" cy="8.1" r="3.3" fill="#F6A609"/><circle cx="253.3" cy="11.6" r="3.3" fill="#E07B00"/><circle cx="260.0" cy="13.8" r="3.3" fill="#F6A609"/><circle cx="266.7" cy="15.0" r="3.3" fill="#E07B00"/><circle cx="273.3" cy="15.0" r="3.3" fill="#F6A609"/><circle cx="280.0" cy="13.8" r="3.3" fill="#E07B00"/><circle cx="286.7" cy="11.6" r="3.3" fill="#F6A609"/><circle cx="293.3" cy="8.1" r="3.3" fill="#E07B00"/></g><g class="toran__swag"><circle cx="306.7" cy="8.1" r="3.3" fill="#F6A609"/><circle cx="313.3" cy="11.6" r="3.3" fill="#E07B00"/><circle cx="320.0" cy="13.8" r="3.3" fill="#F6A609"/><circle cx="326.7" cy="15.0" r="3.3" fill="#E07B00"/><circle cx="333.3" cy="15.0" r="3.3" fill="#F6A609"/><circle cx="340.0" cy="13.8" r="3.3" fill="#E07B00"/><circle cx="346.7" cy="11.6" r="3.3" fill="#F6A609"/><circle cx="353.3" cy="8.1" r="3.3" fill="#E07B00"/></g><g class="toran__swag"><circle cx="366.7" cy="8.1" r="3.3" fill="#F6A609"/><circle cx="373.3" cy="11.6" r="3.3" fill="#E07B00"/><circle cx="380.0" cy="13.8" r="3.3" fill="#F6A609"/><circle cx="386.7" cy="15.0" r="3.3" fill="#E07B00"/><circle cx="393.3" cy="15.0" r="3.3" fill="#F6A609"/><circle cx="400.0" cy="13.8" r="3.3" fill="#E07B00"/><circle cx="406.7" cy="11.6" r="3.3" fill="#F6A609"/><circle cx="413.3" cy="8.1" r="3.3" fill="#E07B00"/></g><g class="toran__swag"><circle cx="426.7" cy="8.1" r="3.3" fill="#F6A609"/><circle cx="433.3" cy="11.6" r="3.3" fill="#E07B00"/><circle cx="440.0" cy="13.8" r="3.3" fill="#F6A609"/><circle cx="446.7" cy="15.0" r="3.3" fill="#E07B00"/><circle cx="453.3" cy="15.0" r="3.3" fill="#F6A609"/><circle cx="460.0" cy="13.8" r="3.3" fill="#E07B00"/><circle cx="466.7" cy="11.6" r="3.3" fill="#F6A609"/><circle cx="473.3" cy="8.1" r="3.3" fill="#E07B00"/></g><g class="toran__pendant" style="--i:0"><path d="M0 6c4.6 4 4.8 11 0 18.5c-4.8-7.5-4.6-14.5 0-18.5z" fill="#2F7D32"/><path d="M0 7.5v15" stroke="#1E5A22" stroke-width=".8"/><circle cx="0" cy="5" r="3.8" fill="#D6246E"/><circle cx="0" cy="5" r="1.6" fill="#FFD23F"/></g><g class="toran__drop" style="--i:0"><path d="M30.0 15v5" stroke="#7A3E00" stroke-width=".8"/><circle cx="30.0" cy="21.5" r="2.9" fill="#F6A609"/><circle cx="30.0" cy="26.6" r="2.3" fill="#E07B00"/></g><g class="toran__pendant" style="--i:1"><path d="M60 6c4.6 4 4.8 11 0 18.5c-4.8-7.5-4.6-14.5 0-18.5z" fill="#2F7D32"/><path d="M60 7.5v15" stroke="#1E5A22" stroke-width=".8"/><circle cx="60" cy="5" r="3.8" fill="#D6246E"/><circle cx="60" cy="5" r="1.6" fill="#FFD23F"/></g><g class="toran__drop" style="--i:1"><path d="M90.0 15v5" stroke="#7A3E00" stroke-width=".8"/><circle cx="90.0" cy="21.5" r="2.9" fill="#F6A609"/><circle cx="90.0" cy="26.6" r="2.3" fill="#E07B00"/></g><g class="toran__pendant" style="--i:2"><path d="M120 6c4.6 4 4.8 11 0 18.5c-4.8-7.5-4.6-14.5 0-18.5z" fill="#2F7D32"/><path d="M120 7.5v15" stroke="#1E5A22" stroke-width=".8"/><circle cx="120" cy="5" r="3.8" fill="#D6246E"/><circle cx="120" cy="5" r="1.6" fill="#FFD23F"/></g><g class="toran__drop" style="--i:2"><path d="M150.0 15v5" stroke="#7A3E00" stroke-width=".8"/><circle cx="150.0" cy="21.5" r="2.9" fill="#F6A609"/><circle cx="150.0" cy="26.6" r="2.3" fill="#E07B00"/></g><g class="toran__pendant" style="--i:3"><path d="M180 6c4.6 4 4.8 11 0 18.5c-4.8-7.5-4.6-14.5 0-18.5z" fill="#2F7D32"/><path d="M180 7.5v15" stroke="#1E5A22" stroke-width=".8"/><circle cx="180" cy="5" r="3.8" fill="#D6246E"/><circle cx="180" cy="5" r="1.6" fill="#FFD23F"/></g><g class="toran__drop" style="--i:3"><path d="M210.0 15v5" stroke="#7A3E00" stroke-width=".8"/><circle cx="210.0" cy="21.5" r="2.9" fill="#F6A609"/><circle cx="210.0" cy="26.6" r="2.3" fill="#E07B00"/></g><g class="toran__pendant" style="--i:4"><path d="M240 6c4.6 4 4.8 11 0 18.5c-4.8-7.5-4.6-14.5 0-18.5z" fill="#2F7D32"/><path d="M240 7.5v15" stroke="#1E5A22" stroke-width=".8"/><circle cx="240" cy="5" r="3.8" fill="#D6246E"/><circle cx="240" cy="5" r="1.6" fill="#FFD23F"/></g><g class="toran__drop" style="--i:4"><path d="M270.0 15v5" stroke="#7A3E00" stroke-width=".8"/><circle cx="270.0" cy="21.5" r="2.9" fill="#F6A609"/><circle cx="270.0" cy="26.6" r="2.3" fill="#E07B00"/></g><g class="toran__pendant" style="--i:5"><path d="M300 6c4.6 4 4.8 11 0 18.5c-4.8-7.5-4.6-14.5 0-18.5z" fill="#2F7D32"/><path d="M300 7.5v15" stroke="#1E5A22" stroke-width=".8"/><circle cx="300" cy="5" r="3.8" fill="#D6246E"/><circle cx="300" cy="5" r="1.6" fill="#FFD23F"/></g><g class="toran__drop" style="--i:5"><path d="M330.0 15v5" stroke="#7A3E00" stroke-width=".8"/><circle cx="330.0" cy="21.5" r="2.9" fill="#F6A609"/><circle cx="330.0" cy="26.6" r="2.3" fill="#E07B00"/></g><g class="toran__pendant" style="--i:6"><path d="M360 6c4.6 4 4.8 11 0 18.5c-4.8-7.5-4.6-14.5 0-18.5z" fill="#2F7D32"/><path d="M360 7.5v15" stroke="#1E5A22" stroke-width=".8"/><circle cx="360" cy="5" r="3.8" fill="#D6246E"/><circle cx="360" cy="5" r="1.6" fill="#FFD23F"/></g><g class="toran__drop" style="--i:6"><path d="M390.0 15v5" stroke="#7A3E00" stroke-width=".8"/><circle cx="390.0" cy="21.5" r="2.9" fill="#F6A609"/><circle cx="390.0" cy="26.6" r="2.3" fill="#E07B00"/></g><g class="toran__pendant" style="--i:7"><path d="M420 6c4.6 4 4.8 11 0 18.5c-4.8-7.5-4.6-14.5 0-18.5z" fill="#2F7D32"/><path d="M420 7.5v15" stroke="#1E5A22" stroke-width=".8"/><circle cx="420" cy="5" r="3.8" fill="#D6246E"/><circle cx="420" cy="5" r="1.6" fill="#FFD23F"/></g><g class="toran__drop" style="--i:7"><path d="M450.0 15v5" stroke="#7A3E00" stroke-width=".8"/><circle cx="450.0" cy="21.5" r="2.9" fill="#F6A609"/><circle cx="450.0" cy="26.6" r="2.3" fill="#E07B00"/></g><g class="toran__pendant" style="--i:8"><path d="M480 6c4.6 4 4.8 11 0 18.5c-4.8-7.5-4.6-14.5 0-18.5z" fill="#2F7D32"/><path d="M480 7.5v15" stroke="#1E5A22" stroke-width=".8"/><circle cx="480" cy="5" r="3.8" fill="#D6246E"/><circle cx="480" cy="5" r="1.6" fill="#FFD23F"/></g></svg></div>
+</header>
+
+<main id="main" class="main">
+  <noscript><p class="noscript">This ticket needs JavaScript. Open the link in Chrome or Safari.</p></noscript>
+
+  <!-- ==============================================================
+       STOP 0 · PLATFORM (cover ticket + "Who's boarding?")
+       ============================================================== -->
+  <section class="stop is-active" id="stop-platform" data-stop="platform" aria-labelledby="t-platform">
+    <article class="ticket cover" id="cover">
+      <svg class="jharokha" viewBox="0 0 330 100" aria-hidden="true" focusable="false">
+        <g class="jharokha__shehnai jharokha__shehnai--l" transform="translate(60 88) rotate(-150)"><g class="jharokha__play">
+          <rect x="0" y="-1.2" width="7" height="2.4" rx="1" fill="#FCE9D6"/>
+          <circle cx="7.5" cy="0" r="2.6" fill="#F6A609"/>
+          <path d="M9 -2.4 46 -4.4V4.4L9 2.4z" fill="#E07B00"/>
+          <g fill="#7A3E00"><circle cx="19" cy="0" r="1.1"/><circle cx="25" cy="0" r="1.1"/><circle cx="31" cy="0" r="1.1"/><circle cx="37" cy="0" r="1.1"/></g>
+          <rect x="13" y="-3" width="2.2" height="6" fill="#FFD23F"/><rect x="42" y="-4.4" width="2.2" height="8.8" fill="#FFD23F"/>
+          <path d="M46 -4.4C54 -5 58 -11 65 -12.5V12.5C58 11 54 5 46 4.4z" fill="#F6A609"/>
+          <path d="M65 -12.5V12.5" stroke="#FFD23F" stroke-width="2.4"/></g>
+        </g>
+        <g class="jharokha__shehnai jharokha__shehnai--r" transform="translate(270 88) rotate(-30)"><g class="jharokha__play">
+          <rect x="0" y="-1.2" width="7" height="2.4" rx="1" fill="#FCE9D6"/>
+          <circle cx="7.5" cy="0" r="2.6" fill="#F6A609"/>
+          <path d="M9 -2.4 46 -4.4V4.4L9 2.4z" fill="#E07B00"/>
+          <g fill="#7A3E00"><circle cx="19" cy="0" r="1.1"/><circle cx="25" cy="0" r="1.1"/><circle cx="31" cy="0" r="1.1"/><circle cx="37" cy="0" r="1.1"/></g>
+          <rect x="13" y="-3" width="2.2" height="6" fill="#FFD23F"/><rect x="42" y="-4.4" width="2.2" height="8.8" fill="#FFD23F"/>
+          <path d="M46 -4.4C54 -5 58 -11 65 -12.5V12.5C58 11 54 5 46 4.4z" fill="#F6A609"/>
+          <path d="M65 -12.5V12.5" stroke="#FFD23F" stroke-width="2.4"/></g>
+        </g>
+        <path class="jharokha__dome" d="M40 92C56 92 60 80 64 72 70 58 100 50 128 42 146 37 158 32 165 22 172 32 184 37 202 42 230 50 260 58 266 72 270 80 274 92 290 92V100H40Z" fill="#FCE9D6"/>
+        <path d="M52 100C66 98 70 86 74 78 80 66 106 58 132 50 148 45 158 41 165 33 172 41 182 45 198 50 224 58 250 66 256 78 260 86 264 98 278 100" fill="none" stroke="#A8174F" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="0 5.2"/>
+        <g class="jharokha__kalash" transform="translate(0 -5)">
+          <path d="M157 26c0-5.4 3.6-8.4 8-8.4s8 3 8 8.4c0 4.6-3.6 7.4-8 7.4s-8-2.8-8-7.4z" fill="#F6A609"/>
+          <path d="M159 24.5h12" stroke="#D6246E" stroke-width="1.6"/>
+          <rect x="161" y="14" width="8" height="4.4" rx="1" fill="#E07B00"/>
+          <path d="M165 14c-4-3-8-3.4-12-2.4 3 2.6 7 3.4 12 2.4zM165 14c4-3 8-3.4 12-2.4-3 2.6-7 3.4-12 2.4z" fill="#2F7D32"/>
+          <circle cx="165" cy="9.6" r="4.6" fill="#7A3E00"/>
+          <path d="M163 6.6c1.4-1.4 2.6-1.4 4 0" stroke="#E07B00" stroke-width="1.2" fill="none"/>
+        </g>
+      </svg>
+
+      <p class="cover__blessing" lang="hi">॥ शुभ विवाह ॥</p>
+      <div class="ticket__part ticket__part--top cover__top">
+        <p class="dm cover__train">Shaadi Express · 1012</p>
+        <h1 class="cover__names stop__title" id="t-platform" tabindex="-1">
+          <span class="cover__name">Saumy</span>
+          <span class="cover__weds">weds</span>
+          <span class="cover__name">Manorika</span>
+        </h1>
+        <p class="cover__when">10–12 Dec 2026 · Bhilwara, Rajasthan</p>
+      </div>
+      <div class="ticket__part ticket__part--stub cover__stub">
+        <h2 class="dm cover__tt-label">Timetable</h2>
+        <ol class="timetable">
+          <li class="timetable__row"><span class="timetable__date">Thu 10 Dec</span><span class="timetable__time">Afternoon</span><span class="timetable__event">Carnival</span></li>
+          <li class="timetable__row"><span class="timetable__date">Thu 10 Dec</span><span class="timetable__time">Evening</span><span class="timetable__event">Sangeet</span></li>
+          <li class="timetable__row"><span class="timetable__date">Fri 11 Dec</span><span class="timetable__time">Afternoon</span><span class="timetable__event">Maayra</span></li>
+          <li class="timetable__row"><span class="timetable__date">Fri 11 Dec</span><span class="timetable__time">Evening</span><span class="timetable__event">Baraat &amp; Reception</span></li>
+          <li class="timetable__row timetable__row--phera"><span class="timetable__date">Sat 12 Dec</span><span class="timetable__time">03:00</span><span class="timetable__event">Phera<span class="timetable__note">3 AM. Yes, AM.</span></span></li>
+        </ol>
+      </div>
+    </article>
+
+    <!-- Welcome back (returning device). Shown by app.js instead of #search-block. -->
+    <div class="ticket panel welcome" id="welcome" hidden data-preview>
+      <p class="dm welcome__kicker">Welcome back</p>
+      <p class="welcome__name" id="welcome-name">Rahul Sharma</p>
+      <p class="welcome__text">Your ticket is saved on this phone.</p>
+      <div class="welcome__actions">
+        <button class="btn btn--primary" id="welcome-view-pass" type="button"><svg class="btn__icon" aria-hidden="true"><use href="#i-ticket"/></svg>View my pass</button>
+        <button class="btn btn--secondary" id="welcome-edit" type="button"><svg class="btn__icon" aria-hidden="true"><use href="#i-edit"/></svg>Edit my ticket</button>
+      </div>
+      <button class="btn btn--link welcome__reset" id="welcome-reset" type="button">Someone else? Start a new ticket</button>
+    </div>
+
+    <!-- Who's boarding? -->
+    <div class="boarding" id="search-block">
+      <label class="boarding__label" for="guest-search">Who's boarding?</label>
+      <p class="boarding__hint" id="search-hint">Type at least 3 letters of your name, then pick it.</p>
+      <div class="search">
+        <svg class="search__icon" aria-hidden="true" focusable="false"><use href="#i-search"/></svg>
+        <input class="input search__input" id="guest-search" type="search" inputmode="search" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Start typing your name" aria-describedby="search-hint" aria-controls="search-results">
+      </div>
+      <ul class="results" id="search-results" aria-label="Matching names">
+        <li data-sample><button class="result" type="button" data-id="k7m2"><span class="result__label">Rahul Sharma</span><span class="result__go" aria-hidden="true">Board<svg><use href="#i-arrow-right"/></svg></span></button></li>
+        <li data-sample><button class="result" type="button" data-id="p3x9"><span class="result__label">Mr &amp; Mrs Agarwal</span><span class="result__go" aria-hidden="true">Board<svg><use href="#i-arrow-right"/></svg></span></button></li>
+      </ul>
+      <p class="boarding__empty" id="search-empty" hidden data-preview>No match. Check spelling or board anyway.</p>
+      <p class="field__error field__error--dark" id="search-error" hidden data-preview>Pick your name from the list first, or board anyway.</p>
+
+      <!-- Selected guest confirmation -->
+      <div class="boarding-as" id="boarding-as" hidden data-preview>
+        <span class="boarding-as__label dm">Boarding as</span>
+        <span class="boarding-as__name" id="boarding-as-name">Rahul Sharma</span>
+        <button class="btn btn--link btn--link-dark" id="boarding-change" type="button">Change</button>
+      </div>
+
+      <button class="btn btn--link btn--link-dark boarding__anyway" id="board-anyway" type="button" aria-expanded="false" aria-controls="unlisted-block">Not on the list? Board anyway</button>
+
+      <div class="field field--dark" id="unlisted-block" hidden data-preview>
+        <label class="field__label" for="unlisted-name">Your name</label>
+        <input class="input" id="unlisted-name" type="text" autocomplete="name" autocapitalize="words" maxlength="60" aria-describedby="unlisted-hint unlisted-error">
+        <p class="field__hint" id="unlisted-hint">As Saumy would know you.</p>
+        <p class="field__error field__error--dark" id="unlisted-error" hidden>Add your name so we know who's coming.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==============================================================
+       STOP 1 · PASSENGERS
+       ============================================================== -->
+  <section class="stop" id="stop-passengers" data-stop="passengers" aria-labelledby="t-passengers">
+    <div class="ticket form-card">
+      <div class="ticket__strip"><span>Shaadi Express · 1012</span><span>Stop 1 of 4</span></div>
+      <div class="form-card__body">
+        <h2 class="stop__title" id="t-passengers" tabindex="-1">Passenger chart</h2>
+        <p class="stop__lede">Mark everyone on your ticket. <strong>Waitlisted</strong> means you'll confirm later, like a waitlisted ticket that clears at chart preparation.</p>
+
+        <ol class="guest-list" id="guest-list" aria-label="Passengers">
+          <li class="guest-card" data-sample data-index="0" data-status="confirmed">
+            <div class="guest-card__head">
+              <span class="guest-card__no dm">Passenger 1</span>
+            </div>
+            <p class="guest-card__name">Rahul Sharma</p>
+            <div class="chips chips--status" role="radiogroup" aria-label="Rahul Sharma's status" data-group="status">
+              <button class="chip chip--status chip--confirmed" type="button" role="radio" aria-checked="true" data-value="confirmed"><span class="chip__label">Confirmed</span><span class="chip__code">CNF</span></button>
+              <button class="chip chip--status chip--waitlisted" type="button" role="radio" aria-checked="false" data-value="waitlisted"><span class="chip__label">Waitlisted</span><span class="chip__code">WL</span></button>
+              <button class="chip chip--status chip--regret" type="button" role="radio" aria-checked="false" data-value="regret"><span class="chip__label">Regret</span></button>
+            </div>
+          </li>
+          <li class="guest-card is-added is-invalid" data-sample data-index="1" data-status="waitlisted">
+            <div class="guest-card__head">
+              <span class="guest-card__no dm">Passenger 2</span>
+              <button class="icon-btn guest-card__remove" type="button" aria-label="Remove passenger 2"><svg aria-hidden="true"><use href="#i-x"/></svg></button>
+            </div>
+            <div class="field guest-card__name-field">
+              <label class="field__label" for="sample-guest-name-1">Name</label>
+              <input class="input" id="sample-guest-name-1" type="text" autocomplete="off" autocapitalize="words" maxlength="60" placeholder="Their name" aria-invalid="true">
+            </div>
+            <div class="chips chips--status" role="radiogroup" aria-label="Passenger 2's status" data-group="status">
+              <button class="chip chip--status chip--confirmed" type="button" role="radio" aria-checked="false" data-value="confirmed"><span class="chip__label">Confirmed</span><span class="chip__code">CNF</span></button>
+              <button class="chip chip--status chip--waitlisted" type="button" role="radio" aria-checked="true" data-value="waitlisted"><span class="chip__label">Waitlisted</span><span class="chip__code">WL</span></button>
+              <button class="chip chip--status chip--regret" type="button" role="radio" aria-checked="false" data-value="regret"><span class="chip__label">Regret</span></button>
+            </div>
+            <p class="field__error">Add a name for this passenger.</p>
+          </li>
+        </ol>
+
+        <button class="btn btn--add" id="add-guest" type="button"><svg class="btn__icon" aria-hidden="true"><use href="#i-plus"/></svg>Add guest</button>
+        <p class="add-guest__hint" id="add-guest-hint">You can bring 1 more.</p>
+        <p class="field__error" id="passengers-error" role="alert" hidden data-preview>Pick a status for every passenger.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==============================================================
+       STOP 2 · ROUTE
+       ============================================================== -->
+  <section class="stop" id="stop-route" data-stop="route" aria-labelledby="t-route">
+    <div class="ticket form-card">
+      <div class="ticket__strip"><span>Shaadi Express · 1012</span><span>Stop 2 of 4</span></div>
+      <div class="form-card__body">
+        <h2 class="stop__title" id="t-route" tabindex="-1"><span class="v-cnf">How are you travelling?</span><span class="v-wl">If your ticket confirms, how would you travel?</span></h2>
+        <p class="stop__lede">Your best guess is perfect. You can change this anytime.</p>
+
+        <div class="group">
+          <p class="group__label" id="mode-label">Mode</p>
+          <div class="chips chips--mode" id="mode-chips" role="radiogroup" aria-labelledby="mode-label" data-group="mode">
+            <button class="chip chip--mode" type="button" role="radio" aria-checked="false" data-value="train" data-preview-check><svg class="chip__icon" viewBox="0 0 48 28" aria-hidden="true"><use href="#v-train"/></svg><span class="chip__label">Train</span></button>
+            <button class="chip chip--mode" type="button" role="radio" aria-checked="false" data-value="flight"><svg class="chip__icon" viewBox="0 0 48 28" aria-hidden="true"><use href="#v-flight"/></svg><span class="chip__label">Flight</span></button>
+            <button class="chip chip--mode" type="button" role="radio" aria-checked="false" data-value="bus"><svg class="chip__icon" viewBox="0 0 48 28" aria-hidden="true"><use href="#v-bus"/></svg><span class="chip__label">Bus</span></button>
+            <button class="chip chip--mode" type="button" role="radio" aria-checked="false" data-value="car"><svg class="chip__icon" viewBox="0 0 48 28" aria-hidden="true"><use href="#v-car"/></svg><span class="chip__label">Car</span></button>
+          </div>
+          <p class="field__error" id="mode-error" hidden data-preview>Pick how you'll roughly travel.</p>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="from-city">Travelling from</label>
+          <input class="input" id="from-city" type="text" list="city-list" autocomplete="address-level2" autocapitalize="words" maxlength="60" placeholder="Your city" aria-describedby="from-hint from-error">
+          <datalist id="city-list"></datalist>
+          <p class="field__hint" id="from-hint">Pick from the list or type your own.</p>
+          <p class="field__error" id="from-error" hidden data-preview>Tell us roughly where you're coming from.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==============================================================
+       STOP 3 · ARRIVAL (tentative)
+       ============================================================== -->
+  <section class="stop" id="stop-arrival" data-stop="arrival" aria-labelledby="t-arrival">
+    <div class="ticket form-card">
+      <div class="ticket__strip"><span>Shaadi Express · 1012</span><span>Stop 3 of 4</span></div>
+      <div class="form-card__body">
+        <h2 class="stop__title" id="t-arrival" tabindex="-1"><span class="v-cnf">Roughly when do you arrive?</span><span class="v-wl">If your ticket confirms, roughly when would you arrive?</span></h2>
+        <p class="stop__lede">A rough guess helps us plan your pickup. You can change this anytime.</p>
+
+        <div class="group">
+          <p class="group__label" id="arrive-date-label">Date</p>
+          <div class="chips chips--date" id="arrive-date-chips" role="radiogroup" aria-labelledby="arrive-date-label" data-group="arrive-date">
+            <button class="chip chip--date" type="button" role="radio" aria-checked="false" data-value="2026-12-08"><span class="chip__kicker">Tue</span><span class="chip__label">8 Dec</span></button>
+            <button class="chip chip--date" type="button" role="radio" aria-checked="false" data-value="2026-12-09" data-preview-check><span class="chip__kicker">Wed</span><span class="chip__label">9 Dec</span></button>
+            <button class="chip chip--date" type="button" role="radio" aria-checked="false" data-value="2026-12-10"><span class="chip__kicker">Thu</span><span class="chip__label">10 Dec</span></button>
+            <button class="chip chip--date" type="button" role="radio" aria-checked="false" data-value="2026-12-11"><span class="chip__kicker">Fri</span><span class="chip__label">11 Dec</span></button>
+            <button class="chip chip--date chip--unsure" type="button" role="radio" aria-checked="false" data-value="unsure"><span class="chip__label">Not sure yet</span></button>
+          </div>
+        </div>
+
+        <div class="group">
+          <p class="group__label" id="arrive-slot-label">Time of day</p>
+          <div class="chips chips--slot" id="arrive-slot-chips" role="radiogroup" aria-labelledby="arrive-slot-label" data-group="arrive-slot">
+            <button class="chip chip--slot" type="button" role="radio" aria-checked="false" data-value="early"><span class="chip__label">Early morning</span><span class="chip__hint">before 8 AM</span></button>
+            <button class="chip chip--slot" type="button" role="radio" aria-checked="false" data-value="morning" data-preview-check><span class="chip__label">Morning</span><span class="chip__hint">8 AM – noon</span></button>
+            <button class="chip chip--slot" type="button" role="radio" aria-checked="false" data-value="afternoon"><span class="chip__label">Afternoon</span><span class="chip__hint">noon – 4 PM</span></button>
+            <button class="chip chip--slot" type="button" role="radio" aria-checked="false" data-value="evening"><span class="chip__label">Evening</span><span class="chip__hint">4 – 8 PM</span></button>
+            <button class="chip chip--slot" type="button" role="radio" aria-checked="false" data-value="night"><span class="chip__label">Night</span><span class="chip__hint">after 8 PM</span></button>
+            <button class="chip chip--slot chip--unsure" type="button" role="radio" aria-checked="false" data-value="unsure"><span class="chip__label">Not sure yet</span></button>
+          </div>
+        </div>
+        <p class="field__error" id="arrive-error" hidden data-preview>Pick a rough date and time. "Not sure yet" is fine.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==============================================================
+       STOP 4 · DEPARTURE (tentative) + Your stops + note
+       ============================================================== -->
+  <section class="stop" id="stop-departure" data-stop="departure" aria-labelledby="t-departure">
+    <div class="ticket form-card">
+      <div class="ticket__strip"><span>Shaadi Express · 1012</span><span>Stop 4 of 4</span></div>
+      <div class="form-card__body">
+        <h2 class="stop__title" id="t-departure" tabindex="-1"><span class="v-cnf">Roughly when do you leave?</span><span class="v-wl">If your ticket confirms, roughly when would you leave?</span></h2>
+        <p class="stop__lede">So we can plan your drop-off. You can change this anytime.</p>
+
+        <div class="group">
+          <p class="group__label" id="depart-date-label">Date</p>
+          <div class="chips chips--date" id="depart-date-chips" role="radiogroup" aria-labelledby="depart-date-label" data-group="depart-date">
+            <button class="chip chip--date" type="button" role="radio" aria-checked="false" data-value="2026-12-11"><span class="chip__kicker">Fri</span><span class="chip__label">11 Dec</span></button>
+            <button class="chip chip--date" type="button" role="radio" aria-checked="false" data-value="2026-12-12" data-preview-check><span class="chip__kicker">Sat</span><span class="chip__label">12 Dec</span></button>
+            <button class="chip chip--date" type="button" role="radio" aria-checked="false" data-value="2026-12-13"><span class="chip__kicker">Sun</span><span class="chip__label">13 Dec</span></button>
+            <button class="chip chip--date" type="button" role="radio" aria-checked="false" data-value="2026-12-14"><span class="chip__kicker">Mon</span><span class="chip__label">14 Dec</span></button>
+            <button class="chip chip--date chip--unsure" type="button" role="radio" aria-checked="false" data-value="unsure"><span class="chip__label">Not sure yet</span></button>
+          </div>
+        </div>
+
+        <div class="group">
+          <p class="group__label" id="depart-slot-label">Time of day</p>
+          <div class="chips chips--slot" id="depart-slot-chips" role="radiogroup" aria-labelledby="depart-slot-label" data-group="depart-slot">
+            <button class="chip chip--slot" type="button" role="radio" aria-checked="false" data-value="early"><span class="chip__label">Early morning</span><span class="chip__hint">before 8 AM</span></button>
+            <button class="chip chip--slot" type="button" role="radio" aria-checked="false" data-value="morning"><span class="chip__label">Morning</span><span class="chip__hint">8 AM – noon</span></button>
+            <button class="chip chip--slot" type="button" role="radio" aria-checked="false" data-value="afternoon" data-preview-check><span class="chip__label">Afternoon</span><span class="chip__hint">noon – 4 PM</span></button>
+            <button class="chip chip--slot" type="button" role="radio" aria-checked="false" data-value="evening"><span class="chip__label">Evening</span><span class="chip__hint">4 – 8 PM</span></button>
+            <button class="chip chip--slot" type="button" role="radio" aria-checked="false" data-value="night"><span class="chip__label">Night</span><span class="chip__hint">after 8 PM</span></button>
+            <button class="chip chip--slot chip--unsure" type="button" role="radio" aria-checked="false" data-value="unsure"><span class="chip__label">Not sure yet</span></button>
+          </div>
+        </div>
+        <p class="field__error" id="depart-error" hidden data-preview>Your leaving date is before your arrival. Pick a later date.</p>
+
+        <div class="your-stops">
+          <h3 class="your-stops__title">Your stops</h3>
+          <p class="your-stops__lede">Based on your rough plan. A lit diya means you're there.</p>
+          <ol class="catches" id="catches" aria-label="Functions you'll catch">
+            <li class="tt-row" data-sample data-caught="true"><svg class="diya diya--sm" viewBox="0 0 40 40" aria-hidden="true"><use href="#diya-bowl"/><use class="diya__flame" href="#diya-flame"/></svg><span class="tt-row__main"><span class="tt-row__name">Carnival</span><span class="tt-row__when">Thu 10 Dec · Afternoon</span></span><span class="sr-only">You'll be there.</span></li>
+            <li class="tt-row" data-sample data-caught="true"><svg class="diya diya--sm" viewBox="0 0 40 40" aria-hidden="true"><use href="#diya-bowl"/><use class="diya__flame" href="#diya-flame"/></svg><span class="tt-row__main"><span class="tt-row__name">Sangeet</span><span class="tt-row__when">Thu 10 Dec · Evening</span></span><span class="sr-only">You'll be there.</span></li>
+            <li class="tt-row" data-sample data-caught="false"><svg class="diya diya--sm" viewBox="0 0 40 40" aria-hidden="true"><use href="#diya-bowl"/><use class="diya__flame" href="#diya-flame"/></svg><span class="tt-row__main"><span class="tt-row__name">Phera</span><span class="tt-row__when">Sat 12 Dec · 3 AM. Yes, AM.</span><span class="tt-row__quip">You'll miss the Phera! It's at 3 AM anyway…</span></span><span class="sr-only">You'll miss this one.</span></li>
+          </ol>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="note">A note for Saumy &amp; Manorika <span class="field__optional">(optional)</span></label>
+          <textarea class="input input--area" id="note" maxlength="500" rows="3" placeholder="Song requests, dietary needs, anything." aria-describedby="note-count"></textarea>
+          <p class="field__count" id="note-count" aria-live="off">0 / 500</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==============================================================
+       STOP 5 · BHILWARA JUNCTION
+       ============================================================== -->
+  <section class="stop stop--junction" id="stop-junction" data-stop="junction" aria-labelledby="t-junction">
+    <div class="scene" id="arrival-scene">
+      <div class="scene__sky" aria-hidden="true"></div>
+      <div class="board" role="img" aria-label="Station board: Bhilwara. Height above sea level: very happy.">
+        <div class="board__plate">
+          <p class="board__hi" lang="hi">भीलवाड़ा</p>
+          <p class="board__en">Bhilwara</p>
+          <p class="board__msl"><span lang="hi">समुद्र तल से ऊंचाई: बहुत खुश</span><span>Height above sea level: very happy</span></p>
+        </div>
+        <span class="board__post board__post--l"></span>
+        <span class="board__post board__post--r"></span>
+      </div>
+      <div class="couple" aria-hidden="true">
+        <div class="bobble bobble--a">
+          <div class="bobble__head"><img data-head="a" src="assets/couple/saumy-head.svg" data-png="assets/couple/saumy-head.png" alt="" width="256" height="256"></div>
+          <svg class="bobble__body" viewBox="0 0 100 124" focusable="false"><use href="#body-saumy"/><use class="bobble__arm" href="#arm-saumy"/></svg>
+        </div>
+        <div class="bobble bobble--b">
+          <div class="bobble__head"><img data-head="b" src="assets/couple/manorika-head.svg" data-png="assets/couple/manorika-head.png" alt="" width="256" height="256"></div>
+          <svg class="bobble__body" viewBox="0 0 100 124" focusable="false"><use href="#body-manorika"/><use class="bobble__arm" href="#arm-manorika"/></svg>
+        </div>
+      </div>
+      <button class="instrument instrument--dhol" id="tap-dhol" type="button" aria-label="Play the dhol">
+        <svg viewBox="0 0 80 64" aria-hidden="true" focusable="false">
+          <path d="M14 24C16 6 64 6 66 24" fill="none" stroke="#D6246E" stroke-width="3" stroke-linecap="round"/>
+          <path d="M14 22c16-5 36-5 52 0v32c-16 5-36 5-52 0z" fill="#D6246E"/>
+          <path d="M14 26c16-4 36-4 52 0M14 50c16 4 36 4 52 0" stroke="#F6A609" stroke-width="3" fill="none"/>
+          <path d="M18 25l8 26 8-26 8 26 8-26 8 26 6-24" stroke="#FCE9D6" stroke-width="1.6" fill="none" stroke-linejoin="round"/>
+          <ellipse cx="14" cy="38" rx="6.5" ry="16.5" fill="#FCE9D6" stroke="#7A3E00" stroke-width="2"/>
+          <ellipse cx="66" cy="38" rx="6.5" ry="16.5" fill="#FCE9D6" stroke="#7A3E00" stroke-width="2"/>
+          <path d="M70 20c4-6 7-11 8-17" stroke="#FFD23F" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+        </svg>
+        <span class="instrument__hint" aria-hidden="true">Tap</span>
+      </button>
+      <button class="instrument instrument--shehnai" id="tap-shehnai" type="button" aria-label="Play the shehnai">
+        <svg viewBox="0 0 80 64" aria-hidden="true" focusable="false">
+          <g transform="translate(8 56) rotate(-38)">
+            <rect x="0" y="-1.6" width="9" height="3.2" rx="1.2" fill="#FCE9D6"/>
+            <circle cx="10" cy="0" r="3.4" fill="#F6A609"/>
+            <path d="M12 -3.2 58 -5.8V5.8L12 3.2z" fill="#E07B00"/>
+            <g fill="#7A3E00"><circle cx="24" cy="0" r="1.4"/><circle cx="31" cy="0" r="1.4"/><circle cx="38" cy="0" r="1.4"/><circle cx="45" cy="0" r="1.4"/></g>
+            <rect x="17" y="-4" width="2.6" height="8" fill="#FFD23F"/><rect x="53" y="-5.8" width="2.6" height="11.6" fill="#FFD23F"/>
+            <path d="M58 -5.8C68 -6.4 72 -14 82 -16V16C72 14 68 6.4 58 5.8z" fill="#F6A609"/>
+            <path d="M82 -16V16" stroke="#FFD23F" stroke-width="3"/>
+          </g>
+        </svg>
+        <span class="instrument__hint" aria-hidden="true">Tap</span>
+      </button>
+      <div class="platform-edge" aria-hidden="true"></div>
+      <div class="petals" aria-hidden="true"><i class="petal" style="--x:34%;--d:0.23s;--t:2.45s;--r:-175deg;--s:0.84;--w:20px;--c:var(--genda)"></i><i class="petal" style="--x:52%;--d:0.32s;--t:2.38s;--r:372deg;--s:0.92;--w:24px;--c:var(--genda-deep)"></i><i class="petal" style="--x:47%;--d:1.43s;--t:3.35s;--r:-407deg;--s:1.15;--w:-16px;--c:var(--genda)"></i><i class="petal" style="--x:39%;--d:1.31s;--t:3.29s;--r:-406deg;--s:0.82;--w:13px;--c:var(--rani)"></i><i class="petal" style="--x:96%;--d:1.35s;--t:3.34s;--r:527deg;--s:0.98;--w:-15px;--c:var(--haldi)"></i><i class="petal" style="--x:49%;--d:0.58s;--t:2.44s;--r:191deg;--s:1.13;--w:0px;--c:var(--genda)"></i><i class="petal" style="--x:84%;--d:0.97s;--t:2.83s;--r:-439deg;--s:1.00;--w:2px;--c:var(--genda-deep)"></i><i class="petal" style="--x:62%;--d:0.57s;--t:2.99s;--r:431deg;--s:0.90;--w:-25px;--c:var(--genda)"></i><i class="petal" style="--x:19%;--d:0.31s;--t:2.50s;--r:234deg;--s:0.73;--w:-21px;--c:var(--rani)"></i><i class="petal" style="--x:74%;--d:0.42s;--t:2.52s;--r:-425deg;--s:1.04;--w:13px;--c:var(--haldi)"></i><i class="petal" style="--x:69%;--d:1.54s;--t:2.81s;--r:197deg;--s:1.02;--w:8px;--c:var(--genda)"></i><i class="petal" style="--x:64%;--d:0.63s;--t:2.35s;--r:-304deg;--s:0.79;--w:-11px;--c:var(--genda-deep)"></i><i class="petal" style="--x:58%;--d:1.18s;--t:3.37s;--r:-517deg;--s:1.24;--w:-15px;--c:var(--genda)"></i><i class="petal" style="--x:87%;--d:0.65s;--t:2.74s;--r:-246deg;--s:0.90;--w:-20px;--c:var(--rani)"></i><i class="petal" style="--x:33%;--d:1.01s;--t:2.42s;--r:512deg;--s:1.02;--w:-4px;--c:var(--haldi)"></i><i class="petal" style="--x:47%;--d:0.71s;--t:2.59s;--r:-342deg;--s:1.01;--w:-16px;--c:var(--genda)"></i><i class="petal" style="--x:33%;--d:0.02s;--t:2.42s;--r:-213deg;--s:1.10;--w:15px;--c:var(--genda-deep)"></i><i class="petal" style="--x:10%;--d:0.13s;--t:3.37s;--r:423deg;--s:1.02;--w:26px;--c:var(--genda)"></i><i class="petal" style="--x:42%;--d:1.19s;--t:2.83s;--r:-316deg;--s:1.23;--w:-13px;--c:var(--rani)"></i><i class="petal" style="--x:19%;--d:0.09s;--t:2.51s;--r:-508deg;--s:1.22;--w:-21px;--c:var(--haldi)"></i><i class="petal" style="--x:7%;--d:0.06s;--t:2.38s;--r:262deg;--s:0.84;--w:20px;--c:var(--genda)"></i><i class="petal" style="--x:66%;--d:1.45s;--t:2.86s;--r:160deg;--s:0.71;--w:16px;--c:var(--genda-deep)"></i><i class="petal" style="--x:23%;--d:1.27s;--t:2.58s;--r:-170deg;--s:0.76;--w:-18px;--c:var(--genda)"></i><i class="petal" style="--x:55%;--d:0.60s;--t:2.91s;--r:417deg;--s:0.73;--w:-16px;--c:var(--rani)"></i><i class="petal" style="--x:52%;--d:0.86s;--t:2.78s;--r:521deg;--s:0.85;--w:-4px;--c:var(--haldi)"></i><i class="petal" style="--x:96%;--d:0.71s;--t:3.14s;--r:-439deg;--s:1.00;--w:8px;--c:var(--genda)"></i><i class="petal" style="--x:62%;--d:0.36s;--t:2.76s;--r:170deg;--s:0.83;--w:3px;--c:var(--genda-deep)"></i><i class="petal" style="--x:29%;--d:0.28s;--t:3.36s;--r:-534deg;--s:1.22;--w:-26px;--c:var(--genda)"></i></div>
+    </div>
+
+    <div class="junction__intro">
+      <h2 class="stop__title stop__title--hero" id="t-junction" tabindex="-1"><span class="v-cnf">See you in Bhilwara!</span><span class="v-wl">You're on the waitlist</span></h2>
+      <p class="stop__lede stop__lede--dark"><span class="v-cnf">Your ticket is saved. Edit it anytime from this phone, or search your name again on another.</span><span class="v-wl">We'll keep a seat warm. Come back and confirm when you know.</span></p>
+    </div>
+
+    <!-- Boarding pass -->
+    <section class="pass-block" aria-labelledby="pass-title">
+      <h3 class="section-title section-title--dark" id="pass-title">Your boarding pass</h3>
+      <div class="pass-wrap">
+        <figure class="pass is-loading" id="pass">
+          <img class="pass__img" id="pass-img" alt="Your Shaadi Express boarding pass" width="1080" height="1350">
+          <div class="pass__printing" aria-hidden="true">
+            <span class="pass__head"></span>
+            <span class="pass__lines"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+            <span class="dm pass__printing-label">Printing your ticket…</span>
+          </div>
+        </figure>
+      </div>
+      <div class="pass__actions">
+        <button class="btn btn--primary" id="pass-download" type="button"><svg class="btn__icon" aria-hidden="true"><use href="#i-download"/></svg>Download ticket</button>
+        <button class="btn btn--rani" id="pass-share" type="button"><svg class="btn__icon" aria-hidden="true"><use href="#i-share"/></svg>Share</button>
+      </div>
+      <a class="btn btn--ghost btn--block" id="pass-wa" href="#" target="_blank" rel="noopener" hidden data-preview><svg class="btn__icon" aria-hidden="true"><use href="#i-chat"/></svg>Send it to Saumy on WhatsApp</a>
+      <p class="field__error field__error--dark" id="pass-error" hidden>Couldn't print the pass. Try again in a moment.</p>
+    </section>
+
+    <!-- Booking-open reminders (train only) -->
+    <section class="ticket info-card" id="booking" aria-labelledby="booking-title" hidden data-preview>
+      <div class="ticket__strip"><span>IRCTC</span><span>Booking opens 8:00 AM</span></div>
+      <div class="info-card__body">
+        <h3 class="section-title" id="booking-title">Book your train the morning it opens</h3>
+        <p class="info-card__text">Booking opens 60 days before the journey, at 8:00 AM. Long-distance trains count from the day the train leaves its first station, so it can open a day earlier.</p>
+        <ul class="booking-list" id="booking-list">
+          <li class="booking-card" data-sample data-state="upcoming">
+            <p class="booking-card__leg dm">Onward · boards ~Tue 8 Dec</p>
+            <p class="booking-card__opens">Opens <strong>Fri 9 Oct, 8:00 AM</strong></p>
+            <p class="booking-card__countdown dm">in 23 h 50 min</p>
+            <p class="booking-card__note">Arriving early on Wed 9 Dec usually means an overnight train that leaves the day before. If yours leaves on Wed 9 Dec itself, booking opens Sat 10 Oct instead.</p>
+            <div class="booking-card__actions">
+              <a class="btn btn--small btn--secondary" href="#" target="_blank" rel="noopener"><svg class="btn__icon" aria-hidden="true"><use href="#i-calendar"/></svg>Add 7:50 AM reminder</a>
+              <a class="btn btn--link" href="#" download="booking-reminder.ics">Other calendar app (.ics)</a>
+            </div>
+          </li>
+          <li class="booking-card" data-sample data-state="upcoming">
+            <p class="booking-card__leg dm">Return · date not fixed yet</p>
+            <p class="booking-card__opens">Next window opens <strong>Mon 12 Oct, 8:00 AM</strong></p>
+            <p class="booking-card__countdown dm">in 3 days 23 h</p>
+            <ul class="booking-card__dates"><li><span>Fri 11 Dec</span><span>opens Mon 12 Oct</span></li><li><span>Sat 12 Dec</span><span>opens Tue 13 Oct</span></li><li><span>Sun 13 Dec</span><span>opens Wed 14 Oct</span></li><li><span>Mon 14 Dec</span><span>opens Thu 15 Oct</span></li></ul>
+            <p class="booking-card__note">Pick your date and book on the morning its window opens.</p>
+            <div class="booking-card__actions">
+              <a class="btn btn--small btn--secondary" href="#" target="_blank" rel="noopener"><svg class="btn__icon" aria-hidden="true"><use href="#i-calendar"/></svg>Add 7:50 AM reminder</a>
+              <a class="btn btn--link" href="#" download="booking-reminder.ics">Other calendar app (.ics)</a>
+            </div>
+          </li>
+          <li class="booking-card" data-sample data-state="open">
+            <p class="booking-card__leg dm">Return · Sat 12 Dec</p>
+            <p class="booking-card__opens">Opened <strong>Tue 13 Oct, 8:00 AM</strong></p>
+            <div class="booking-card__open-now"><p>Booking is open now. Book today.</p><a class="btn btn--small btn--secondary" href="https://www.irctc.co.in/nget/train-search" target="_blank" rel="noopener">Open IRCTC</a></div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Leave kit -->
+    <section class="ticket info-card" id="leave-kit" aria-labelledby="leave-title">
+      <div class="ticket__strip"><span>Leave kit</span><span>Office-ready</span></div>
+      <div class="info-card__body">
+        <h3 class="section-title" id="leave-title">Get the days off</h3>
+        <p class="info-card__text">You'll need about <strong class="leave__days" id="leave-days">3</strong> working days off.</p>
+        <div class="chips chips--leave" id="leave-kind-chips" role="radiogroup" aria-label="Email tone" data-group="leave-kind">
+          <button class="chip" type="button" role="radio" aria-checked="true" data-value="formal"><span class="chip__label">Formal</span></button>
+          <button class="chip" type="button" role="radio" aria-checked="false" data-value="honest"><span class="chip__label">Honest</span></button>
+        </div>
+        <div class="leave__preview">
+          <p class="leave__subject"><span class="dm leave__subject-label">Subject</span> <span id="leave-subject">Leave request: 9–12 Dec</span></p>
+          <p class="leave__body" id="leave-body">Hi,
+
+I'd like to request leave from Wed 9 Dec to Sat 12 Dec to attend a close friend's wedding in Bhilwara, Rajasthan.
+
+Thanks,
+Rahul</p>
+        </div>
+        <div class="leave__actions">
+          <button class="btn btn--secondary" id="leave-copy" type="button"><svg class="btn__icon" aria-hidden="true"><use href="#i-copy"/></svg>Copy email</button>
+          <a class="btn btn--secondary" id="leave-mail" href="#"><svg class="btn__icon" aria-hidden="true"><use href="#i-mail"/></svg>Open in mail</a>
+        </div>
+      </div>
+    </section>
+
+    <button class="btn btn--ghost btn--block" id="junction-edit" type="button"><svg class="btn__icon" aria-hidden="true"><use href="#i-edit"/></svg>Edit my ticket</button>
+  </section>
+
+  <!-- ==============================================================
+       STOP 5r · REGRET ENDING
+       ============================================================== -->
+  <section class="stop stop--regret" id="stop-regret-end" data-stop="regret-end" aria-labelledby="t-regret">
+    <div class="scene scene--sad" id="regret-scene" aria-hidden="true">
+      <div class="scene__sky"></div>
+      <div class="raincloud">
+        <svg viewBox="0 0 120 70" focusable="false">
+          <path d="M28 46a16 16 0 0 1 3-31.7A22 22 0 0 1 72 10a18 18 0 0 1 22 15.4A14 14 0 0 1 92 53H28a8 8 0 0 1 0-7z" fill="#5B6290"/>
+          <path d="M32 44a12 12 0 0 1 2-22" fill="none" stroke="#7D84B0" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        <span class="raincloud__drops"><i></i><i></i><i></i><i></i><i></i></span>
+      </div>
+      <div class="board board--small">
+        <div class="board__plate">
+          <p class="board__hi" lang="hi">भीलवाड़ा</p>
+          <p class="board__en">Bhilwara</p>
+        </div>
+        <span class="board__post board__post--l"></span>
+        <span class="board__post board__post--r"></span>
+      </div>
+      <div class="couple">
+        <div class="bobble bobble--a is-sad">
+          <div class="bobble__head"><img data-head="a" src="assets/couple/saumy-head-sad.svg" data-png="assets/couple/saumy-head.png" alt="" width="256" height="256"><span class="bobble__tear"></span></div>
+          <svg class="bobble__body" viewBox="0 0 100 124" focusable="false"><use href="#body-saumy"/><use class="bobble__arm" href="#arm-saumy-down"/></svg>
+        </div>
+        <div class="bobble bobble--b is-sad">
+          <div class="bobble__head"><img data-head="b" src="assets/couple/manorika-head-sad.svg" data-png="assets/couple/manorika-head.png" alt="" width="256" height="256"><span class="bobble__tear"></span></div>
+          <svg class="bobble__body" viewBox="0 0 100 124" focusable="false"><use href="#body-manorika"/><use class="bobble__arm" href="#arm-manorika-down"/></svg>
+        </div>
+      </div>
+      <div class="platform-edge"></div>
+    </div>
+
+    <div class="junction__intro">
+      <h2 class="stop__title stop__title--hero" id="t-regret" tabindex="-1">We'll miss you!</h2>
+      <p class="stop__lede stop__lede--dark" id="regret-sub">Your reply is saved. Still loved, always.</p>
+    </div>
+
+    <div class="ticket info-card" id="regret-note-wrap">
+      <div class="info-card__body">
+        <div class="field">
+          <label class="field__label" for="regret-note">A note for Saumy &amp; Manorika <span class="field__optional">(optional)</span></label>
+          <textarea class="input input--area" id="regret-note" maxlength="500" rows="3" placeholder="Blessings, excuses, a dance you'd have done…" aria-describedby="regret-note-count"></textarea>
+          <p class="field__count" id="regret-note-count" aria-live="off">0 / 500</p>
+          <p class="field__error" id="regret-note-error" role="alert" hidden></p>
+        </div>
+        <button class="btn btn--primary btn--block" id="regret-note-save" type="button">Send note</button>
+      </div>
+    </div>
+
+    <div class="regret__again">
+      <p>Changed your mind?</p>
+      <button class="btn btn--ghost" id="regret-edit" type="button"><svg class="btn__icon" aria-hidden="true"><use href="#i-edit"/></svg>Edit my ticket</button>
+    </div>
+  </section>
+
+  <!-- Diya row: decor at the end of every stop -->
+  <div class="diyas" aria-hidden="true">
+    <svg class="diya" viewBox="0 0 40 40" focusable="false"><use href="#diya-bowl"/><use class="diya__flame" href="#diya-flame"/></svg>
+    <svg class="diya" viewBox="0 0 40 40" focusable="false"><use href="#diya-bowl"/><use class="diya__flame" href="#diya-flame"/></svg>
+    <svg class="diya" viewBox="0 0 40 40" focusable="false"><use href="#diya-bowl"/><use class="diya__flame" href="#diya-flame"/></svg>
+    <svg class="diya" viewBox="0 0 40 40" focusable="false"><use href="#diya-bowl"/><use class="diya__flame" href="#diya-flame"/></svg>
+    <svg class="diya" viewBox="0 0 40 40" focusable="false"><use href="#diya-bowl"/><use class="diya__flame" href="#diya-flame"/></svg>
+  </div>
+</main>
+
+<!-- Toast for small confirmations ("Copied", "Downloaded") -->
+<p class="toast" id="toast" role="status" aria-live="polite"></p>
+
+<!-- ================================================================
+     Bottom CTA bar
+     ================================================================ -->
+<div class="cta-bar" id="cta-bar">
+  <div class="cta-bar__inner">
+    <div class="cta-error" id="cta-error" role="alert" hidden data-preview>
+      <p class="cta-error__msg" id="cta-error-msg">Couldn't reach the ticket counter. Check your connection and try again.</p>
+      <button class="btn btn--small btn--ghost" id="cta-retry" type="button">Try again</button>
+    </div>
+    <div class="cta-bar__row">
+      <button class="btn btn--back" id="cta-back" type="button" hidden data-preview><svg class="btn__icon" aria-hidden="true"><use href="#i-arrow-left"/></svg><span>Back</span></button>
+      <button class="btn btn--primary btn--cta" id="cta-next" type="button"><svg class="btn__spinner" aria-hidden="true"><use href="#i-wheel"/></svg><span id="cta-label">Board now</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================
+     Templates: cloned by app.js. Fill [data-slot] nodes with textContent.
+     ================================================================ -->
+<template id="tpl-result">
+  <li><button class="result" type="button" data-id=""><span class="result__label" data-slot="label"></span><span class="result__go" aria-hidden="true">Board<svg><use href="#i-arrow-right"/></svg></span></button></li>
+</template>
+
+<template id="tpl-guest">
+  <li class="guest-card" data-index="">
+    <div class="guest-card__head">
+      <span class="guest-card__no dm">Passenger <span data-slot="no"></span></span>
+      <button class="icon-btn guest-card__remove" type="button" data-action="remove" aria-label="Remove this passenger" hidden><svg aria-hidden="true"><use href="#i-x"/></svg></button>
+    </div>
+    <p class="guest-card__name" data-slot="name"></p>
+    <div class="field guest-card__name-field" hidden>
+      <label class="field__label" data-slot="name-label">Name</label>
+      <input class="input" data-slot="name-input" type="text" autocomplete="off" autocapitalize="words" maxlength="60" placeholder="Their name">
+    </div>
+    <div class="chips chips--status" role="radiogroup" data-group="status">
+      <button class="chip chip--status chip--confirmed" type="button" role="radio" aria-checked="false" data-value="confirmed"><span class="chip__label">Confirmed</span><span class="chip__code">CNF</span></button>
+      <button class="chip chip--status chip--waitlisted" type="button" role="radio" aria-checked="false" data-value="waitlisted"><span class="chip__label">Waitlisted</span><span class="chip__code">WL</span></button>
+      <button class="chip chip--status chip--regret" type="button" role="radio" aria-checked="false" data-value="regret"><span class="chip__label">Regret</span></button>
+    </div>
+    <p class="field__error" data-slot="error" hidden></p>
+  </li>
+</template>
+
+<template id="tpl-chip">
+  <button class="chip" type="button" role="radio" aria-checked="false" data-value=""><span class="chip__kicker" data-slot="kicker" hidden></span><span class="chip__label" data-slot="label"></span><span class="chip__hint" data-slot="hint" hidden></span></button>
+</template>
+
+<template id="tpl-booking">
+  <li class="booking-card" data-state="upcoming">
+    <p class="booking-card__leg dm" data-slot="leg"></p>
+    <p class="booking-card__opens"><span data-slot="opens-verb">Opens</span> <strong data-slot="opens"></strong></p>
+    <p class="booking-card__countdown dm" data-slot="countdown"></p>
+    <ul class="booking-card__dates" data-slot="dates" aria-label="Booking windows by travel date" hidden></ul>
+    <p class="booking-card__note" data-slot="note" hidden></p>
+    <div class="booking-card__open-now" data-slot="open-now"><p>Booking is open now. Book today.</p><a class="btn btn--small btn--secondary" data-slot="irctc" href="https://www.irctc.co.in/nget/train-search" target="_blank" rel="noopener">Open IRCTC</a></div>
+    <div class="booking-card__actions">
+      <a class="btn btn--small btn--secondary" data-slot="gcal" href="#" target="_blank" rel="noopener"><svg class="btn__icon" aria-hidden="true"><use href="#i-calendar"/></svg>Add 7:50 AM reminder</a>
+      <a class="btn btn--link" data-slot="ics" href="#" download="booking-reminder.ics">Other calendar app (.ics)</a>
+    </div>
+  </li>
+</template>
+
+<template id="tpl-catch-row">
+  <li class="tt-row" data-caught="true">
+    <svg class="diya diya--sm" viewBox="0 0 40 40" aria-hidden="true"><use href="#diya-bowl"/><use class="diya__flame" href="#diya-flame"/></svg>
+    <span class="tt-row__main"><span class="tt-row__name" data-slot="name"></span><span class="tt-row__when" data-slot="when"></span><span class="tt-row__quip" data-slot="quip"></span></span>
+    <span class="sr-only" data-slot="status"></span>
+  </li>
+</template>
+
+<!-- Dev-only: ?preview=all shows every stop stacked so the design can be reviewed without app.js -->
+<script>
+  (function () {
+    if (new URLSearchParams(location.search).get('preview') !== 'all') return;
+    document.body.classList.add('preview-all');
+    document.querySelectorAll('[data-preview]').forEach(function (el) { el.hidden = false; });
+    document.querySelectorAll('[data-preview-check]').forEach(function (el) { el.setAttribute('aria-checked', 'true'); });
+    document.querySelectorAll('.scene').forEach(function (el) { el.classList.add('is-arrived'); });
+    document.getElementById('journey').style.setProperty('--progress', '0.6');
+  })();
+</script>
+</body>
+</html>

@@ -45,7 +45,7 @@
 - **Fonts:** "Yatra One" (display, sparing), "Mukta" (body, 400/600), "DotGothic16" (dot-matrix utility).
 - **Mobile first:** 360–430px wide, tap targets ≥ 44px, no horizontal scroll, safe-area insets, `prefers-reduced-motion` respected, visible `:focus-visible`, contrast ≥ 4.5:1.
 - **No external JS libraries.** No emoji used as icons (emoji inside copy text is fine). All decor is inline SVG or CSS.
-- **Dependencies:** none, and no npm packages. Tests run with `node --test tests/`.
+- **Dependencies:** none, and no npm packages. Tests run with `node --test "tests/*.test.mjs"` (or a bare `node --test`). On Node 22+ a directory argument is run as a module, so the older `node --test tests/` form only works through the `tests/index.js` shim.
 - **Commits:** agents do not commit; the orchestrator does.
 - **The Apps Script URL is unknown at build time.** `CONFIG.apiUrl = ''` means mock mode.
 
@@ -90,9 +90,9 @@
 | `leaveEmail(kind:'formal'\|'honest', {name, arrive, depart, days, couple, city}): {subject, body}` | The honest body mentions the 3 AM phera and dancing in the baraat, in a warm, funny tone. |
 | `matchesQuery(q, label, names[]): boolean` | Trimmed q must be at least 3 chars. Every query word must be a prefix of some word in `label` or `names`. Case-insensitive; ignores `&`, `.` and `,`. |
 
-- [ ] **Step 1:** Run `node --test tests/` and confirm it FAILs (the module is missing).
+- [ ] **Step 1:** Run `node --test "tests/*.test.mjs"` and confirm it FAILs (the module is missing).
 - [ ] **Step 2:** Implement `js/logic.js` to satisfy every test and the interface table. Keep it under 250 lines and use JSDoc on exports.
-- [ ] **Step 3:** Run `node --test tests/`. Expected: all tests pass.
+- [ ] **Step 3:** Run `node --test "tests/*.test.mjs"`. Expected: all tests pass.
 
 ### Task 2: Config, API client, Apps Script backend, setup docs
 
@@ -150,11 +150,11 @@ export async function findGuests(q): Promise<{id,label}[]>   // [] when q.trim()
 export async function getGuest(id): Promise<{id,label,names:string[],max_guests:number} | null>
 export async function submitRsvp(payload): Promise<{ok:true,id,updated_at}>   // throws Error(userFacingMessage) on failure
 export function newUnlistedId(): string        // 'u-' + 8 random base36 chars (crypto.getRandomValues)
-export const local = {                          // localStorage key 'stt.v1', all calls wrapped in try/catch
+export const local = {                          // localStorage key 'stt.v1' ('stt.mock.v1' in mock mode), all calls wrapped in try/catch
   load(): {id,label,unlisted,payload,updated_at} | null,
   save(record): void,
   clear(): void,
-  loadDraft(): object | null, saveDraft(state): void, clearDraft(): void,   // key 'stt.draft.v1'
+  loadDraft(): object | null, saveDraft(state): void, clearDraft(): void,   // key 'stt.draft.v1' ('stt.mock.draft.v1' in mock mode)
 };
 ```
 
@@ -202,7 +202,7 @@ export const local = {                          // localStorage key 'stt.v1', al
 **`tools/guests-template.csv`:** has the header `id,label,names,max_guests,notes` and the four mock rows, with `names` pipe-separated.
 
 - [ ] **Step 1:** Write `js/config.js` and `js/api.js` exactly to the interface above.
-- [ ] **Step 2:** Write a quick node smoke test, `tests/api.mock.test.mjs`. It stubs `globalThis.localStorage` with an in-memory object and `globalThis.location = {search:''}`, then asserts that `findGuests('rah')` returns the k7m2 entry and that `submitRsvp(validPayload)` resolves `ok:true`. Run `node --test tests/`; all pass.
+- [ ] **Step 2:** Write a quick node smoke test, `tests/api.mock.test.mjs`. It stubs `globalThis.localStorage` with an in-memory object and `globalThis.location = {search:''}`, then asserts that `findGuests('rah')` returns the k7m2 entry and that `submitRsvp(validPayload)` resolves `ok:true`. Run `node --test "tests/*.test.mjs"`; all pass.
 - [ ] **Step 3:** Write `Code.gs`, `appsscript.json`, `SETUP.md` and the CSV. Self-review `Code.gs` for Apps Script V8 compatibility: no ES module syntax, `const`/`let` and arrow functions are fine, and no top-level `await`.
 
 ### Task 3: Regret runaway button (`js/regret.js`)
@@ -287,7 +287,8 @@ export async function renderPass(data) => HTMLCanvasElement   // 1080 x 1350
 // }
 export function passFilename(label) => string                  // 'shaadi-express-ticket-rahul-sharma.png'
 export async function downloadPass(canvas, filename) => void   // toBlob → object URL → <a download>; revoke later
-export async function sharePass(canvas, {title, text, filename}) => 'shared'|'cancelled'|'unsupported'
+export async function sharePass(canvas, {title, text, filename}) => 'shared'|'cancelled'|'unsupported'  // shares a JPEG (.jpg)
+export function passBlob(canvas, type = 'image/png') => Promise<Blob>   // cached encode; app uses it for the preview
 ```
 
 **Design (draw with the Canvas 2D API only; first `await document.fonts.load('40px "Yatra One"')` and the same for Mukta and DotGothic16, then `document.fonts.ready`):**
@@ -373,7 +374,7 @@ export async function sharePass(canvas, {title, text, filename}) => 'shared'|'ca
 
 ### Task 7: Integration and verification (orchestrator plus verifier agents)
 
-- [ ] Run `node --test tests/`; all pass.
+- [ ] Run `node --test "tests/*.test.mjs"`; all pass.
 - [ ] Browser check at 375×812 in mock mode:
   - the full happy path;
   - the all-regret path, where Regret dodges three times inside the viewport and selects on the 4th tap;

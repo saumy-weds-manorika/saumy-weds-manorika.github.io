@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pass demo · Save the Train</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Mukta:wght@400;600&family=Yatra+One&display=swap" rel="stylesheet">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px max(16px, env(safe-area-inset-right)) 48px max(16px, env(safe-area-inset-left));
+    background: #10164A; color: #FCE9D6; font: 400 16px/1.5 Mukta, system-ui, sans-serif;
+  }
+  h1 { font: 400 28px/1.2 "Yatra One", serif; margin: 8px 0 4px; }
+  p { margin: 0 0 16px; max-width: 60ch; }
+  .grid { display: grid; gap: 28px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); max-width: 1440px; }
+  figure { margin: 0; }
+  figcaption { font-weight: 600; margin: 0 0 8px; }
+  img { display: block; width: 100%; height: auto; border-radius: 10px; background: #1A2260; }
+  .row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  button {
+    min-height: 44px; padding: 0 18px; border: 0; border-radius: 999px; cursor: pointer;
+    background: #F6A609; color: #1B1B2F; font: 600 16px Mukta, sans-serif;
+  }
+  button.ghost { background: transparent; color: #FCE9D6; box-shadow: inset 0 0 0 2px #FCE9D6; }
+  button:focus-visible { outline: 3px solid #FFD23F; outline-offset: 3px; }
+  output { display: block; min-height: 1.5em; font-size: 14px; opacity: .85; }
+</style>
+</head>
+<body>
+<h1>Boarding pass demo</h1>
+<p id="status" role="status">Rendering the passes…</p>
+<div class="grid" id="grid"></div>
+
+<script type="module">
+import { renderPass, downloadPass, sharePass, passFilename } from '../js/pass.js';
+
+// Other modules are built in parallel; fall back to inline sample data if they're missing.
+let CONFIG;
+let catches;
+try { ({ CONFIG } = await import('../js/config.js')); } catch {
+  CONFIG = {
+    couple: { a: 'Saumy', b: 'Manorika' }, city: 'Bhilwara', cityHi: 'भीलवाड़ा', station: 'BHL', state: 'Rajasthan',
+    train: { name: 'Shaadi Express', number: '1012' },
+    functions: [
+      { id: 'carnival', name: 'Carnival', date: '2026-12-10', when: 'Afternoon', at: '2026-12-10T13:00' },
+      { id: 'sangeet', name: 'Sangeet', date: '2026-12-10', when: 'Evening', at: '2026-12-10T19:00' },
+      { id: 'maayra', name: 'Maayra', date: '2026-12-11', when: 'Afternoon', at: '2026-12-11T13:00' },
+      { id: 'baraat', name: 'Baraat & Reception', date: '2026-12-11', when: 'Evening', at: '2026-12-11T18:00' },
+      { id: 'phera', name: 'Phera', date: '2026-12-12', when: '3 AM. Yes, AM.', at: '2026-12-12T03:00' },
+    ],
+    slots: [
+      { id: 'early', label: 'Early morning' }, { id: 'morning', label: 'Morning' }, { id: 'afternoon', label: 'Afternoon' },
+      { id: 'evening', label: 'Evening' }, { id: 'night', label: 'Night' }, { id: 'unsure', label: 'Not sure yet' },
+    ],
+    modes: [{ id: 'train', label: 'Train' }, { id: 'flight', label: 'Flight' }, { id: 'bus', label: 'Bus' }, { id: 'car', label: 'Car' }],
+    statuses: [{ id: 'confirmed', stamp: 'CNF' }, { id: 'waitlisted', stamp: 'WL' }, { id: 'regret', stamp: 'REGRET' }],
+  };
+}
+try { ({ catches } = await import('../js/logic.js')); } catch {
+  catches = (_travel, fns) => fns.map(({ id, name }) => ({ id, name, caught: true }));
+}
+
+// Placeholder bobblehead heads: assets/couple/*.svg (Task 6), else these inline stand-ins.
+const INLINE_HEADS = {
+  a: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><ellipse cx="128" cy="150" rx="70" ry="78" fill="#D9A27A"/><path d="M50 120c0-50 36-82 78-82s78 32 78 82c-20-14-50-20-78-20s-58 6-78 20z" fill="#D6246E"/><path d="M60 112c22-12 46-16 68-16s46 4 68 16" stroke="#FFD23F" stroke-width="7" fill="none"/><circle cx="128" cy="66" r="10" fill="#FFD23F"/><path d="M128 58c10-26 30-34 40-30-12 6-26 18-34 34z" fill="#FCE9D6"/><circle cx="103" cy="150" r="9" fill="#1B1B2F"/><circle cx="153" cy="150" r="9" fill="#1B1B2F"/><path d="M98 186c18 18 42 18 60 0" stroke="#1B1B2F" stroke-width="6" fill="none" stroke-linecap="round"/><path d="M108 172c10 6 30 6 40 0" stroke="#3B2416" stroke-width="7" fill="none" stroke-linecap="round"/></svg>`,
+  b: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><circle cx="128" cy="62" r="26" fill="#2B1A12"/><ellipse cx="128" cy="146" rx="68" ry="76" fill="#E3AE86"/><path d="M58 140c0-52 30-80 70-80s70 28 70 80c-14-30-40-44-70-44s-56 14-70 44z" fill="#2B1A12"/><path d="M128 84v26" stroke="#F6A609" stroke-width="4"/><circle cx="128" cy="114" r="7" fill="#F6A609"/><circle cx="104" cy="152" r="8" fill="#1B1B2F"/><circle cx="152" cy="152" r="8" fill="#1B1B2F"/><circle cx="142" cy="176" r="9" fill="none" stroke="#F6A609" stroke-width="3.5"/><path d="M102 188c16 16 36 16 52 0" stroke="#C62828" stroke-width="6" fill="none" stroke-linecap="round"/></svg>`,
+};
+
+function loadImage(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+// ?heads=png tries the real caricature PNGs first (they 404 until Saumy adds them).
+const tryPng = new URLSearchParams(location.search).get('heads') === 'png';
+async function loadHead(key, file) {
+  return (tryPng && await loadImage(`../assets/couple/${file}.png`))
+    || (await loadImage(`../assets/couple/${file}.svg`))
+    || loadImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(INLINE_HEADS[key])}`);
+}
+const heads = { a: await loadHead('a', 'saumy-head'), b: await loadHead('b', 'manorika-head') };
+
+const VARIANTS = [
+  {
+    title: 'Confirmed couple by train (with heads)',
+    label: 'Rahul Sharma', passId: 'K7M2',
+    guests: [{ name: 'Rahul Sharma', status: 'confirmed' }, { name: 'Priya Sharma', status: 'confirmed' }],
+    travel: { mode: 'train', from: 'Mumbai', arrive: { date: '2026-12-09', slot: 'evening' }, depart: { date: '2026-12-12', slot: 'afternoon' } },
+    heads,
+  },
+  {
+    title: 'Waitlisted solo by flight',
+    label: 'Ananya Iyer', passId: 'A1B2',
+    guests: [{ name: 'Ananya Iyer', status: 'waitlisted' }],
+    travel: { mode: 'flight', from: 'Bengaluru', arrive: { date: '2026-12-10', slot: 'morning' }, depart: { date: 'unsure', slot: 'unsure' } },
+  },
+  {
+    title: 'All regret',
+    label: 'Mr & Mrs Agarwal', passId: 'P3X9',
+    guests: [{ name: 'Mr Agarwal', status: 'regret' }, { name: 'Mrs Agarwal', status: 'regret' }],
+    travel: null,
+  },
+  {
+    title: 'Stress: bus, four mixed guests, long city, unlisted id',
+    label: 'Venkataraghavan Subramaniam', passId: 'U-K3J9QX2P',
+    guests: [
+      { name: 'Venkataraghavan Subramaniam Iyer', status: 'confirmed' },
+      { name: 'Lakshmi', status: 'waitlisted' },
+      { name: 'Aarav', status: 'regret' },
+      { name: 'Meera Krishnamurthy', status: 'confirmed' },
+    ],
+    travel: { mode: 'bus', from: 'Thiruvananthapuram', arrive: { date: '2026-12-11', slot: 'early' }, depart: { date: '2026-12-11', slot: 'night' } },
+  },
+  {
+    title: 'Car, early arrival, leaves before the Phera (postmark, no heads)',
+    label: 'Kabir Khan', passId: 'Z8Q4',
+    guests: [{ name: 'Kabir Khan', status: 'confirmed' }, { name: 'Zoya Khan', status: 'waitlisted' }],
+    travel: { mode: 'car', from: 'Jaipur', arrive: { date: '2026-12-10', slot: 'early' }, depart: { date: '2026-12-11', slot: 'night' } },
+  },
+];
+
+const grid = document.getElementById('grid');
+const status = document.getElementById('status');
+const canvases = [];
+const t0 = performance.now();
+
+for (const v of VARIANTS) {
+  const t = performance.now();
+  const canvas = await renderPass({
+    config: CONFIG, label: v.label, passId: v.passId, guests: v.guests, travel: v.travel,
+    catches: v.travel ? catches(v.travel, CONFIG.functions) : [],
+    heads: v.heads || { a: null, b: null },
+  });
+  console.log(`[pass-demo] ${v.title}: ${canvas.width}x${canvas.height} in ${Math.round(performance.now() - t)}ms`);
+  canvases.push(canvas);
+
+  const fig = document.createElement('figure');
+  const cap = document.createElement('figcaption');
+  cap.textContent = v.title;
+  const img = document.createElement('img');
+  img.src = canvas.toDataURL('image/png');
+  img.width = canvas.width;
+  img.height = canvas.height;
+  img.alt = `Boarding pass for ${v.label}`;
+  const row = document.createElement('div');
+  row.className = 'row';
+  const out = document.createElement('output');
+  const filename = passFilename(v.label);
+  const dl = document.createElement('button');
+  dl.type = 'button';
+  dl.textContent = 'Download ticket';
+  dl.addEventListener('click', async () => { await downloadPass(canvas, filename); out.textContent = `Saved ${filename}`; });
+  const sh = document.createElement('button');
+  sh.type = 'button';
+  sh.className = 'ghost';
+  sh.textContent = 'Share';
+  sh.addEventListener('click', async () => {
+    const r = await sharePass(canvas, { title: 'My Shaadi Express ticket', text: 'Boarding the Shaadi Express to Bhilwara!', filename });
+    out.textContent = `Share result: ${r}`;
+    console.log('[pass-demo] share:', r);
+  });
+  row.append(dl, sh);
+  fig.append(cap, img, row, out);
+  grid.append(fig);
+}
+
+status.textContent = `Rendered ${VARIANTS.length} passes in ${Math.round(performance.now() - t0)}ms.`;
+window.__passDemo = { canvases, VARIANTS, passFilename };
+</script>
+</body>
+</html>

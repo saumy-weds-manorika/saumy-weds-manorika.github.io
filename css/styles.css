@@ -1,0 +1,1950 @@
+/* ==========================================================================
+   Save the Train · styles.css
+   Vintage Indian Railways PRS ticket meets a Marwadi wedding.
+   Signature: the journey track to the yellow BHILWARA board (bobblehead couple).
+   Everything else stays quiet: kagaz paper, dot-matrix print, marigold accents.
+   State hooks are documented in docs/ui-hooks.md.
+   ========================================================================== */
+
+/* 0. Tokens ---------------------------------------------------------- */
+
+@property --progress {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+:root {
+  /* Palette (fixed by the spec) */
+  --neel: #1A2260;
+  --neel-deep: #10164A;
+  --genda: #F6A609;
+  --genda-deep: #E07B00;
+  --rani: #D6246E;
+  --haldi: #FFD23F;
+  --kagaz: #FCE9D6;
+  --syahi: #1B1B2F;
+  --patta: #2F7D32;
+  --sindoor: #C62828;
+
+  /* Derived (contrast-checked) */
+  --rani-ink: #A8174F;        /* rani for small text on kagaz: 5.9:1 */
+  --kagaz-hi: #FFF6EC;        /* inputs, chips */
+  --ink-muted: #4A4560;       /* 7.6:1 on kagaz */
+  --line: rgb(27 27 47 / .24);
+  --line-strong: rgb(27 27 47 / .5);
+  --on-dark: #FCE9D6;         /* 12:1 on neel */
+  --on-dark-muted: #C9C3DE;   /* 8.5:1 on neel */
+  --error-on-dark: #FF9E94;   /* 6.4:1 on neel */
+
+  --font-display: "Yatra One", "Mukta", system-ui, sans-serif;
+  --font-body: "Mukta", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-dm: "DotGothic16", ui-monospace, "Courier New", monospace;
+
+  --radius-card: 16px;
+  --radius-ctl: 12px;
+  --radius-chip: 10px;
+
+  --col: 480px;
+  --gutter: 16px;
+  --bar-h: 64px;
+  --toran-h: min(30px, 6.25vw);
+
+  --z-decor: 1;
+  --z-main: 2;
+  --z-bar: 40;
+  --z-toast: 50;      /* regret.js uses 59 (button) and 60 (bubble) */
+
+  --focus: var(--haldi);
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ease-inout: cubic-bezier(.65, 0, .35, 1);
+  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+
+  --paper:
+    radial-gradient(140% 90% at 50% 0%, transparent 55%, rgb(224 123 0 / .09)),
+    repeating-linear-gradient(-45deg, rgb(214 36 110 / .03) 0 1.5px, transparent 1.5px 7px);
+  --bandhani: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Cg fill='%23FCE9D6' fill-opacity='.17'%3E%3Ccircle cx='9' cy='5.8' r='1.15'/%3E%3Ccircle cx='12.2' cy='9' r='1.15'/%3E%3Ccircle cx='9' cy='12.2' r='1.15'/%3E%3Ccircle cx='5.8' cy='9' r='1.15'/%3E%3C/g%3E%3Ccircle cx='9' cy='9' r='.9' fill='%23FFD23F' fill-opacity='.26'/%3E%3Cg fill='%23F6A609' fill-opacity='.15'%3E%3Ccircle cx='27' cy='23.8' r='1.15'/%3E%3Ccircle cx='30.2' cy='27' r='1.15'/%3E%3Ccircle cx='27' cy='30.2' r='1.15'/%3E%3Ccircle cx='23.8' cy='27' r='1.15'/%3E%3C/g%3E%3Ccircle cx='27' cy='27' r='.9' fill='%23FCE9D6' fill-opacity='.22'/%3E%3C/svg%3E");
+  --ladi: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='24'%3E%3Cpath d='M6 0v24' stroke='%237A3E00' stroke-width='1'/%3E%3Ccircle cx='6' cy='6' r='5.2' fill='%23E07B00'/%3E%3Cg fill='%23F6A609'%3E%3Ccircle cx='6' cy='2.7' r='2.2'/%3E%3Ccircle cx='9.1' cy='5' r='2.2'/%3E%3Ccircle cx='8' cy='8.7' r='2.2'/%3E%3Ccircle cx='4' cy='8.7' r='2.2'/%3E%3Ccircle cx='2.9' cy='5' r='2.2'/%3E%3C/g%3E%3Ccircle cx='6' cy='6' r='1.7' fill='%23E07B00'/%3E%3Ccircle cx='6' cy='18' r='5.2' fill='%23F6A609'/%3E%3Cg fill='%23FFD23F'%3E%3Ccircle cx='6' cy='14.7' r='2.2'/%3E%3Ccircle cx='9.1' cy='17' r='2.2'/%3E%3Ccircle cx='8' cy='20.7' r='2.2'/%3E%3Ccircle cx='4' cy='20.7' r='2.2'/%3E%3Ccircle cx='2.9' cy='17' r='2.2'/%3E%3C/g%3E%3Ccircle cx='6' cy='18' r='1.7' fill='%23E07B00'/%3E%3C/svg%3E");
+  --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 6 9 17l-5-5' fill='none' stroke='%23000' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+/* 1. Base ------------------------------------------------------------ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+[hidden] { display: none !important; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* The sticky bar is --bar-h + the notch inset tall, with the toran hanging below it */
+  scroll-padding-top: calc(var(--bar-h) + env(safe-area-inset-top) + var(--toran-h) + 16px);
+  scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  background: var(--neel);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: clip;
+  color: var(--on-dark);
+  font: 400 16px/1.5 var(--font-body);
+  background-color: var(--neel);
+  background-image:
+    radial-gradient(120% 60% at 50% 0%, rgb(48 60 150 / .55), transparent 65%),
+    radial-gradient(90% 50% at 50% 100%, rgb(214 36 110 / .12), transparent 70%),
+    var(--bandhani);
+  background-size: 100% 100%, 100% 100%, 36px 36px;
+  background-attachment: scroll;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1, h2, h3, p { margin: 0; }
+strong, b { font-weight: 600; }
+img, svg { display: block; max-width: 100%; }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: inherit; }
+::selection { background: var(--rani); color: #fff; }
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.stop__title:focus { outline: none; }
+
+.sr-only {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+.dm {
+  font-family: var(--font-dm);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.noscript {
+  padding: 16px;
+  border-radius: var(--radius-ctl);
+  background: var(--kagaz);
+  color: var(--syahi);
+  font-weight: 600;
+}
+
+/* Copy variants: body[data-party="waitlisted"] swaps .v-cnf for .v-wl */
+.v-wl { display: none; }
+body[data-party="waitlisted"] .v-wl { display: revert; }
+body[data-party="waitlisted"] .v-cnf { display: none; }
+
+/* Sample children: visible only in ?preview=all (app.js replaces them) */
+body:not(.preview-all) [data-sample] { display: none !important; }
+
+/* 2. Buttons --------------------------------------------------------- */
+
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--radius-ctl);
+  font: 600 16px/1.15 var(--font-body);
+  text-align: center;
+  text-decoration: none;
+  touch-action: manipulation;
+  transition: transform .12s var(--ease-out), background-color .16s, box-shadow .16s, border-color .16s;
+}
+.btn__icon { flex: none; width: 20px; height: 20px; }
+.btn--block { width: 100%; }
+.btn--small { min-height: 44px; padding: 0 14px; font-size: 15px; }
+
+.btn--primary {
+  background: var(--genda);
+  color: var(--syahi);
+  box-shadow: 0 3px 0 var(--genda-deep), 0 8px 18px rgb(224 123 0 / .22);
+}
+.btn--primary::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 1.5px dashed rgb(27 27 47 / .32);
+  border-radius: 9px;
+  pointer-events: none;
+}
+.btn--primary:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--genda-deep); }
+@media (hover: hover) {
+  .btn--primary:hover { background: #FFB322; }
+}
+
+.btn--rani {
+  background: var(--rani);
+  color: #fff;
+  box-shadow: 0 3px 0 var(--rani-ink);
+}
+.btn--rani:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--rani-ink); }
+
+.btn--secondary {
+  border: 1.5px solid var(--line-strong);
+  background: transparent;
+  color: var(--syahi);
+}
+@media (hover: hover) {
+  .btn--secondary:hover { background: rgb(255 255 255 / .45); }
+}
+.btn--secondary:active { transform: scale(.98); }
+
+.btn--ghost {
+  border: 1.5px solid rgb(252 233 214 / .38);
+  background: rgb(252 233 214 / .06);
+  color: var(--kagaz);
+}
+@media (hover: hover) {
+  .btn--ghost:hover { background: rgb(252 233 214 / .12); }
+}
+.btn--ghost:active { transform: scale(.98); }
+
+.btn--link {
+  min-height: 44px;
+  padding: 0 4px;
+  background: none;
+  color: var(--rani-ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 4px;
+}
+.btn--link-dark { color: var(--haldi); }
+
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink-muted);
+}
+.icon-btn svg { width: 20px; height: 20px; }
+@media (hover: hover) {
+  .icon-btn:hover { background: rgb(27 27 47 / .07); color: var(--syahi); }
+}
+
+.btn__spinner { display: none; width: 22px; height: 22px; }
+.btn[aria-busy="true"] { cursor: progress; }
+.btn[aria-busy="true"] .btn__spinner { display: block; }
+.btn[aria-disabled="true"] { opacity: .55; }
+
+body.is-busy .main { pointer-events: none; }
+
+/* 3. Form controls --------------------------------------------------- */
+
+.field { display: grid; gap: 6px; }
+.field__label,
+.group__label {
+  font: 600 15px/1.25 var(--font-body);
+  color: var(--syahi);
+}
+.field__optional { font-weight: 400; color: var(--ink-muted); }
+.field__hint { font-size: 14px; color: var(--ink-muted); }
+.field__error {
+  font: 600 14px/1.35 var(--font-body);
+  color: var(--sindoor);
+}
+.field__error--dark,
+.field--dark .field__error { color: var(--error-on-dark); }
+.field__count {
+  font: 13px/1 var(--font-dm);
+  letter-spacing: .06em;
+  color: var(--ink-muted);
+  text-align: right;
+}
+.field--dark .field__label { color: var(--kagaz); }
+.field--dark .field__hint { color: var(--on-dark-muted); }
+
+.input {
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius-ctl);
+  background: var(--kagaz-hi);
+  color: var(--syahi);
+  font: 400 17px/1.3 var(--font-body);
+  -webkit-appearance: none;
+  appearance: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.input::placeholder { color: #625C75; opacity: 1; }
+.input:focus,
+.input:focus-visible {
+  outline: none;
+  border-color: var(--neel);
+  box-shadow: 0 0 0 3px rgb(26 34 96 / .28);
+}
+.input[aria-invalid="true"] {
+  border-color: var(--sindoor);
+  box-shadow: 0 0 0 3px rgb(198 40 40 / .18);
+}
+.input--area {
+  min-height: 108px;
+  resize: vertical;
+}
+
+.group { display: grid; gap: 10px; }
+
+/* Chips (radio semantics) */
+.chips { display: grid; gap: 8px; }
+.chips--status { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.chips--mode,
+.chips--slot,
+.chips--leave { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.chips--date { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.chips--date .chip--unsure { grid-column: span 2; }
+
+.chip {
+  --on: var(--rani);
+  --on-ink: #fff;
+  --focus: var(--neel);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 44px;
+  min-height: 52px;
+  padding: 7px 10px;
+  border: 1.5px solid rgb(27 27 47 / .42); /* ~3:1 against the chip and the card */
+  border-radius: var(--radius-chip);
+  background: var(--kagaz-hi);
+  color: var(--syahi);
+  font: 600 16px/1.15 var(--font-body);
+  text-align: center;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background-color .18s var(--ease-out), border-color .18s, color .18s, box-shadow .18s, transform .12s var(--ease-out);
+}
+.chip__kicker,
+.chip__code {
+  font: 13px/1 var(--font-dm);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.chip__hint {
+  font: 400 13px/1.2 var(--font-body);
+  color: var(--ink-muted);
+}
+.chip__icon {
+  flex: none;
+  width: 46px;
+  height: 32px;
+  padding: 4px 5px;
+  border-radius: 8px;
+  background: var(--neel-deep);
+  overflow: visible;
+}
+.chip:active { transform: scale(.97); }
+@media (hover: hover) {
+  .chip:hover { border-color: var(--line-strong); }
+}
+
+.chip[aria-checked="true"] {
+  border-color: var(--on);
+  background: var(--on);
+  color: var(--on-ink);
+  box-shadow: inset 0 0 0 2px var(--on), inset 0 0 0 3.5px color-mix(in srgb, var(--on-ink) 80%, transparent);
+}
+.chip[aria-checked="true"] :is(.chip__kicker, .chip__hint, .chip__code) { color: inherit; }
+.chip[aria-checked="true"]:not(.chip--status)::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 13px;
+  height: 13px;
+  background: currentColor;
+  -webkit-mask: var(--check) center / contain no-repeat;
+  mask: var(--check) center / contain no-repeat;
+}
+
+.chip--unsure { border-style: dashed; }
+.chip--mode {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 58px;
+  padding-inline: 8px 12px;
+  font-size: 17px;
+}
+.chip--slot { min-height: 56px; }
+
+.chip--confirmed { --on: var(--patta); }
+.chip--waitlisted { --on: var(--genda-deep); --on-ink: var(--syahi); }
+.chip--regret { --on: var(--sindoor); }
+
+/* Three status chips share ~265px at 360px wide: shrink type and padding a little so
+   "Confirmed" / "Waitlisted" clear the selected chip's inner ring. */
+.chips--status .chip {
+  padding-inline: clamp(4px, 1.5vw, 10px);
+  font-size: clamp(14px, 4.1vw, 16px);
+  letter-spacing: -.005em;
+}
+@media (max-width: 389px) {
+  .chips--status { gap: 6px; }
+}
+
+/* The Regret chip while regret.js has it on the run (moved to <body>) */
+.chip.rj-moving {
+  z-index: 59;
+  border-color: var(--sindoor);
+  background: var(--sindoor);
+  color: #fff;
+  box-shadow: 0 12px 28px rgb(5 8 40 / .55), 0 0 0 3px rgb(255 255 255 / .9);
+}
+.chip.rj-moving .chip__code { color: inherit; }
+/* The empty slot regret.js leaves behind, sized to sit in the chip grid */
+.chips .rj-ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0 !important;  /* stay inside the grid column */
+  min-height: 52px;
+  padding: 4px;
+  overflow: hidden;
+  border: 1.5px dashed var(--sindoor);
+  border-radius: var(--radius-chip);
+  background: rgb(198 40 40 / .05);
+  color: var(--sindoor);
+  font: 600 12px/1.1 var(--font-body);
+  text-align: center;
+  white-space: normal;      /* "Regret ran away →" wraps to two lines in a narrow column */
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+/* 4. Decor: ladis (marigold strings) --------------------------------- */
+
+.decor {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-decor);
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ladi {
+  position: absolute;
+  top: 0;
+  width: 12px;
+  height: 34vh;
+  background: var(--ladi) repeat-y top center / 12px 24px;
+  transform-origin: 50% 0;
+  filter: drop-shadow(0 3px 3px rgb(5 8 40 / .45));
+}
+.ladi::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -17px;
+  width: 10px;
+  height: 18px;
+  margin-left: -5px;
+  background:
+    radial-gradient(circle at 50% 3px, var(--rani) 3px, transparent 3.5px),
+    repeating-linear-gradient(90deg, var(--rani) 0 1.5px, transparent 1.5px 2.6px) bottom / 100% 12px no-repeat;
+}
+
+.ladi--l1 { left: 3px; height: 38vh; }
+.ladi--r1 { right: 3px; height: 30vh; }
+.ladi--l2, .ladi--r2, .ladi--l3, .ladi--r3 { display: none; }
+
+@media (min-width: 560px) {
+  .ladi--l1, .ladi--l2, .ladi--l3 { left: auto; right: calc(50% + var(--col) / 2 + 6px); }
+  .ladi--r1, .ladi--r2, .ladi--r3 { right: auto; left: calc(50% + var(--col) / 2 + 6px); }
+  .ladi--l2, .ladi--r2, .ladi--l3, .ladi--r3 { display: block; }
+  .ladi--l1 { height: 52vh; }
+  .ladi--l2 { height: 38vh; margin-right: 20px; }
+  .ladi--l3 { height: 26vh; margin-right: 40px; }
+  .ladi--r1 { height: 46vh; }
+  .ladi--r2 { height: 60vh; margin-left: 20px; }
+  .ladi--r3 { height: 32vh; margin-left: 40px; }
+}
+
+/* 5. Journey bar (signature) ----------------------------------------- */
+
+.journey-bar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-bar);
+  padding-top: env(safe-area-inset-top);
+  background: var(--neel-deep);
+  box-shadow: 0 1px 0 rgb(246 166 9 / .35), 0 10px 26px rgb(5 8 40 / .55);
+}
+
+.journey-bar__inner {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: var(--bar-h);
+  max-width: var(--col);
+  margin-inline: auto;
+  padding: 8px max(12px, env(safe-area-inset-right)) 8px max(12px, env(safe-area-inset-left));
+}
+
+/* Baaja toggle */
+.baaja {
+  flex: none;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  width: 50px;
+  min-height: 48px;
+  padding: 4px 0;
+  border: 1.5px solid rgb(252 233 214 / .22);
+  border-radius: var(--radius-ctl);
+  background: transparent;
+  color: var(--on-dark-muted);
+  transition: color .2s, border-color .2s, background-color .2s;
+}
+.baaja__icon { width: 24px; height: 24px; overflow: visible; }
+.baaja__label {
+  /* Mukta, not DotGothic16: the dot-matrix face smears below its 16px grid */
+  font: 600 12px/1 var(--font-body);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+/* One-time "Tap for dhol & shehnai" hint under the Baaja toggle */
+.journey-bar__inner { position: relative; }
+.baaja-nudge {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% - 4px);
+  left: max(8px, env(safe-area-inset-left));
+  margin: 0;
+  padding: 7px 12px;
+  border: 2px solid var(--genda);
+  border-radius: 12px;
+  background: var(--kagaz);
+  color: var(--syahi);
+  font: 600 14px/1.2 var(--font-body);
+  white-space: nowrap;
+  box-shadow: 0 8px 20px rgb(5 8 40 / .5);
+  pointer-events: none;
+}
+.baaja-nudge::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 26px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--genda);
+  border-right: 0;
+  border-bottom: 0;
+  background: var(--kagaz);
+  transform: rotate(45deg);
+}
+.baaja[aria-pressed="true"] {
+  color: var(--genda);
+  border-color: rgb(246 166 9 / .65);
+  background: rgb(246 166 9 / .12);
+}
+.baaja[aria-pressed="true"] .baaja__off { display: none; }
+@media (hover: hover) {
+  .baaja:hover { border-color: rgb(252 233 214 / .5); color: var(--on-dark); }
+}
+
+/* Track */
+.journey {
+  --veh-w: 40px;
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 44px;
+  align-self: center;
+  container-type: inline-size; /* 100cqw = track width, for the transform-based runner below */
+}
+.journey__rail,
+.journey__lit {
+  position: absolute;
+  left: 0;
+  bottom: 7px;
+  height: 7px;
+  background:
+    linear-gradient(var(--rail), var(--rail)) top / 100% 1.5px no-repeat,
+    linear-gradient(var(--rail), var(--rail)) bottom / 100% 1.5px no-repeat,
+    repeating-linear-gradient(90deg, var(--sleeper) 0 2px, transparent 2px 7px);
+}
+.journey__rail { right: 0; --rail: rgb(252 233 214 / .42); --sleeper: rgb(252 233 214 / .22); }
+.journey__lit {
+  --rail: var(--genda);
+  --sleeper: rgb(246 166 9 / .55);
+  right: 0;
+  /* Full width, revealed with clip-path (paint only) instead of animating width (layout) */
+  clip-path: inset(-6px calc(100% - (var(--progress) * (100cqw - var(--veh-w)) + var(--veh-w) / 2)) -6px -6px);
+  filter: drop-shadow(0 0 3px rgb(246 166 9 / .6));
+}
+
+.journey__station {
+  position: absolute;
+  bottom: 4.5px;
+  left: calc(var(--at) * (100% - var(--veh-w)) + var(--veh-w) / 2);
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border-radius: 50%;
+  background: var(--neel-deep);
+  box-shadow: inset 0 0 0 2px rgb(252 233 214 / .55);
+}
+.journey__station::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--genda);
+  box-shadow: 0 0 6px rgb(246 166 9 / .8), inset 0 0 0 2px var(--haldi);
+  /* lights up once the vehicle has reached this station */
+  opacity: clamp(0, calc((var(--progress) - var(--at)) * 1000 + 1), 1);
+}
+
+.journey__runner {
+  /* Only as wide as the vehicle (a translated full-width box once poked past the screen
+     edge and made mobile Chrome zoom out). Moved with transform, which never overflows
+     the track: at progress 1 it ends exactly at the right edge. */
+  position: absolute;
+  left: 0;
+  width: var(--veh-w);
+  bottom: 11px;
+  height: 26px;
+  transform: translateX(calc(var(--progress) * (100cqw - var(--veh-w))));
+  will-change: transform;
+}
+.vehicle {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: var(--veh-w);
+  height: 24px;
+}
+.vehicle__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+  overflow: visible;
+  filter: drop-shadow(0 2px 2px rgb(0 0 0 / .45));
+}
+.vehicle__svg[data-mode="train"],
+body[data-mode="flight"] .vehicle__svg[data-mode="flight"],
+body[data-mode="bus"] .vehicle__svg[data-mode="bus"],
+body[data-mode="car"] .vehicle__svg[data-mode="car"] { display: block; }
+body[data-mode="flight"] .vehicle__svg[data-mode="train"],
+body[data-mode="bus"] .vehicle__svg[data-mode="train"],
+body[data-mode="car"] .vehicle__svg[data-mode="train"] { display: none; }
+body[data-mode="flight"] .vehicle { bottom: 9px; }
+body[data-mode="flight"] .vehicle__svg { transform: rotate(-7deg); }
+
+.vehicle__puffs {
+  position: absolute;
+  left: 68%;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  display: none;
+}
+body[data-mode="train"] .vehicle__puffs,
+body:not([data-mode]) .vehicle__puffs { display: block; }
+.vehicle__puffs i {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgb(252 233 214 / .85);
+  opacity: 0;
+}
+
+/* Mini BHILWARA board with the bobblehead heads peeking over */
+.mini-board {
+  flex: none;
+  position: relative;
+  width: 84px;
+  height: 48px;
+  display: flex;
+  align-items: flex-end;
+}
+.mini-board__heads {
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  display: flex;
+  transform: translateX(-50%);
+}
+.mini-board__head {
+  width: 29px;
+  height: 29px;
+  margin-inline: -1px;
+}
+.mini-board__plate {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 100%;
+  padding: 2px 4px;
+  border: 2px solid var(--syahi);
+  border-radius: 4px;
+  background: var(--haldi);
+  color: var(--syahi);
+  text-align: center;
+  box-shadow: 0 0 0 1.5px var(--haldi), 0 3px 0 1px rgb(0 0 0 / .35), 0 0 14px rgb(255 210 63 / .25);
+}
+.mini-board__hi { font: 10px/1.05 var(--font-display); }
+.mini-board__en { font: 12.5px/1 var(--font-display); letter-spacing: .06em; }
+
+body[data-party="regret"] .mini-board__head:first-child { transform: rotate(-16deg) translateY(3px); }
+body[data-party="regret"] .mini-board__head:last-child { transform: rotate(16deg) translateY(3px); }
+
+/* Toran hanging below the bar, over a soft canopy shade so content fades under it */
+.journey-bar::before {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: calc(var(--toran-h) + 10px);
+  background: linear-gradient(rgb(16 22 74 / .96) 30%, rgb(16 22 74 / 0));
+  pointer-events: none;
+}
+.toran {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-width: var(--col);
+  margin-inline: auto;
+  height: var(--toran-h);
+  pointer-events: none;
+  /* The garland sways as ONE composited layer: its SVG (and drop shadow) is painted once,
+     not repainted every frame as moving SVG children would be. */
+  transform-origin: 50% 0;
+  will-change: transform;
+}
+.toran__svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  filter: drop-shadow(0 3px 2px rgb(5 8 40 / .5));
+}
+
+/* 6. Layout: main + stops -------------------------------------------- */
+
+.main {
+  position: relative;
+  z-index: var(--z-main);
+  flex: 1 0 auto;
+  /* The stop entrance slides in from 28px to the side. Clip that sideways overflow here:
+     body's overflow-x is propagated to the viewport, which mobile Chrome still widens. */
+  overflow-x: clip;
+  width: 100%;
+  max-width: var(--col);
+  margin-inline: auto;
+  padding:
+    calc(var(--toran-h) + 18px)
+    max(var(--gutter), env(safe-area-inset-right))
+    8px
+    max(var(--gutter), env(safe-area-inset-left));
+}
+
+/* No CTA bar on the endings: keep the last button clear of the home indicator */
+body:is([data-stop="junction"], [data-stop="regret-end"]) .main {
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+}
+
+/* Name search: room to lift "Who's boarding?" above the phone keyboard (app.js adds
+   is-searching on focus and keeps it until a name is picked, so the page never shrinks
+   mid-tap), and the CTA bar stays out of the way while typing ("Board now" needs a name). */
+body.is-searching[data-stop="platform"] .main { padding-bottom: 60vh; }
+body.is-typing-name[data-stop="platform"] .cta-bar { visibility: hidden; }
+
+.stop { display: none; }
+.stop.is-active {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ?preview=all: every stop stacked, labelled */
+.preview-all .stop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 40px;
+  padding-top: 30px;
+  border-top: 2px dashed rgb(255 210 63 / .45);
+}
+.preview-all .stop::before {
+  content: "stop · " attr(data-stop);
+  position: absolute;
+  top: 7px;
+  left: 0;
+  font: 12px/1 var(--font-dm);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--haldi);
+}
+
+.stop__title {
+  font: 28px/1.15 var(--font-display);
+  color: var(--syahi);
+  text-wrap: balance;
+}
+.stop__title--hero {
+  font-size: 34px;
+  color: var(--kagaz);
+  text-align: center;
+  text-shadow: 0 2px 12px rgb(5 8 40 / .6);
+}
+.stop__lede {
+  color: var(--ink-muted);
+  text-wrap: pretty;
+}
+.stop__lede--dark {
+  color: var(--on-dark-muted);
+  text-align: center;
+}
+
+/* 7. Ticket surfaces ------------------------------------------------- */
+
+.ticket {
+  --focus: var(--neel);
+  position: relative;
+  color: var(--syahi);
+}
+
+/* Paper surfaces: light form controls and scrollbars (the page itself is color-scheme: dark) */
+.ticket,
+.form-card,
+.info-card,
+.panel { color-scheme: light; }
+
+.form-card,
+.info-card,
+.panel {
+  border-radius: var(--radius-card);
+  background-color: var(--kagaz);
+  background-image: var(--paper);
+  box-shadow: 0 14px 30px rgb(5 8 40 / .45), 0 2px 3px rgb(5 8 40 / .3);
+}
+
+.ticket__strip {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 16px 8px;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  background: var(--bandhani) 0 0 / 36px 36px, var(--rani); /* rani bandhani, like a chunri */
+  color: #fff;
+  font: 13px/1 var(--font-dm);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.form-card__body,
+.info-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px 16px 22px;
+}
+.form-card__body > .stop__lede { margin-top: -10px; }
+
+/* Cover ticket: jharokha cap + two masked parts with real perforation notches */
+.cover {
+  --notch: 12px;
+  isolation: isolate;
+  margin-top: 66px;
+}
+/* The ticket's shadow is a static blurred layer behind it, not a filter on .cover: a filter
+   there would re-rasterise the whole cover every frame while the jharokha shehnais play. */
+.cover::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 10px 8px 0;
+  border-radius: var(--radius-card);
+  background: rgb(5 8 40 / .55);
+  filter: blur(14px);
+  transform: translateY(12px);
+  pointer-events: none;
+}
+.jharokha {
+  position: absolute;
+  top: -92px;
+  left: 50%;
+  width: 330px;
+  max-width: none;
+  height: 100px;
+  transform: translateX(-50%);
+  overflow: visible;
+  pointer-events: none;
+}
+.jharokha__play {
+  transform-box: fill-box;
+  transform-origin: 0 50%;
+}
+.cover__blessing {
+  position: absolute;
+  z-index: 1;
+  top: -28px;
+  left: 0;
+  right: 0;
+  font: 15px/1 var(--font-display);
+  color: var(--rani-ink);
+  text-align: center;
+}
+
+.ticket__part {
+  background-color: var(--kagaz);
+  background-image: var(--paper);
+}
+.ticket__part--top {
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  -webkit-mask:
+    radial-gradient(circle var(--notch) at 0 100%, #0000 97%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle var(--notch) at 100% 100%, #0000 97%, #000) right / 51% 100% no-repeat;
+  mask:
+    radial-gradient(circle var(--notch) at 0 100%, #0000 97%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle var(--notch) at 100% 100%, #0000 97%, #000) right / 51% 100% no-repeat;
+}
+.ticket__part--stub {
+  border-top: 2px dashed rgb(27 27 47 / .3);
+  border-radius: 0 0 var(--radius-card) var(--radius-card);
+  -webkit-mask:
+    radial-gradient(circle var(--notch) at 0 0, #0000 97%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle var(--notch) at 100% 0, #0000 97%, #000) right / 51% 100% no-repeat;
+  mask:
+    radial-gradient(circle var(--notch) at 0 0, #0000 97%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle var(--notch) at 100% 0, #0000 97%, #000) right / 51% 100% no-repeat;
+}
+
+.cover__top {
+  padding: 16px 18px 18px;
+  text-align: center;
+}
+.cover__train {
+  font-size: 13px;
+  letter-spacing: .16em;
+  color: var(--ink-muted);
+}
+.cover__names {
+  display: grid;
+  justify-items: center;
+  margin-top: 8px;
+}
+.cover__name {
+  font: 42px/1 var(--font-display);
+  color: var(--rani);
+  letter-spacing: .005em;
+}
+.cover__weds {
+  margin: 6px 0 4px;
+  font: 13px/1 var(--font-dm);
+  letter-spacing: .32em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.cover__when {
+  margin-top: 12px;
+  font: 600 16px/1.3 var(--font-body);
+  color: var(--syahi);
+}
+
+.cover__stub { padding: 14px 18px 16px; }
+.cover__tt-label {
+  font-size: 13px;
+  letter-spacing: .22em;
+  color: var(--rani-ink);
+}
+.timetable {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font: 13.5px/1.25 var(--font-dm);
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+.timetable__row {
+  display: grid;
+  grid-template-columns: 5.6em 5.2em 1fr;
+  column-gap: 8px;
+  align-items: baseline;
+}
+.timetable__date,
+.timetable__time { white-space: nowrap; }
+.timetable__date,
+.timetable__time { color: var(--ink-muted); }
+.timetable__event { color: var(--syahi); }
+.timetable__note {
+  margin-left: 6px;
+  font: 600 14px/1.2 var(--font-body);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--rani-ink);
+}
+
+/* 8. Platform: welcome + who's boarding ------------------------------ */
+
+.panel { padding: 20px 18px; }
+.welcome { display: grid; gap: 4px; }
+.welcome__kicker { font-size: 13px; letter-spacing: .16em; color: var(--rani-ink); }
+.welcome__name { font: 28px/1.15 var(--font-display); color: var(--syahi); }
+.welcome__text { color: var(--ink-muted); }
+.welcome__actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+.welcome__reset { justify-self: center; margin-top: 4px; }
+
+.boarding {
+  display: grid;
+  gap: 10px;
+}
+.boarding__label {
+  font: 30px/1.1 var(--font-display);
+  color: var(--kagaz);
+}
+.boarding__hint {
+  margin-top: -4px;
+  color: var(--on-dark-muted);
+}
+.boarding__empty {
+  padding: 12px 14px;
+  border: 1.5px dashed rgb(252 233 214 / .35);
+  border-radius: var(--radius-ctl);
+  color: var(--on-dark);
+}
+.boarding__anyway { justify-self: start; }
+
+.search { position: relative; }
+.search__icon {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  width: 22px;
+  height: 22px;
+  color: var(--ink-muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.search .search__input {
+  padding-left: 46px;
+  border-color: transparent;
+  background: var(--kagaz);
+  box-shadow: 0 8px 18px rgb(5 8 40 / .4);
+}
+.search .search__input:focus,
+.search .search__input:focus-visible {
+  border-color: var(--haldi);
+  box-shadow: 0 0 0 3px rgb(255 210 63 / .4), 0 8px 18px rgb(5 8 40 / .4);
+}
+.search__input::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+.results {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.results:empty { display: none; }
+.result {
+  --focus: var(--haldi);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 14px 10px 16px;
+  border: 0;
+  border-left: 6px solid var(--genda);
+  border-radius: var(--radius-ctl);
+  background: var(--kagaz);
+  color: var(--syahi);
+  font: 600 17px/1.2 var(--font-body);
+  text-align: left;
+  box-shadow: 0 6px 14px rgb(5 8 40 / .35);
+  transition: transform .12s var(--ease-out), background-color .15s;
+}
+.result__go {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  font: 13px/1 var(--font-dm);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--rani-ink);
+}
+.result__go svg { width: 16px; height: 16px; }
+.result:active { transform: scale(.985); }
+@media (hover: hover) {
+  .result:hover { background: var(--kagaz-hi); }
+}
+
+.boarding-as {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 10px;
+  padding: 6px 6px 6px 14px;
+  border: 1.5px dashed rgb(246 166 9 / .7);
+  border-radius: var(--radius-ctl);
+  background: rgb(246 166 9 / .08);
+}
+.boarding-as__label { font-size: 13px; color: var(--genda); }
+.boarding-as__name { flex: 1 1 auto; font: 600 18px/1.3 var(--font-body); color: var(--kagaz); }
+
+/* 9. Passengers ------------------------------------------------------ */
+
+.guest-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.guest-card {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  padding: 12px 14px 14px;
+  border: 1.5px dashed var(--line-strong);
+  border-radius: 14px;
+  background: rgb(255 255 255 / .38);
+}
+.guest-card.is-invalid {
+  border-style: solid;
+  border-color: var(--sindoor);
+}
+.guest-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 22px;
+}
+.guest-card__no {
+  font-size: 13px;
+  letter-spacing: .12em;
+  color: var(--ink-muted);
+}
+.guest-card__name {
+  padding-right: 72px;
+  font: 600 20px/1.25 var(--font-body);
+  color: var(--syahi);
+  overflow-wrap: anywhere;
+}
+.guest-card__remove { margin: -11px -11px -11px 0; }
+
+/* Rubber stamp for the chosen status */
+.guest-card::after {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  padding: 5px 8px 4px;
+  border: 3px double currentColor;
+  border-radius: 6px;
+  font: 15px/1 var(--font-dm);
+  letter-spacing: .12em;
+  pointer-events: none;
+  transform: rotate(-9deg);
+  opacity: .88;
+}
+.guest-card[data-status="confirmed"]::after { content: "CNF"; content: "CNF" / ""; color: var(--patta); }
+.guest-card[data-status="waitlisted"]::after { content: "WL"; content: "WL" / ""; color: #8A4B00; }
+.guest-card[data-status="regret"]::after { content: "REGRET"; content: "REGRET" / ""; color: var(--sindoor); }
+.guest-card.is-added::after,
+.guest-card:has(.guest-card__remove:not([hidden]))::after { right: 58px; top: 10px; }
+
+.btn--add {
+  width: 100%;
+  min-height: 52px;
+  border: 1.5px dashed var(--line-strong);
+  background: transparent;
+  color: var(--syahi);
+}
+@media (hover: hover) {
+  .btn--add:hover { background: rgb(255 255 255 / .4); }
+}
+.add-guest__hint {
+  margin-top: -10px;
+  font-size: 14px;
+  color: var(--ink-muted);
+  text-align: center;
+}
+
+/* 10. Departure: Your stops (a little departure board) --------------- */
+
+.your-stops {
+  --focus: var(--haldi);
+  display: grid;
+  gap: 6px;
+  padding: 14px 14px 10px;
+  border-radius: 14px;
+  background: var(--neel-deep);
+  color: var(--on-dark);
+  box-shadow: inset 0 0 0 1px rgb(246 166 9 / .25);
+}
+.your-stops__title {
+  font: 15px/1 var(--font-dm);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--genda);
+}
+.your-stops__lede { font-size: 14px; color: var(--on-dark-muted); }
+.catches {
+  display: grid;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.tt-row {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  align-items: center;
+  column-gap: 10px;
+  padding: 7px 0;
+  border-top: 1px dashed rgb(252 233 214 / .16);
+}
+.tt-row__main { display: grid; gap: 1px; }
+.tt-row__name { font: 600 16px/1.2 var(--font-body); color: var(--kagaz); }
+.tt-row__when {
+  font: 13px/1.3 var(--font-dm);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--on-dark-muted);
+}
+.tt-row__quip { font-size: 14px; line-height: 1.3; color: var(--genda); }
+.tt-row__quip:empty { display: none; }
+.tt-row[data-caught="false"] .tt-row__name {
+  color: var(--on-dark-muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--error-on-dark);
+  text-decoration-thickness: 2px;
+}
+.tt-row[data-caught="false"] .diya { opacity: .7; filter: grayscale(.9) brightness(1.3); background: none; }
+.tt-row[data-caught="false"] .diya__flame { display: none; }
+
+/* 11. Diyas ---------------------------------------------------------- */
+
+.diyas {
+  display: flex;
+  justify-content: center;
+  gap: 22px;
+  padding: 28px 0 14px;
+}
+.diya {
+  width: 34px;
+  height: 34px;
+  overflow: visible;
+  /* Static glow behind the flame. A drop-shadow filter on the flickering flame would be
+     re-rasterised every frame. */
+  background: radial-gradient(circle at 50% 34%, rgb(255 210 63 / .5), rgb(255 210 63 / .14) 30%, transparent 52%);
+}
+.diya--sm { width: 30px; height: 30px; }
+.diya__flame {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+/* 12. Junction scene ------------------------------------------------- */
+
+.scene {
+  position: relative;
+  isolation: isolate;
+  height: 380px;
+  overflow: hidden;
+  border-radius: 20px;
+  background:
+    radial-gradient(80% 55% at 50% 22%, rgb(255 210 63 / .2), transparent 70%),
+    linear-gradient(180deg, var(--neel-deep), rgb(26 34 96 / .4) 75%);
+  box-shadow: inset 0 0 0 1px rgb(252 233 214 / .1);
+}
+.scene__sky {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--bandhani) 0 0 / 36px 36px;
+  opacity: .6;
+}
+
+.board {
+  position: absolute;
+  z-index: 1;
+  top: 20px;
+  left: 50%;
+  width: min(300px, calc(100% - 40px));
+  transform: translateX(-50%);
+}
+.board__plate {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  padding: 10px 12px 9px;
+  border: 3px solid var(--syahi);
+  border-radius: 8px;
+  background: var(--haldi);
+  color: var(--syahi);
+  text-align: center;
+  box-shadow:
+    0 0 0 4px var(--haldi),
+    0 8px 0 2px rgb(5 8 40 / .35),
+    0 0 46px rgb(255 210 63 / .35);
+}
+.board__hi { font: 32px/1.15 var(--font-display); }
+.board__en {
+  font: 32px/1 var(--font-display);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.board__msl {
+  display: grid;
+  gap: 1px;
+  width: 100%;
+  margin-top: 7px;
+  padding-top: 6px;
+  border-top: 2px solid var(--syahi);
+  font: 600 12.5px/1.25 var(--font-body);
+}
+.board__post {
+  position: absolute;
+  z-index: 0;
+  top: calc(100% - 6px);
+  width: 9px;
+  height: 320px;
+  background: linear-gradient(90deg, #444a7c, #262b58 55%, #171b44);
+}
+.board__post--l { left: 17%; }
+.board__post--r { right: 17%; }
+.board--small { width: min(220px, calc(100% - 80px)); }
+.board--small .board__hi,
+.board--small .board__en { font-size: 24px; }
+
+.platform-edge {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 24px;
+  background:
+    repeating-linear-gradient(90deg, var(--haldi) 0 16px, transparent 16px 24px) 0 5px / 100% 3px no-repeat,
+    linear-gradient(#2E3570, #1C2157);
+  box-shadow: 0 -2px 0 rgb(252 233 214 / .12);
+}
+
+.couple {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: 18px;
+  display: flex;
+  align-items: flex-end;
+  transform: translateX(-50%);
+}
+.bobble {
+  --head: 100px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 104px;
+}
+.bobble--a { margin-right: -16px; }
+.bobble__head {
+  position: relative;
+  z-index: 0;
+  width: var(--head);
+  height: var(--head);
+  margin-bottom: -10px;
+  transform-origin: 50% 90%;
+}
+.bobble__head img { width: 100%; height: 100%; }
+.bobble__body {
+  position: relative;
+  z-index: 1;
+  width: 84px;
+  height: auto;
+  aspect-ratio: 100 / 124;
+  overflow: visible;
+}
+.bobble__arm { transform-box: view-box; }
+.bobble--a .bobble__arm { transform-origin: 28px 18px; }
+.bobble--b .bobble__arm { transform-origin: 71px 16px; }
+.bobble.is-sad .bobble__head { transform: rotate(var(--sad-tilt, -18deg)) translateY(8px); }
+.bobble--b.is-sad { --sad-tilt: 18deg; }
+/* The SVG placeholders have sad versions with a tear. Photo heads (data-heads="png") can't
+   change expression, so they go a little grey and get a CSS tear instead. */
+.bobble__tear { display: none; }
+body[data-heads="png"] .bobble.is-sad .bobble__head img { filter: saturate(.55) brightness(.92); }
+body[data-heads="png"] .bobble.is-sad .bobble__tear {
+  display: block;
+  position: absolute;
+  top: 58%;
+  left: 34%;
+  width: 9px;
+  height: 13px;
+  border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+  background: #9DB4FF;
+  box-shadow: inset -2px -2px 0 rgb(91 120 214 / .6);
+}
+.bobble--b.is-sad .bobble__tear { left: auto; right: 34%; }
+
+.instrument {
+  --focus: var(--haldi);
+  position: absolute;
+  z-index: 4;
+  bottom: 16px;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  touch-action: manipulation;
+}
+.instrument svg {
+  width: 64px;
+  height: 52px;
+  overflow: visible;
+  filter: drop-shadow(0 4px 4px rgb(5 8 40 / .5));
+  transition: transform .12s var(--ease-out);
+}
+.instrument:active svg { transform: scale(.9); }
+.instrument--dhol { left: 4px; }
+.instrument--shehnai { right: 4px; }
+.instrument__hint {
+  position: absolute;
+  top: -2px;
+  font: 600 12px/1 var(--font-body);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--haldi);
+}
+
+.petals {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  overflow: hidden;
+  pointer-events: none;
+}
+.petal {
+  position: absolute;
+  top: -24px;
+  left: var(--x);
+  width: 11px;
+  height: 15px;
+  border-radius: 80% 0 80% 0;
+  background: var(--c);
+  opacity: 0;
+}
+
+.raincloud {
+  position: absolute;
+  z-index: 4;
+  top: 78px;
+  left: 50%;
+  width: 104px;
+  transform: translateX(-50%);
+}
+.raincloud svg { width: 100%; height: auto; }
+.raincloud__drops {
+  position: absolute;
+  top: 46px;
+  left: 22px;
+  right: 22px;
+  height: 34px;
+}
+.raincloud__drops i {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 9px;
+  border-radius: 2px;
+  background: #9DB4FF;
+  opacity: .8;
+}
+.raincloud__drops i:nth-child(1) { left: 6%; top: 4px; }
+.raincloud__drops i:nth-child(2) { left: 28%; top: 14px; }
+.raincloud__drops i:nth-child(3) { left: 50%; top: 2px; }
+.raincloud__drops i:nth-child(4) { left: 72%; top: 18px; }
+.raincloud__drops i:nth-child(5) { left: 94%; top: 8px; }
+.scene--sad { height: 352px; }
+.scene--sad .couple { bottom: 18px; }
+
+.junction__intro {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* 13. Boarding pass -------------------------------------------------- */
+
+.pass-block { display: grid; gap: 14px; }
+.section-title {
+  /* Mukta: Yatra One stays for the names, stop titles, station board and the hero lines */
+  font: 600 21px/1.25 var(--font-body);
+  letter-spacing: -.005em;
+  color: var(--syahi);
+}
+.section-title--dark {
+  color: var(--kagaz);
+  text-align: center;
+}
+.pass-wrap {
+  position: relative;
+  isolation: isolate;
+  width: min(100%, 340px);
+  margin: 4px auto 6px;
+}
+/* The tilt lives on a rani card behind the pass, so the pass image itself stays straight
+   and crisp (rotating the 1080px raster made its small dot-matrix print soft). */
+.pass-wrap::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 2px;
+  border-radius: 16px;
+  background: var(--rani);
+  background-image: var(--bandhani);
+  background-size: 36px 36px;
+  box-shadow: 0 14px 30px rgb(5 8 40 / .5);
+  transform: rotate(-3.5deg);
+}
+.pass-wrap:has(> .pass[hidden]) { display: none; }
+.pass {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1080 / 1350;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--neel-deep);
+  box-shadow: 0 20px 40px rgb(5 8 40 / .6), 0 0 0 1px rgb(252 233 214 / .14);
+}
+.pass__img { width: 100%; height: 100%; object-fit: cover; }
+.pass.is-loading .pass__img { visibility: hidden; }
+.pass__printing {
+  position: absolute;
+  inset: 14px;
+  display: none;
+  align-content: start;
+  gap: 18px;
+  padding: 26px 22px;
+  border-radius: 12px;
+  background: var(--kagaz);
+  background-image: var(--paper);
+  color: var(--syahi);
+}
+.pass.is-loading .pass__printing { display: grid; }
+.pass__head {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--rani);
+}
+.pass__lines { display: grid; gap: 14px; }
+.pass__lines i {
+  display: block;
+  height: 9px;
+  width: var(--w, 80%);
+  background: repeating-linear-gradient(90deg, rgb(27 27 47 / .55) 0 3px, transparent 3px 5px);
+  transform-origin: left;
+}
+.pass__lines i:nth-child(1) { --w: 64%; }
+.pass__lines i:nth-child(2) { --w: 88%; }
+.pass__lines i:nth-child(3) { --w: 42%; }
+.pass__lines i:nth-child(4) { --w: 76%; }
+.pass__lines i:nth-child(5) { --w: 58%; }
+.pass__lines i:nth-child(6) { --w: 92%; }
+.pass__lines i:nth-child(7) { --w: 36%; }
+.pass__printing-label {
+  margin-top: 6px;
+  font-size: 14px;
+  letter-spacing: .12em;
+  color: var(--rani-ink);
+}
+.pass__actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+/* 14. Booking + leave kit -------------------------------------------- */
+
+.info-card__text { color: var(--ink-muted); text-wrap: pretty; }
+.info-card__text strong { color: var(--syahi); }
+
+.booking-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.booking-card {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border: 1.5px solid var(--line);
+  border-left: 6px solid var(--rani);
+  border-radius: var(--radius-ctl);
+  background: var(--kagaz-hi);
+}
+.booking-card__leg { font-size: 13px; letter-spacing: .1em; color: var(--rani-ink); }
+.booking-card__countdown {
+  font: 24px/1.15 var(--font-dm);
+  letter-spacing: .02em;
+  text-transform: none;
+  color: var(--syahi);
+}
+.booking-card__open-now {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
+.booking-card__open-now p { font-weight: 600; color: var(--patta); }
+.booking-card__note {
+  margin-top: 4px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink-muted);
+  text-wrap: pretty;
+}
+.booking-card__dates {
+  display: grid;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font: 14px/1.2 var(--font-dm);
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+.booking-card__dates li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-top: 1px dashed var(--line);
+}
+.booking-card__dates li[data-state="open"] span:last-child { color: var(--patta); }
+.booking-card__actions {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  margin-top: 8px;
+}
+.booking-card__actions .btn--secondary { width: 100%; }
+.booking-card[data-state="upcoming"]:not([data-any-open]) .booking-card__open-now { display: none; }
+.booking-card[data-state="open"] { border-left-color: var(--patta); }
+.booking-card[data-state="open"] :is(.booking-card__countdown, .booking-card__actions) { display: none; }
+
+.leave__days {
+  font: 600 20px/1 var(--font-body);
+  color: var(--rani-ink);
+}
+.leave__preview {
+  display: grid;
+  gap: 10px;
+  max-height: 280px;
+  overflow: auto;
+  padding: 14px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-ctl);
+  background: var(--kagaz-hi);
+}
+.leave__subject { font-weight: 600; }
+.leave__subject-label {
+  margin-right: 6px;
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+.leave__body {
+  font-size: 15px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.leave__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.leave__actions .btn { padding-inline: 10px; }
+
+.regret__again {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  color: var(--on-dark-muted);
+  text-align: center;
+}
+
+/* 15. Bottom CTA bar ------------------------------------------------- */
+
+.cta-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: var(--z-bar);
+  padding-bottom: env(safe-area-inset-bottom);
+  border-top: 1px solid rgb(246 166 9 / .35);
+  background: var(--neel-deep);
+  box-shadow: 0 -10px 26px rgb(5 8 40 / .45);
+}
+.cta-bar__inner {
+  display: grid;
+  gap: 10px;
+  max-width: var(--col);
+  margin-inline: auto;
+  padding: 10px max(var(--gutter), env(safe-area-inset-right)) 10px max(var(--gutter), env(safe-area-inset-left));
+}
+.cta-bar__row { display: flex; gap: 10px; }
+.btn--cta {
+  flex: 1 1 auto;
+  min-height: 54px;
+  font-size: 18px;
+}
+.btn--back {
+  flex: none;
+  min-height: 54px;
+  padding: 0 14px 0 10px;
+  border: 1.5px solid rgb(252 233 214 / .3);
+  background: transparent;
+  color: var(--kagaz);
+}
+.btn--back:active { transform: scale(.97); }
+.cta-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 12px;
+  border: 1px solid rgb(255 158 148 / .55);
+  border-radius: var(--radius-ctl);
+  background: rgb(198 40 40 / .2);
+}
+.cta-error__msg {
+  flex: 1 1 auto;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--kagaz);
+}
+
+/* 16. Toast ---------------------------------------------------------- */
+
+.toast {
+  position: fixed;
+  z-index: var(--z-toast);
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  max-width: min(90vw, 420px);
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: var(--kagaz);
+  color: var(--syahi);
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 12px 30px rgb(5 8 40 / .5);
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, 12px);
+  transition: opacity .2s, visibility .2s;
+}
+.toast.is-shown {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
+/* 17. Motion (all keyframes and movement are opt-in) ----------------- */
+
+@keyframes stop-in { from { opacity: 0; transform: translateX(28px); } }
+@keyframes stop-in-back { from { opacity: 0; transform: translateX(-28px); } }
+@keyframes ladi-sway { from { transform: rotate(-1.6deg); } to { transform: rotate(1.6deg); } }
+@keyframes toran-breathe {
+  from { transform: translateY(0) scaleY(1) skewX(0); }
+  to { transform: translateY(1.5px) scaleY(1.06) skewX(-1.2deg); }
+}
+@keyframes flicker {
+  0%, 100% { transform: scale(1, 1) skewX(0); opacity: 1; }
+  20% { transform: scale(.94, 1.07) skewX(3deg); }
+  45% { transform: scale(1.05, .94) skewX(-2deg); opacity: .9; }
+  70% { transform: scale(.97, 1.04) skewX(1.5deg); }
+}
+@keyframes chug { from { transform: translateY(0); } to { transform: translateY(-1.5px); } }
+@keyframes puff {
+  0% { opacity: .9; transform: translate(0, 0) scale(.5); }
+  100% { opacity: 0; transform: translate(-16px, -12px) scale(1.7); }
+}
+@keyframes beat {
+  0% { transform: scale(1.14); }
+  35%, 100% { transform: scale(1); }
+}
+@keyframes hop { from { transform: translateY(0); } to { transform: translateY(-4px); } }
+@keyframes bobble {
+  0%, 62%, 100% { transform: rotate(0); }
+  8% { transform: rotate(-10deg); }
+  18% { transform: rotate(8deg); }
+  28% { transform: rotate(-6deg); }
+  38% { transform: rotate(4deg); }
+  48% { transform: rotate(-2deg); }
+}
+@keyframes wave {
+  0%, 100% { transform: rotate(0); }
+  30% { transform: rotate(-18deg); }
+  70% { transform: rotate(12deg); }
+}
+@keyframes petal-fall {
+  0% { opacity: 0; transform: translate(0, 0) rotate(0) scale(var(--s)); }
+  8% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--w), 420px) rotate(var(--r)) scale(var(--s)); }
+}
+@keyframes drizzle {
+  from { transform: translateY(0); opacity: .85; }
+  to { transform: translateY(34px); opacity: 0; }
+}
+@keyframes sad-sway {
+  from { transform: rotate(var(--sad-tilt, -18deg)) translateY(8px); }
+  to { transform: rotate(calc(var(--sad-tilt, -18deg) * .8)) translateY(7px); }
+}
+@keyframes stamp-a { from { transform: rotate(-9deg) scale(1.7); opacity: 0; } }
+@keyframes stamp-b { from { transform: rotate(-9deg) scale(1.7); opacity: 0; } }
+@keyframes stamp-c { from { transform: rotate(-9deg) scale(1.7); opacity: 0; } }
+@keyframes print-line { from { transform: scaleX(0); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes shehnai-play {
+  0%, 100% { transform: rotate(0); }
+  50% { transform: rotate(-5deg); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+
+  .stop.is-active { animation: stop-in .34s var(--ease-out) both; }
+  body[data-dir="back"] .stop.is-active { animation-name: stop-in-back; }
+  .preview-all .stop { animation: none; }
+
+  .ladi { animation: ladi-sway 6.5s ease-in-out infinite alternate; }
+  .ladi--r1 { animation-delay: -2.1s; animation-duration: 7.2s; }
+  .ladi--l2 { animation-delay: -3.4s; }
+  .ladi--r2 { animation-delay: -1.2s; animation-duration: 5.8s; }
+  .ladi--l3 { animation-delay: -4.6s; animation-duration: 7.6s; }
+  .ladi--r3 { animation-delay: -.6s; }
+
+  .toran { animation: toran-breathe 4.2s ease-in-out infinite alternate; }
+
+  .diya__flame { animation: flicker 1.6s ease-in-out infinite; }
+  .diya:nth-child(2n) .diya__flame { animation-duration: 1.25s; animation-delay: -.4s; }
+  .diya:nth-child(3n) .diya__flame { animation-duration: 1.9s; animation-delay: -.9s; }
+  .tt-row:nth-child(2n) .diya__flame { animation-delay: -.7s; }
+
+  .journey { transition: --progress 1.1s var(--ease-inout); }
+  .journey__station::after { transition: opacity .25s; }
+  .journey.is-moving .vehicle { animation: chug .2s ease-in-out infinite alternate; }
+  .journey.is-moving .vehicle__puffs i { animation: puff .9s ease-out infinite; }
+  .journey.is-moving .vehicle__puffs i:nth-child(2) { animation-delay: .3s; }
+  .journey.is-moving .vehicle__puffs i:nth-child(3) { animation-delay: .6s; }
+
+  body:has(.baaja[aria-pressed="true"]) .baaja__dhol,
+  body.is-baaja-on .baaja__dhol { transform-box: fill-box; transform-origin: center; animation: beat .6s ease-out infinite; }
+  body:has(.baaja[aria-pressed="true"]) .instrument--dhol svg,
+  body.is-baaja-on .instrument--dhol svg { animation: beat .6s ease-out infinite; }
+  body:has(.baaja[aria-pressed="true"]) .jharokha__play,
+  body.is-baaja-on .jharokha__play { animation: shehnai-play 2.4s ease-in-out infinite; }
+  body:has(.baaja[aria-pressed="true"]) .instrument--shehnai svg,
+  body.is-baaja-on .instrument--shehnai svg { animation: shehnai-play 2.4s ease-in-out infinite; transform-origin: 10% 90%; }
+
+  body[data-stop="junction"] .mini-board__head { animation: hop .45s ease-in-out infinite alternate; }
+  body[data-stop="junction"] .mini-board__head:last-child { animation-delay: -.22s; }
+
+  .scene.is-arrived .bobble__head { animation: bobble 3.2s var(--ease-out) infinite; }
+  .scene.is-arrived .bobble--b .bobble__head { animation-delay: .35s; }
+  .scene.is-arrived .bobble__arm { animation: wave 1s ease-in-out 3 .4s; }
+  .scene.is-arrived .petal { animation: petal-fall var(--t) cubic-bezier(.3, .1, .5, 1) var(--d) 1 both; }
+  .bobble.is-sad .bobble__head { animation: sad-sway 3.6s ease-in-out infinite alternate; }
+  .raincloud__drops i { animation: drizzle 1.1s linear infinite; }
+  .raincloud__drops i:nth-child(2) { animation-delay: -.35s; }
+  .raincloud__drops i:nth-child(3) { animation-delay: -.7s; }
+  .raincloud__drops i:nth-child(4) { animation-delay: -.2s; }
+  .raincloud__drops i:nth-child(5) { animation-delay: -.85s; }
+
+  .guest-card[data-status="confirmed"]::after { animation: stamp-a .34s var(--ease-spring); }
+  .guest-card[data-status="waitlisted"]::after { animation: stamp-b .34s var(--ease-spring); }
+  .guest-card[data-status="regret"]::after { animation: stamp-c .34s var(--ease-spring); }
+
+  .pass__lines i { animation: print-line 1.6s steps(16) infinite; }
+  .pass__lines i:nth-child(2) { animation-delay: .15s; }
+  .pass__lines i:nth-child(3) { animation-delay: .3s; }
+  .pass__lines i:nth-child(4) { animation-delay: .45s; }
+  .pass__lines i:nth-child(5) { animation-delay: .6s; }
+  .pass__lines i:nth-child(6) { animation-delay: .75s; }
+  .pass__lines i:nth-child(7) { animation-delay: .9s; }
+
+  .btn[aria-busy="true"] .btn__spinner { animation: spin 1s linear infinite; }
+
+  /* Spring movement (static under reduced motion) */
+  .mini-board__head { transition: transform .5s var(--ease-spring); }
+  .bobble__head { transition: transform .6s var(--ease-spring); }
+  .toast { transition: opacity .2s, transform .2s var(--ease-out), visibility .2s; }
+  .baaja-nudge:not([hidden]) { animation: nudge-in .4s var(--ease-spring) both, nudge-bob 1.4s ease-in-out .5s 3 alternate; }
+}
+
+@keyframes nudge-in { from { opacity: 0; transform: translateY(-6px) scale(.9); } }
+@keyframes nudge-bob { to { transform: translateY(3px); } }
+
+/* 18. Larger screens ------------------------------------------------- */
+
+@media (min-width: 400px) {
+  .cover__name { font-size: 48px; }
+}
+
+@media (max-width: 359px) {
+  .cover__name { font-size: 38px; }
+  .chip { font-size: 15px; }
+  .bobble { --head: 88px; width: 94px; }
+  .bobble__body { width: 76px; }
+  .instrument { width: 60px; }
+  .instrument svg { width: 54px; }
+}

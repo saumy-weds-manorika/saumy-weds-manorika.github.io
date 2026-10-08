@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <title>Saumy (placeholder caricature)</title>
+  <!-- neck (hidden behind the body collar when used as a bobblehead) -->
+  <path d="M106 206h44v50h-44z" fill="#B87A4E"/>
+  <!-- ears -->
+  <ellipse cx="60" cy="156" rx="15" ry="19" fill="#C98B5E"/>
+  <ellipse cx="196" cy="156" rx="15" ry="19" fill="#C98B5E"/>
+  <ellipse cx="62" cy="157" rx="7" ry="10" fill="#A9704A"/>
+  <ellipse cx="194" cy="157" rx="7" ry="10" fill="#A9704A"/>
+  <!-- face -->
+  <path d="M128 76c44 0 72 30 72 80c0 46-30 76-72 76s-72-30-72-76c0-50 28-80 72-80z" fill="#C98B5E"/>
+  <path d="M66 176c8 34 32 56 62 56s54-22 62-56c-10 22-32 38-62 38s-52-16-62-38z" fill="#B07448" opacity=".55"/>
+  <!-- sideburns -->
+  <path d="M60 118c2 14 4 26 10 36l6-30z" fill="#1B1B2F"/>
+  <path d="M196 118c-2 14-4 26-10 36l-6-30z" fill="#1B1B2F"/>
+  <!-- safa (turban) -->
+  <path d="M42 120c-4-46 34-84 86-84s92 36 86 84c-14-14-46-22-86-22s-72 8-86 22z" fill="#D6246E"/>
+  <path d="M48 104c22-18 52-26 80-26s58 8 80 26" fill="none" stroke="#A8174F" stroke-width="7" stroke-linecap="round"/>
+  <path d="M56 82c22-16 46-22 72-22s50 6 72 22" fill="none" stroke="#E8508C" stroke-width="6" stroke-linecap="round"/>
+  <path d="M74 58c16-9 34-13 54-13s38 4 54 13" fill="none" stroke="#A8174F" stroke-width="5" stroke-linecap="round"/>
+  <!-- bandhani dots on the safa -->
+  <g fill="#FFD23F">
+    <circle cx="70" cy="96" r="2.4"/><circle cx="92" cy="88" r="2.4"/><circle cx="164" cy="88" r="2.4"/><circle cx="186" cy="96" r="2.4"/>
+    <circle cx="84" cy="70" r="2.2"/><circle cx="106" cy="64" r="2.2"/><circle cx="150" cy="64" r="2.2"/><circle cx="172" cy="70" r="2.2"/>
+    <circle cx="120" cy="50" r="2"/><circle cx="138" cy="50" r="2"/><circle cx="60" cy="110" r="2.2"/><circle cx="196" cy="110" r="2.2"/>
+  </g>
+  <!-- kalgi (plume) and sarpech (brooch) -->
+  <path d="M136 84c6-26 18-48 38-64c-4 22-12 44-28 66z" fill="#FCE9D6"/>
+  <path d="M140 82c6-20 16-38 30-52" fill="none" stroke="#F6A609" stroke-width="2.4" stroke-linecap="round"/>
+  <circle cx="171" cy="22" r="5" fill="#F6A609"/>
+  <path d="M116 92l12-14l12 14l-12 14z" fill="#F6A609"/>
+  <circle cx="128" cy="92" r="5.5" fill="#2F7D32"/>
+  <circle cx="128" cy="92" r="2.2" fill="#FFD23F"/>
+  <g fill="#FCE9D6"><circle cx="112" cy="104" r="2.6"/><circle cx="120" cy="108" r="2.6"/><circle cx="128" cy="110" r="2.6"/><circle cx="136" cy="108" r="2.6"/><circle cx="144" cy="104" r="2.6"/></g>
+  <!-- tilak -->
+  <path d="M128 118c3 6 3 14 0 20c-3-6-3-14 0-20z" fill="#C62828"/>
+  <!-- eyebrows -->
+  <path d="M84 132c8-7 20-8 30-3" fill="none" stroke="#1B1B2F" stroke-width="6" stroke-linecap="round"/>
+  <path d="M172 132c-8-7-20-8-30-3" fill="none" stroke="#1B1B2F" stroke-width="6" stroke-linecap="round"/>
+  <!-- eyes -->
+  <ellipse cx="100" cy="154" rx="15" ry="17" fill="#fff"/>
+  <ellipse cx="156" cy="154" rx="15" ry="17" fill="#fff"/>
+  <circle cx="102" cy="157" r="9.5" fill="#1B1B2F"/>
+  <circle cx="154" cy="157" r="9.5" fill="#1B1B2F"/>
+  <circle cx="105" cy="153" r="3.4" fill="#fff"/>
+  <circle cx="157" cy="153" r="3.4" fill="#fff"/>
+  <!-- cheeks -->
+  <ellipse cx="80" cy="186" rx="13" ry="8" fill="#D6246E" opacity=".22"/>
+  <ellipse cx="176" cy="186" rx="13" ry="8" fill="#D6246E" opacity=".22"/>
+  <!-- nose -->
+  <path d="M124 166c-4 8-4 13 4 15" fill="none" stroke="#8E5A36" stroke-width="3.5" stroke-linecap="round"/>
+  <!-- big smile -->
+  <path d="M96 190c10 22 54 22 64 0c-20 6-44 6-64 0z" fill="#7A1636"/>
+  <path d="M100 192c18 5 38 5 56 0l-2 7c-16 4-36 4-52 0z" fill="#fff"/>
+</svg>
