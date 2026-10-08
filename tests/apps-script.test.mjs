@@ -118,18 +118,18 @@ test('list tabs: "First List" is Primary, "Second List" is Secondary, case- and 
 });
 
 test('list columns: found by header text, with the usual positions as a fallback', () => {
-  assert.deepEqual(gs('listColumns_', HEAD), { guest1: 0, gender1: 1, guest2: 2, gender2: 3, both: 4, nick: 5, id: 6 });
+  assert.deepEqual(gs('listColumns_', HEAD), { guest1: 0, gender1: 1, guest2: 2, gender2: 3, both: 4, nick: 5, id: 6, link: -1, message: -1, wa: -1 });
   // Saumy's original file: no Nicknames / ID yet (setup adds them).
-  assert.deepEqual(gs('listColumns_', HEAD.slice(0, 5)), { guest1: 0, gender1: 1, guest2: 2, gender2: 3, both: 4, nick: -1, id: -1 });
+  assert.deepEqual(gs('listColumns_', HEAD.slice(0, 5)), { guest1: 0, gender1: 1, guest2: 2, gender2: 3, both: 4, nick: -1, id: -1, link: -1, message: -1, wa: -1 });
   // Extra columns and a different order still work.
   assert.deepEqual(gs('listColumns_', ['S.No', 'ID', 'Guest 1', 'Gender Guest 1', 'Guest 2', 'Gender Guest 2', 'Both Primary', 'Notes', 'Nicknames']),
-    { guest1: 2, gender1: 3, guest2: 4, gender2: 5, both: 6, nick: 8, id: 1 });
+    { guest1: 2, gender1: 3, guest2: 4, gender2: 5, both: 6, nick: 8, id: 1, link: -1, message: -1, wa: -1 });
   // Unrecognised headers fall back to A–E; Nicknames/ID are never guessed.
   assert.deepEqual(gs('listColumns_', ['Friend', 'Sex', 'Plus one', 'Sex 2', 'Both?', 'Notes']),
-    { guest1: 0, gender1: 1, guest2: 2, gender2: 3, both: 4, nick: -1, id: -1 });
+    { guest1: 0, gender1: 1, guest2: 2, gender2: 3, both: 4, nick: -1, id: -1, link: -1, message: -1, wa: -1 });
   // Both gender columns headed plain "Gender": the second one is still Gender Guest 2.
   assert.deepEqual(gs('listColumns_', ['Guest 1', 'Gender', 'Guest 2', 'Gender', 'Both Primary?']),
-    { guest1: 0, gender1: 1, guest2: 2, gender2: 3, both: 4, nick: -1, id: -1 });
+    { guest1: 0, gender1: 1, guest2: 2, gender2: 3, both: 4, nick: -1, id: -1, link: -1, message: -1, wa: -1 });
 });
 
 test('parseListRows_: names, genders, partner, labels, couple, aliases, NA handling (fictional rows)', () => {
@@ -525,4 +525,51 @@ test('chunk_ splits the cached list without breaking characters; runs_ groups ro
   assert.deepEqual(gs('runs_', [2, 3, 4, 7, 9, 10]), [{ start: 2, count: 3 }, { start: 7, count: 1 }, { start: 9, count: 2 }]);
   assert.equal(gs('quoteSheet_', "Saumy's List"), "'Saumy''s List'");
   assert.match(gs('slug_'), /^[a-z][a-z0-9]{3}$/);
+});
+
+/* ---------- Personal links & invite messages (columns H, I, J) ---------- */
+
+const BEFORE = Date.UTC(2026, 9, 8, 10, 0); // 8 Oct, before booking opens
+const AFTER = Date.UTC(2026, 9, 11, 10, 0); // 11 Oct, after
+const LINK = 'https://saumy-weds-manorika.github.io/?g=k7m2';
+
+test('inviteMessage_: greeting and company follow the row type', () => {
+  const couple = gs('inviteMessage_', { names: ['Rahul Sharma', 'Priya Sharma'], couple: true, partner: null }, LINK, BEFORE);
+  assert.ok(couple.startsWith('Hi Rahul & Priya! 🚂'), couple);
+  assert.ok(couple.includes('love to have you both there'));
+  const named = gs('inviteMessage_', { names: ['Arjun Mehra', 'Tara'], couple: false, partner: null }, LINK, BEFORE);
+  assert.ok(named.startsWith('Hi Arjun! 🚂') && named.includes('love to have you and Tara there'), named);
+  const unnamed = gs('inviteMessage_', { names: ['Kabir Khan'], couple: false, partner: { title: 'Mrs', gender: 'F' } }, LINK, BEFORE);
+  assert.ok(unnamed.startsWith('Hi Kabir! 🚂') && unnamed.includes('love to have you both there'), unnamed);
+  const single = gs('inviteMessage_', { names: ['Ananya Iyer'], couple: false, partner: null }, LINK, BEFORE);
+  assert.ok(single.startsWith('Hi Ananya! 🚂') && single.includes('love to have you there'), single);
+});
+
+test('inviteMessage_: link, dates and exactly one train line', () => {
+  const m = gs('inviteMessage_', { names: ['Ananya Iyer'], couple: false, partner: null }, LINK, BEFORE);
+  assert.ok(m.includes('\n' + LINK + '\n'));
+  assert.ok(m.includes('10–11 December 2026') && !/10\s*[–-]\s*12/.test(m));
+  assert.ok(m.includes('Train, bus, car or flight'));
+  assert.equal((m.match(/🎟️/g) || []).length, 1);
+  assert.ok(m.includes('open for booking Sat 10 Oct, 8 AM'));
+  const later = gs('inviteMessage_', { names: ['Ananya Iyer'], couple: false, partner: null }, LINK, AFTER);
+  assert.ok(later.includes('Train bookings are open') && !later.includes('Sat 10 Oct'), later);
+});
+
+test('waLink_ and personalLink_ build working links', () => {
+  assert.equal(gs('personalLink_', 'https://saumy-weds-manorika.github.io/', 'k7m2'), LINK);
+  const wa = gs('waLink_', 'Hi Rahul & Priya! 🚂\nLine two');
+  assert.ok(wa.startsWith('https://wa.me/?text=Hi%20Rahul%20%26%20Priya!%20'), wa);
+  assert.ok(wa.includes('%0ALine%20two') && !wa.includes('"'));
+});
+
+test('listColumns_ finds the new link/message/WhatsApp columns after A–G', () => {
+  const col = gs('listColumns_', ['Guest 1', 'Gender Guest 1', 'Guest 2', 'Gender Guest 2', 'Both Primary?', 'Nicknames', 'ID', 'Personal link', 'Invite message', 'Send on WhatsApp']);
+  assert.equal(col.id, 6);
+  assert.equal(col.link, 7);
+  assert.equal(col.message, 8);
+  assert.equal(col.wa, 9);
+  const old = gs('listColumns_', ['Guest 1', 'Gender Guest 1', 'Guest 2', 'Gender Guest 2', 'Both Primary?', 'Nicknames', 'ID']);
+  assert.equal(old.link, -1);
+  assert.equal(old.guest1, 0);
 });

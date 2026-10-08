@@ -33,7 +33,9 @@ import { searchGuests, validatePayload } from './logic.js';
 const keyRecord = () => (isMock() ? 'stt.mock.v1' : 'stt.v1');
 const keyDraft = () => (isMock() ? 'stt.mock.draft.v1' : 'stt.draft.v1');
 const KEY_MOCK = 'stt.mock.responses';
-const TIMEOUT_MS = 12000;        // GET (search, guest lookup)
+const TIMEOUT_MS = 30000;        // GET (search, guest lookup): Apps Script cold starts can take ~20s
+const GET_RETRIES = 1;           // one quiet retry for a timeout or a transient Google error
+const WARM_EVERY_MS = 4 * 60 * 1000; // re-wake the script at most this often
 const POST_TIMEOUT_MS = 25000;   // POST waits longer than the server's 10s lock wait plus a cold start
 const MOCK_DELAY_MS = 600;
 const MOCK_LOG_MAX = 50;
@@ -233,11 +235,45 @@ async function request(url, init, timeoutMs = TIMEOUT_MS) {
     if (!isPlainObject(data)) throw fail(MSG.server, 'bad_json');
     return data;
   } catch (err) {
-    if (err && err.code) throw err;
-    if (err && err.name === 'AbortError') throw fail(MSG.timeout, 'timeout');
+    // A timeout aborts the fetch. Check that first: the browser's AbortError (a DOMException) has a
+    // numeric `code` of its own, which must not be mistaken for one of our string error codes.
+    if ((ctrl && ctrl.signal.aborted) || (err && err.name === 'AbortError')) throw fail(MSG.timeout, 'timeout');
+    if (err && typeof err.code === 'string') throw err;
     throw fail(MSG.network, 'network');
   } finally {
     if (timer) clearTimeout(timer);
+  }
+}
+
+/** Error codes worth one quiet retry: timeouts, dropped connections and Google's transient error pages. */
+const RETRYABLE = /^(timeout|network|bad_json|http_(404|408|429|5\d\d))$/;
+
+/** GET with one quiet retry, so a cold start or a passing Google hiccup doesn't reach the guest. */
+async function getJSON(url) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await request(url, { method: 'GET' });
+    } catch (err) {
+      if (attempt >= GET_RETRIES || !(err && RETRYABLE.test(String(err.code)))) throw err;
+      await wait(800);
+    }
+  }
+}
+
+let lastWarm = 0;
+/**
+ * Wakes the Apps Script backend in the background (a cheap ping), so the guest's first search
+ * doesn't wait for a cold start. Live mode only; at most once every few minutes; never throws.
+ */
+export function warmUp() {
+  if (isMock()) return;
+  const now = Date.now();
+  if (now - lastWarm < WARM_EVERY_MS) return;
+  lastWarm = now;
+  try {
+    request(apiUrl({ action: 'ping' }), { method: 'GET' }).catch(() => {});
+  } catch {
+    // A bad apiUrl is reported by the real search; warming up stays silent.
   }
 }
 
@@ -287,7 +323,7 @@ export async function findGuests(q) {
   if (isMock()) {
     return searchGuests(term, MOCK_GUESTS, MAX_MATCHES).map(({ id, label }) => ({ id, label }));
   }
-  const data = await request(apiUrl({ action: 'find', q: term }), { method: 'GET' });
+  const data = await getJSON(apiUrl({ action: 'find', q: term }));
   if (!data.ok) throw errorFrom(data);
   const list = Array.isArray(data.matches) ? data.matches : [];
   return list
@@ -312,7 +348,7 @@ export async function getGuest(id) {
     const g = MOCK_GUESTS.find((x) => x.id === key);
     return g ? normalizeGuest({ ...g, booked: mockBooked(key) }) : null;
   }
-  const data = await request(apiUrl({ action: 'guest', id: key }), { method: 'GET' });
+  const data = await getJSON(apiUrl({ action: 'guest', id: key }));
   if (!data.ok) {
     const err = errorFrom(data);
     if (err.code === 'unknown_guest') return null;

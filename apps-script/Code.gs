@@ -10,6 +10,7 @@
  *   "First List"  -> list Primary        "Second List" -> list Secondary
  * Row 1 of each holds the headers:
  *   A Guest 1 | B Gender Guest 1 | C Guest 2 | D Gender Guest 2 | E Both Primary? | F Nicknames | G ID
+ *   | H Personal link | I Invite message | J Send on WhatsApp   (H to J are written by the script)
  * Guest 2 is a partner's name, or Mr / Mrs / Ms (partner invited, name unknown), or NA.
  * setup adds the Nicknames and ID headers when they are missing and fills in the IDs.
  *
@@ -25,7 +26,9 @@
  * the "Save the Train" menu inside the Sheet):
  *   setup              adds Nicknames/ID headers and IDs, creates or repairs Summary, People and Responses (safe to re-run;
  *                      it also adds the v4 hub and onward columns to an older People tab, keeping every row)
- *   generateIds        gives every guest row without an ID a short unique ID
+ *   generateIds        gives every guest row without an ID a short unique ID (and refreshes H to J)
+ *   fillPersonalLinks  writes each guest's personal link (H), WhatsApp invite message (I) and a
+ *                      "Send on WhatsApp" link that opens WhatsApp with the message typed in (J)
  *   listPersonalLinks  shows a personal link per guest (uses SITE_URL below)
  *   rebuildPeople      rewrites the People tab from the Responses log
  */
@@ -70,7 +73,16 @@ const LIST_COLS = [
   { key: 'both', header: 'Both Primary?', aliases: ['bothprimary', 'couple'], pos: 4 },
   { key: 'nick', header: 'Nicknames', aliases: ['nicknames', 'nickname', 'aliases', 'alias'], pos: 5, auto: true },
   { key: 'id', header: 'ID', aliases: ['id', 'guestid'], pos: 6, auto: true },
+  // Filled in by the script for every guest with an ID (setup, "Fill in missing guest ids" and
+  // "Fill personal links & messages" all refresh them). Hand edits here are overwritten on the next run.
+  // Only these exact, script-owned headers are matched, so a column of yours headed "WhatsApp",
+  // "Link" or "Message" (phone numbers, notes...) is never mistaken for one of these and overwritten.
+  { key: 'link', header: 'Personal link', aliases: ['personallink'], pos: 7, auto: true },
+  { key: 'message', header: 'Invite message', aliases: ['invitemessage'], pos: 8, auto: true },
+  { key: 'wa', header: 'Send on WhatsApp', aliases: ['sendonwhatsapp'], pos: 9, auto: true },
 ];
+/** 8:00 AM IST on Sat 10 Oct 2026: train booking for 9 Dec journeys opens (the invite message mentions it until then). */
+const BOOKING_OPENS_MS = Date.UTC(2026, 9, 10, 2, 30);
 /** Every ticket may carry up to 4 people (the invite plus "Add guest"). */
 const MAX_GUESTS = 4;
 /** Cells that mean "nothing here": NA, N/A, N / A, N.A, N.A., -, --. */
@@ -192,6 +204,7 @@ function onOpen() {
     .createMenu('Save the Train')
     .addItem('Set up / repair tabs', 'setup')
     .addItem('Fill in missing guest ids', 'generateIds')
+    .addItem('Fill personal links & messages', 'fillPersonalLinks')
     .addItem('Show personal links', 'listPersonalLinks')
     .addItem('Rebuild People from Responses', 'rebuildPeople')
     .addToUi();
@@ -235,6 +248,7 @@ function setup() {
     else rebuilt = done;
   }
   const ids = fillIds_(tabs);
+  const links = safeFillLinks_(tabs, ids);
   clearGuestCache_();
 
   formatResponses_(responses);
@@ -243,7 +257,7 @@ function setup() {
   SpreadsheetApp.flush();
 
   const found = tabs.map(function (t) { return '"' + t.sheet.getName() + '" (' + t.list + ')'; }).join(' and ');
-  let msg = 'Setup done. Guest lists: ' + found + '. ' + idMessage_(ids);
+  let msg = 'Setup done. Guest lists: ' + found + '. ' + idMessage_(ids) + ' ' + linksMessage_(links);
   if (tabs.length < LIST_TABS.length) msg += ' Only one list tab was found; that is fine if you have just one list.';
   if (rebuilt === null) msg += ' People still has an old layout: run setup again, or "Rebuild People from Responses", when nobody is submitting.';
   else if (rebuilt >= 0) msg += ' People was rebuilt in the new layout (' + rebuilt + ' rows).';
@@ -255,9 +269,24 @@ function setup() {
 function generateIds() {
   const tabs = prepareListTabs_(ss_());
   const ids = fillIds_(tabs);
+  const links = safeFillLinks_(tabs, ids);
   clearGuestCache_();
   SpreadsheetApp.flush();
-  notify_(idMessage_(ids));
+  notify_(idMessage_(ids) + ' ' + linksMessage_(links));
+}
+
+/**
+ * Writes, for every guest row with an ID: the personal link (column "Personal link"), a ready-to-send
+ * WhatsApp message with that link ("Message"), and a "Send on WhatsApp" link that opens WhatsApp with the
+ * message typed in, so you only pick the contact. Safe to re-run; it refreshes all three columns.
+ */
+function fillPersonalLinks() {
+  const tabs = prepareListTabs_(ss_());
+  const ids = fillIds_(tabs);
+  const links = safeFillLinks_(tabs, ids);
+  clearGuestCache_();
+  SpreadsheetApp.flush();
+  notify_((ids.made || ids.dupes.length ? idMessage_(ids) + ' ' : '') + linksMessage_(links));
 }
 
 /** Lists "label: personal link" for every guest. Shows a dialog in the Sheet and writes to the Execution log. */
@@ -690,6 +719,11 @@ function ensureListHeaders_(sh) {
   if (col.nick >= 0) {
     sh.getRange(1, col.nick + 1).setNote('Optional. Extra names people might search for, separated by commas, e.g. "Annu, Annie".');
   }
+  const filled = 'Filled in by the Save the Train script for every guest with an ID. Re-running ' +
+    '"Fill personal links & messages" refreshes it, so edits here are overwritten.';
+  if (col.link >= 0) sh.getRange(1, col.link + 1).setNote(filled + ' Opens that guest\'s ticket directly, no search needed.');
+  if (col.message >= 0) sh.getRange(1, col.message + 1).setNote(filled + ' To copy without quote marks: double-click the cell, select all, copy.');
+  if (col.wa >= 0) sh.getRange(1, col.wa + 1).setNote(filled + ' Tap it (on your phone or computer) to open WhatsApp with the message typed in, then pick the contact.');
 }
 
 /** The preferred 1-based column when its header and cells are all empty, else the first column after the data. */
@@ -809,7 +843,11 @@ function readAllGuests_(ss) {
   findListTabs_(ss).forEach(function (t) {
     const sh = t.sheet;
     if (sh.getLastRow() < 2 || sh.getLastColumn() < 1) return;
-    const values = sh.getRange(1, 1, sh.getLastRow(), sh.getLastColumn()).getValues();
+    // Read only up to the last guest-list column (ID etc.), not the long invite messages after it.
+    const col = listColumns_(headerRow_(sh));
+    const width = Math.max(1, Math.min(sh.getLastColumn(),
+      Math.max(col.guest1, col.gender1, col.guest2, col.gender2, col.both, col.nick, col.id) + 1));
+    const values = sh.getRange(1, 1, sh.getLastRow(), width).getValues();
     out = out.concat(parseListRows_(values, t.list));
   });
   return out;
@@ -1183,6 +1221,134 @@ function runs_(rows) {
     else out.push({ start: row, count: 1 });
   });
   return out;
+}
+
+/**
+ * Fills the Personal link, Message and Send on WhatsApp columns of each list tab. Rows without a
+ * Guest 1 name or an ID get those three cells cleared. `nowMs` decides the train-booking line.
+ * @returns {{filled:number}}
+ */
+function fillLinks_(tabs, nowMs, dupes) {
+  const base = String(SITE_URL).trim();
+  const dupe = {};
+  (dupes || []).forEach(function (id) { dupe[normId_(id)] = true; });
+  let filled = 0;
+  let skipped = 0;
+  tabs.forEach(function (t) {
+    const sh = t.sheet;
+    const last = sh.getLastRow();
+    if (last < 2) return;
+    const values = sh.getRange(1, 1, last, sh.getLastColumn()).getValues();
+    const col = listColumns_(values[0]);
+    if (col.link < 0 || col.message < 0 || col.wa < 0) return;
+    const links = [];
+    const messages = [];
+    const wa = [];
+    for (let r = 1; r < values.length; r++) {
+      const entry = parseGuestRow_(values[r], col, t.list);
+      if (!entry || !entry.id) {
+        links.push(['']);
+        messages.push(['']);
+        wa.push([SpreadsheetApp.newRichTextValue().setText('').build()]);
+        continue;
+      }
+      if (dupe[entry.id] === true) {
+        // Two rows share this ID, so the link would open someone else's ticket: don't offer one.
+        links.push(['Duplicate ID "' + entry.id + '": give this row a unique ID, then run again']);
+        messages.push(['']);
+        wa.push([SpreadsheetApp.newRichTextValue().setText('').build()]);
+        skipped++;
+        continue;
+      }
+      const link = personalLink_(base, entry.id);
+      const message = inviteMessage_(entry, link, nowMs);
+      links.push([link]);
+      messages.push([message]);
+      wa.push([SpreadsheetApp.newRichTextValue().setText('Send on WhatsApp').setLinkUrl(waLink_(message)).build()]);
+      filled++;
+    }
+    const rows = values.length - 1;
+    sh.getRange(2, col.link + 1, rows, 1).setValues(links);
+    sh.getRange(2, col.message + 1, rows, 1).setValues(messages);
+    sh.getRange(2, col.wa + 1, rows, 1).setRichTextValues(wa);
+    try {
+      // Multi-line messages would make every guest row tall: clip them to one line and keep rows short.
+      sh.getRange(2, col.message + 1, rows, 1).setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
+      sh.setRowHeightsForced(2, rows, 21);
+      if (sh.getColumnWidth(col.message + 1) > 320) sh.setColumnWidth(col.message + 1, 320);
+    } catch (err) {
+      // Cosmetic only.
+    }
+  });
+  return { filled: filled, skipped: skipped };
+}
+
+/** Fills H to J without letting a problem there stop the rest of setup / id generation. */
+function safeFillLinks_(tabs, ids) {
+  try {
+    return fillLinks_(tabs, Date.now(), ids && ids.dupes);
+  } catch (err) {
+    console.error('fillLinks_ failed: ' + (err && err.stack || err));
+    return { filled: 0, skipped: 0, failed: true };
+  }
+}
+
+function linksMessage_(links) {
+  if (links.failed) return 'Personal links could not be written this time: run "Fill personal links & messages".';
+  let msg = links.filled
+    ? 'Personal links and messages are ready for ' + links.filled + ' guest' + (links.filled === 1 ? '' : 's') + '.'
+    : 'No personal links yet: guests need a Guest 1 name and an ID first.';
+  if (links.skipped) msg += ' ' + links.skipped + ' row' + (links.skipped === 1 ? ' has' : 's have') + ' a duplicate ID and got no link.';
+  return msg;
+}
+
+/** Honorifics that shouldn't be used as a first name ("Dr. Anil Verma" -> "Anil"). */
+const HONORIFIC_RE = /^(mr|mrs|ms|miss|smt|shri|dr|prof)\.?$/i;
+
+/**
+ * The name to greet someone by: "Rahul Sharma" -> "Rahul", "Dr. Anil Verma" -> "Anil",
+ * "Mrs Verma" -> "Mrs Verma" (title plus surname stays together), "A. K. Sharma" -> "A. K. Sharma".
+ */
+function firstName_(name) {
+  const words = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return '';
+  if (words.length > 1 && HONORIFIC_RE.test(words[0])) return words.length === 2 ? words.join(' ') : words[1];
+  if (/^[a-z]\.?$/i.test(words[0])) return words.join(' '); // a lone initial: use the whole name
+  return words[0];
+}
+
+/**
+ * The WhatsApp invite Saumy sends one guest (or one couple), with their personal ticket link.
+ * Greets both partners when both are Saumy's friends (Both Primary? = Y). The train-booking line
+ * mentions the 10 Oct opening until it has passed, then just nudges people to book.
+ */
+function inviteMessage_(entry, link, nowMs) {
+  const names = entry.names || [];
+  const first = firstName_(names[0]);
+  const second = names.length > 1 ? firstName_(names[1]) : '';
+  const greet = entry.couple && second ? first + ' & ' + second : first;
+  let company = 'you';
+  if (entry.couple && second) company = 'you both';
+  else if (second) company = 'you and ' + second;
+  else if (entry.partner) company = 'you both';
+  const booking = nowMs < BOOKING_OPENS_MS
+    ? '🎟️ Trains for 9 Dec open for booking Sat 10 Oct, 8 AM. Book early!'
+    : '🎟️ Train bookings are open, so grab your seats early!';
+  return [
+    'Hi ' + greet + '! 🚂',
+    '',
+    'Manorika and I are getting married on 10–11 December 2026 in Bhilwara, Rajasthan, and we\'d love to have ' + company + ' there!',
+    '',
+    'Here\'s your personal ticket on the Shaadi Express. Tap it and tell us who\'s coming and your rough travel plans (it takes a minute):',
+    link,
+    '',
+    'Train, bus, car or flight, every route ends at Bhilwara. ' + booking,
+  ].join('\n');
+}
+
+/** A link that opens WhatsApp with `message` typed in, letting you pick who to send it to. */
+function waLink_(message) {
+  return 'https://wa.me/?text=' + encodeURIComponent(message);
 }
 
 function idMessage_(ids) {

@@ -13,7 +13,7 @@ import {
   formatDate, isValidISODate, slotHour, catches, workingDays, arrivalLine,
   overallStatus, validatePayload, buildPayload, leaveEmail, matchScore, normalizeName, ridersFor,
 } from './logic.js';
-import { findGuests, getGuest, submitRsvp, newUnlistedId, local } from './api.js';
+import { findGuests, getGuest, submitRsvp, newUnlistedId, local, warmUp } from './api.js';
 import { createRegretController } from './regret.js';
 import { createBaaja } from './audio.js';
 import { renderPass, passFilename, downloadPass, sharePass, passBlob } from './pass.js';
@@ -679,7 +679,24 @@ let searchTimer = 0;
 let lastMatches = [];
 let searchErrorDefault = '';
 
+/* A cold Apps Script can take a while to answer the first search: say so instead of looking stuck. */
+let waitTimers = [];
+function startSearchWait() {
+  stopSearchWait();
+  const say = (text) => { el('search-wait').textContent = text; el('search-wait').hidden = false; };
+  waitTimers = [
+    setTimeout(() => say('Looking you up…'), 600),
+    setTimeout(() => say('Waking up the ticket counter… the first search can take up to 20 seconds.'), 5000),
+  ];
+}
+function stopSearchWait() {
+  waitTimers.forEach(clearTimeout);
+  waitTimers = [];
+  el('search-wait').hidden = true;
+}
+
 function hideSearchMessages() {
+  stopSearchWait();
   el('search-empty').hidden = true;
   el('search-short').hidden = true;
   el('search-error').hidden = true;
@@ -721,9 +738,11 @@ function onSearchInput() {
 
 async function runSearch(q) {
   const seq = ++searchSeq;
+  startSearchWait();
   try {
     const matches = await findGuests(q);
     if (seq !== searchSeq) return;
+    stopSearchWait();
     renderResults(matches);
     el('search-empty').hidden = matches.length > 0;
     revealResults();
@@ -732,6 +751,7 @@ async function runSearch(q) {
       : el('search-empty').textContent);
   } catch (err) {
     if (seq !== searchSeq) return;
+    stopSearchWait();
     renderResults([]);
     showSearchError(err && err.message);
   }
@@ -742,12 +762,15 @@ async function pickListed(match, btn) {
   hideSearchMessages();
   let guest = null;
   if (btn) btn.setAttribute('aria-busy', 'true');
+  startSearchWait();
   try {
     guest = await getGuest(match.id);
   } catch (err) {
+    stopSearchWait();
     showSearchError(err && err.message);
     return;
   } finally {
+    stopSearchWait();
     if (btn) btn.removeAttribute('aria-busy');
   }
   if (!guest) {
@@ -2260,6 +2283,7 @@ function bind() {
 
   // Platform
   el('guest-search').addEventListener('focus', onSearchFocus);
+  el('guest-search').addEventListener('focus', warmUp);
   el('guest-search').addEventListener('blur', onSearchBlur);
   el('guest-search').addEventListener('input', onSearchInput);
   el('guest-search').addEventListener('keydown', (e) => {
@@ -2403,6 +2427,7 @@ function boot() {
   for (const group of $$('[role="radiogroup"]')) rove(group);
   updateCta();
   renderRiders();
+  warmUp(); // wake the ticket counter while the guest reads the cover
   restore().catch(() => { /* never leave the platform stuck */ });
   scheduleBaajaNudge();
 }

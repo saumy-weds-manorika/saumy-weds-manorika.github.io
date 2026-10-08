@@ -1382,6 +1382,10 @@ body.is-typing-name[data-stop="platform"] .cta-bar { visibility: hidden; }
   border-radius: var(--radius-ctl);
   color: var(--on-dark);
 }
+.boarding__wait {
+  color: var(--on-dark-muted);
+  font-style: italic;
+}
 .boarding__anyway { justify-self: start; }
 
 .search { position: relative; }

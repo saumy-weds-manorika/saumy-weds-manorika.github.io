@@ -24,7 +24,7 @@ You send **the same message and the same link to everyone**. The page personalis
 5. **Their phone remembers them.** Next time they open the link, it says "Welcome back, Rahul" with **View my pass** and **Edit my ticket**.
 6. **Someone you forgot to list** can tap **Not on the list? Board anyway** and type their name. They show up in Summary under **Unlisted guests**, so you can check them.
 
-**Optional:** you can also give someone a **personal link** that skips the search and opens straight to their ticket (see Part 8). It's handy for a few people with very common names. You don't need it for everyone.
+**Personal messages:** the script can also write a personal link and a ready-to-send WhatsApp message for every guest (see Part 8), if you'd rather message people one by one.
 
 **A sample common message** (edit freely):
 
@@ -175,11 +175,17 @@ v4 adds two People columns, `hub` and `onward`, and an **Arrivals by hub** table
 
 You **don't** need to redeploy when you edit **First List** or **Second List**. New guests, name fixes and nicknames are live within a minute (search remembers the list for up to 60 seconds). Just run **Fill in missing guest ids** for new rows.
 
-## Part 8 (optional): Personal links
+## Part 8: Personal links and ready-to-send messages
 
-31. Click **Save the Train** → **Show personal links**. A box lists one line per invite, such as `Mr & Mrs Kabir Khan: https://saumy-weds-manorika.github.io/?g=z8q4`. Copy a line into that person's chat. Their page skips the search and opens with their name.
+31. Click **Save the Train** → **Fill personal links & messages** (setup and **Fill in missing guest ids** do this too). Every guest row with an ID gets three columns:
+    - **H: Personal link**, e.g. `https://saumy-weds-manorika.github.io/?g=z8q4`. It opens straight to that guest's ticket, with no search needed.
+    - **I: Invite message**, a WhatsApp invite in your voice with their link: "Hi Kabir! 🚂 Manorika and I are getting married on 10–11 December 2026…". Couples marked **Both Primary? = Y** are greeted together ("Hi Meera & Dev!"). Named partners are mentioned ("you and Tara"), and unnamed partners become "you both". Until 8 AM on Sat 10 Oct the message includes the train-booking date; after that it just says bookings are open.
+    - **J: Send on WhatsApp**: tap it on your phone or computer and WhatsApp opens with the message already typed. Pick the contact and send.
+32. To copy a message instead: **double-click** the cell in column I, select all, copy. Copying the cell itself makes Google Sheets wrap the text in quote marks. Messages show on one line in the Sheet; the full text is inside.
+33. Messages are written when you run it. **Run Fill personal links & messages again** after adding guests (for example the Second List), after fixing a name, and once after 8 AM on Sat 10 Oct (so the train line updates). It refreshes H to J for everyone, so don't hand-edit those columns. If a row shows "Duplicate ID", give one of the two rows a new ID (clear it and run **Fill in missing guest ids**) before sending.
+    The columns usually land in H, I and J. If you already use those columns, they go after your last column instead, and your own columns (even ones headed "WhatsApp" or "Message") are never touched.
 
-You can also run **listPersonalLinks** from the Apps Script toolbar and read the list in the **Execution log**. `SITE_URL` (step 24) must match your address first.
+You can still use **Show personal links** for a quick list of every link.
 
 ---
 
