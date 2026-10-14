@@ -332,6 +332,9 @@
         </div>
       </div>
       <p class="field__error field__error--dark side-pick__error" id="side-error" role="alert" hidden data-preview>Pick your side first, then board.</p>
+      <!-- Shown while a ticket is in progress on this phone (app.js renderPlatform), so a second family
+           member on a shared phone starts their own ticket instead of overwriting the first one -->
+      <button class="btn btn--link btn--link-dark side-pick__reset" id="side-reset" type="button" hidden>Someone else? Start a new ticket</button>
     </section>
   </section>
 

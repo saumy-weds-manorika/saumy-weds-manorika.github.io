@@ -41,7 +41,17 @@ test('assets: the shared art is loaded from ../assets/ and every file exists', (
 });
 
 test('modules this edition does not change are identical to the friends edition', () => {
-  for (const f of ['js/audio.js', 'js/band.js', 'js/trip.js', 'js/trip-data.js', 'js/travel-data.js', 'js/rajasthan-outline.js', 'css/trip.css']) {
+  for (const f of ['js/audio.js', 'js/trip.js', 'js/trip-data.js', 'js/travel-data.js', 'js/rajasthan-outline.js', 'css/trip.css']) {
     assert.equal(read(`shaadi/${f}`), read(f), f);
+  }
+});
+
+test('storage: every on-device key of this edition starts with stt.shaadi. (the friends edition shares the origin)', () => {
+  for (const f of jsFiles) {
+    // Code lines only: comments may name the friends edition's keys
+    const code = read(f).split('\n').filter((l) => !/^\s*(\/\/|\/\*|\*)/.test(l)).join('\n');
+    for (const m of code.matchAll(/['"`](stt\.[\w.-]*)['"`]/g)) {
+      assert.ok(m[1].startsWith('stt.shaadi.'), `${f} uses the shared key ${m[1]}`);
+    }
   }
 });

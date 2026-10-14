@@ -38,7 +38,7 @@ const GENDER_IDS = ['M', 'F'];
 const FORM_STOPS = ['platform', 'passengers', 'route', 'arrival', 'departure'];
 const STOP_ORDER = [...FORM_STOPS, 'junction', 'regret-end'];
 const GO_COOLDOWN_MS = 400;      // taps this soon after a stop change are the tail of a double-tap
-const NUDGE_KEY = 'stt.baaja.nudged';
+const NUDGE_KEY = 'stt.shaadi.baaja.nudged'; // this edition's own key: the friends edition shares the origin
 const NAME_MAX = 60;
 const NOTE_MAX = 500;
 const AGE_CHARS = 3;
@@ -97,7 +97,7 @@ const QUIPS = {
   carnival: "You'll miss the Carnival! Who's winning us the giant teddy?",
   sangeet: 'No Sangeet? Your dance slot goes unclaimed then.',
   maayra: "You'll miss the Maayra. Come for the vibe, stay for the food.",
-  baraat: 'Missing the Baraat? Who will do the naagin dance on the road?',
+  baraat: 'Missing the Baraat? Who will dance when the dhol starts?',
   phera: "You'll miss the Phera! It's at 3 AM anyway…",
 };
 
@@ -502,16 +502,25 @@ function onPopState(e) {
   if (target === state.stop) return;
   const dir = STOP_ORDER.indexOf(target) < STOP_ORDER.indexOf(state.stop) ? 'back' : 'forward';
   if (target === 'platform') {
+    const from = state.stop;
     go('platform', { dir, nav: 'none' });
-    // Back from "View my pass": show the welcome panel again rather than the side picker.
+    // Back from "View my pass" (or the regret ending): the welcome panel again. Back from the form
+    // (Edit my ticket included): the side picker with the saved choice, so the side can be changed.
     const r = local.load();
-    if (r && !dirty && state.guest && state.guest.id === r.id) showWelcome(r);
+    if ((from === 'junction' || from === 'regret-end') && r && !dirty && state.guest && state.guest.id === r.id) {
+      showWelcome(r);
+    } else {
+      hideWelcome();
+      updateCta();
+    }
     return;
   }
   if (target === 'junction' || target === 'regret-end') {
-    // Back out of an edit: show the saved ticket, not the half-edited one.
+    // Back out of an edit: show the saved ticket, not the half-edited one, and drop the edit's draft
+    // so it can't come back on the next visit.
     const r = local.load();
     if (!r || !loadRecord(r)) { go('platform', { dir, nav: 'none' }); return; }
+    local.clearDraft();
     hideWelcome();
     go(everyoneRegrets() ? 'regret-end' : 'junction', { dir, nav: 'none' });
     return;
@@ -713,7 +722,8 @@ function hideSideError() {
 function showSideError() {
   el('side-error').hidden = false;
   el('side-pick').classList.add('is-invalid');
-  el('side-pick').scrollIntoView({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+  // 'end': the picker is taller than most phone screens, and the error under it must clear the CTA bar
+  el('side-pick').scrollIntoView({ block: 'end', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
   const first = picker.tabs.find((t) => t.tabIndex === 0) || picker.tabs[0];
   if (first) first.focus({ preventScroll: true });
   announce(el('side-error').textContent);
@@ -743,6 +753,9 @@ function renderPlatform() {
   picker.select(state.relation);
   rove(el('side-tabs'));
   if (state.relation) hideSideError();
+  // A ticket is in progress on this phone: someone else (a shared family phone) can start their own
+  // instead of overwriting it. The welcome panel has the same button for a saved ticket.
+  el('side-reset').hidden = !state.guest;
 }
 
 function showWelcome(record) {
@@ -1770,7 +1783,7 @@ function waLink() {
     + `${rel ? ` (${rel.label})` : ''}. Passengers: ${people}.`;
   const t = state.travel;
   if (!everyoneRegrets() && t.mode === LOCAL) {
-    text += ` ${CONFIG.city} is home, so we'll be at every function.`;
+    text += ` ${CONFIG.city} is home, so no travel plans needed.`;
   } else if (!everyoneRegrets() && t.mode) {
     text += ` Rough plan: ${modeLabel(t.mode)} from ${t.from.trim()}${viaPhrase(t)}, arriving ${formatDate(t.arrive.date)} (${slotLabel(t.arrive.slot)}),`
       + ` leaving ${formatDate(t.depart.date)} (${slotLabel(t.depart.slot)}).`;
@@ -1993,6 +2006,7 @@ function openSaved(kind) {
   if (busy) return;
   const r = local.load();
   if (!r || !loadRecord(r)) { resetAll(); return; }
+  local.clearDraft(); // the saved ticket was chosen: an older, abandoned edit must not come back
   hideWelcome();
   if (kind === 'edit') {
     startEdit();
@@ -2093,6 +2107,7 @@ function bind() {
   el('welcome-view-pass').addEventListener('click', () => { openSaved('pass'); });
   el('welcome-edit').addEventListener('click', () => { openSaved('edit'); });
   el('welcome-reset').addEventListener('click', resetAll);
+  el('side-reset').addEventListener('click', resetAll);
 
   // Passengers
   el('add-guest').addEventListener('click', addGuest);

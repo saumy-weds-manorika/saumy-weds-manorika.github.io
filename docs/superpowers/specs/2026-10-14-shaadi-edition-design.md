@@ -17,7 +17,7 @@ from. The friends edition, its Sheet and its Apps Script stay exactly as they ar
 - On-device storage uses its own keys (`stt.shaadi.*`), because both editions share one origin.
 - Its own backend: `apps-script-shaadi/Code.gs`, pasted into a new, empty Google Sheet. No guest list,
   no search, no personal links.
-- GitHub: tag + Release `friends-v1.0` on 7c73d45 (the final friends edition) and `shaadi-v1.0` on the
+- GitHub: tag + Release `friends-v1.0` on 7c73d45 (the final friends edition) and `shaadi-v1.1` on the
   final commit of this edition. A root README links both.
 
 ## Flow

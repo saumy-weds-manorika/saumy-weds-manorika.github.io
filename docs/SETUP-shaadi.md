@@ -33,7 +33,7 @@ Until Part 4 is done, the page runs in **preview mode**: a small ribbon says "Pr
 ## Part 3: Run setup once
 
 1. In the toolbar's function list pick **setup**, then click **Run**.
-2. Google asks for permission the first time: **Review permissions →** your account **→ Advanced → Go to (project name) → Allow**. It only asks for access to this Sheet.
+2. Google asks for permission the first time: **Review permissions →** your account. On "Google hasn't verified this app" click **Advanced → Go to (project name) (unsafe)**, then **Allow**. If you see checkboxes instead, tick **Select all**, then click **Continue**. It asks to see and edit your Google Sheets (it only ever opens this one) and to run on a timer (for **Keep replies fast**).
 3. Go back to the Sheet tab and reload it. You'll see three tabs, **Summary**, **People** and **Responses**, and a **Save the Train** menu next to Help. The empty "Sheet1" is removed.
 
 ## Part 4: Put it online and connect the website
@@ -47,7 +47,7 @@ Until Part 4 is done, the page runs in **preview mode**: a small ribbon says "Pr
 
 ### Test it once
 
-Open the link on your phone, pick a side, fill one ticket and confirm. Within a few seconds the **Responses** and **People** tabs show it, and **Summary** counts it. To clear the test afterwards, delete its rows in **Responses** (row 2 onwards), then run **Save the Train → Rebuild People from Responses**.
+Open the link on your phone, pick a side, fill one ticket and confirm. Within a few seconds the **Responses** and **People** tabs show it, and **Summary** counts it. To clear the test afterwards, delete its rows in **Responses** (row 2 onwards), then run **Save the Train → Rebuild People from Responses**. Your phone still remembers the test ticket: open the link again and tap **Someone else? Start a new ticket** to forget it.
 
 ## After any change to Code.gs
 

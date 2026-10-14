@@ -139,6 +139,7 @@ body[data-stop="platform"] .mock-ribbon { margin-bottom: 36px; }
   .side-tab[aria-checked="false"]:hover { background: rgb(255 255 255 / .08); }
 }
 .side-pick__error { text-align: center; }
+.side-pick__reset { justify-self: center; }
 .side-pick.is-invalid .side-tab[aria-checked="false"] { border-style: dashed; }
 
 @media (max-width: 359px) {
@@ -162,8 +163,9 @@ body[data-stop="platform"] .mock-ribbon { margin-bottom: 36px; }
 
 .guest-card__facts {
   display: flex;
+  flex-wrap: wrap; /* M/F drops below the age on a 320px phone or with large system text */
   align-items: flex-end;
-  gap: 14px;
+  gap: 12px 14px;
 }
 .guest-card__age { flex: none; }
 .guest-card__gender { flex: none; }

@@ -17,7 +17,7 @@ export const CONFIG = {
   couple: { a: 'Saumy', b: 'Manorika', joined: 'Saumy & Manorika', weds: 'Saumy weds Manorika' },
   city: 'Bhilwara', cityHi: 'भीलवाड़ा', station: 'BHL', state: 'Rajasthan',
   train: { name: 'Shaadi Express', number: '1011' },
-  apiUrl: '', // shaadi Apps Script /exec URL; '' => mock mode
+  apiUrl: 'https://script.google.com/macros/s/AKfycbw9EB5HDk7qz2qq9Bj2Z7xT0ALslbdjH5DWOUIA07HpN0N9mdCxtnpZ5ifDS2I1hE4x/exec', // shaadi Apps Script /exec URL; '' => mock mode
   siteUrl: 'https://saumy-weds-manorika.github.io/shaadi/', // keep in step with the og: tags in index.html
   maxGuests: 6, // everyone on one ticket, the guest who fills it in included
   /**

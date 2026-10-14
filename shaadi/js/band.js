@@ -5,7 +5,7 @@
 // start on the guest's first touch, key press or scroll gesture anywhere on the page. A first touch
 // on the Baaja button itself mutes instead. Muting is remembered for this visit (sessionStorage).
 
-const MUTED_KEY = 'stt.band.muted';
+const MUTED_KEY = 'stt.shaadi.band.muted'; // shaadi edition: its own key (the friends edition shares the origin)
 const VOLUME = 0.55;
 const FADE_MS = 900;
 

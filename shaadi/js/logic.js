@@ -500,7 +500,7 @@ export function leaveEmail(kind, { name, arrive, depart, days, couple, city, bon
       subject: `Leave request: ${a} to ${d} (a Marwadi wedding needs me)`,
       body: `Hi,\n\nI'd like to take ${n} off, ${a} to ${d} 2026, for ${wedding} in ${city}.\n\n`
         + 'In my defence, this is not a holiday. It is a Marwadi wedding: a carnival, a sangeet, a maayra, '
-        + 'a baraat where I am morally obliged to dance on the road, and the phera at 3 AM. Yes, AM.\n\n'
+        + 'a baraat with dhol, ghodi and dancing on the road, and the phera at 3 AM. Yes, AM.\n\n'
         + "I'll hand everything over before I go, stay reachable for real emergencies (between dances), "
         + 'and come back tired, very happy and carrying mithai for the whole team.\n\n'
         + `Thank you for understanding!${sign}`,
