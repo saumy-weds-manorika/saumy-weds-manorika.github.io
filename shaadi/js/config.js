@@ -1,22 +1,44 @@
 /**
- * Save the Train: every piece of content and configuration in one place.
+ * Save the Train, Shaadi edition: every piece of content and configuration in one place.
  *
- * To go live (see docs/SETUP.md):
- *   apiUrl        fill in the Google Apps Script web app URL ending in /exec
- *   hostWhatsApp  Saumy's WhatsApp number, digits only with country code (already set)
- *   siteUrl       the public address of this website once hosted (already set)
+ * This is the family edition at /shaadi/: no guest list and no search. Guests pick which side
+ * they are from, then add everyone on their ticket themselves (see
+ * docs/superpowers/specs/2026-10-14-shaadi-edition-design.md).
  *
- * While apiUrl is empty the site runs in mock mode: fictional sample guests, and
- * answers are kept only in this browser.
+ * To go live (see docs/SETUP-shaadi.md):
+ *   apiUrl   fill in the shaadi Apps Script web app URL ending in /exec
+ *   siteUrl  the public address of this edition (already set)
+ *
+ * While apiUrl is empty the site runs in mock mode: answers are kept only in this browser,
+ * and a ribbon says so.
  */
 export const CONFIG = {
+  edition: 'shaadi',
   couple: { a: 'Saumy', b: 'Manorika', joined: 'Saumy & Manorika', weds: 'Saumy weds Manorika' },
   city: 'Bhilwara', cityHi: 'भीलवाड़ा', station: 'BHL', state: 'Rajasthan',
   train: { name: 'Shaadi Express', number: '1011' },
-  apiUrl: 'https://script.google.com/macros/s/AKfycbyt2BKKaEqmeKVXoLSY1FBmw0g-DDQGhG2r91qJYL27YqdToyClS7T9ntgkk4qGdKnr/exec', // Apps Script /exec URL; '' => mock mode
-  hostWhatsApp: '919414087162', // Saumy's WhatsApp, digits only with country code
-  siteUrl: 'https://saumy-weds-manorika.github.io/', // GitHub Pages address of this repo; keep in step with the og: tags in index.html
-  lists: ['Primary', 'Secondary'], // the two guest-list tabs ("First List", "Second List"); for display only
+  apiUrl: '', // shaadi Apps Script /exec URL; '' => mock mode
+  siteUrl: 'https://saumy-weds-manorika.github.io/shaadi/', // keep in step with the og: tags in index.html
+  maxGuests: 6, // everyone on one ticket, the guest who fills it in included
+  /**
+   * "Which side are you from?" One tab per relation, in the order shown. side 'a' sits under Saumy
+   * (blue), side 'b' under Manorika (pink). bond picks the leave-email wording (logic.leaveEmail).
+   * The ids are what the Sheet stores; apps-script-shaadi/Code.gs has the same list.
+   */
+  sides: {
+    a: { name: 'Saumy', role: 'दूल्हा', label: 'Ladke Wale side' },
+    b: { name: 'Manorika', role: 'दुल्हन', label: 'Ladki Wale side' },
+  },
+  relations: [
+    { id: 'ladke-wale', label: 'Ladke Wale', side: 'a', bond: 'family' },
+    { id: 'mayra-ladke', label: 'Mayra (Ladke Wale)', side: 'a', bond: 'family' },
+    { id: 'ladke-dost', label: 'Ladke Ke Dost', side: 'a', bond: 'friend' },
+    { id: 'ladke-family-friends', label: 'Ladke Ke Family Friends', side: 'a', bond: 'family-friend' },
+    { id: 'ladki-wale', label: 'Ladki Wale', side: 'b', bond: 'family' },
+    { id: 'mayra-ladki', label: 'Mayra (Ladki Wale)', side: 'b', bond: 'family' },
+    { id: 'ladki-sakhiyaan', label: 'Ladki Ki Sakhiyaan', side: 'b', bond: 'friend' },
+    { id: 'ladki-family-friends', label: 'Ladki Ke Family Friends', side: 'b', bond: 'family-friend' },
+  ],
   functions: [
     { id: 'carnival', name: 'Carnival', date: '2026-12-10', when: 'Afternoon', at: '2026-12-10T13:00' },
     { id: 'sangeet',  name: 'Sangeet',  date: '2026-12-10', when: 'Evening',   at: '2026-12-10T19:00' },
@@ -47,7 +69,9 @@ export const CONFIG = {
     { id: 'regret', label: 'Regret', stamp: 'REGRET' },
   ],
   regret: {
-    dodges: ['Do you not love Saumy?', 'How could you miss a Marwadi wedding?', 'You must be completely anti-fun person!!'],
+    // The first line names the side's own person ("Do you not love Saumy?" / "...Manorika?")
+    dodges: { a: 'Do you not love Saumy?', b: 'Do you not love Manorika?' },
+    more: ['How could you miss a Marwadi wedding?', 'You must be completely anti-fun person!!'],
     final: 'Okay, okay, you must be really busy at the time. We will try to understand. 😢',
   },
   cities: ['Ahmedabad','Ajmer','Bengaluru','Bhopal','Chandigarh','Chennai','Delhi','Gurugram','Hyderabad','Indore','Jaipur','Jodhpur','Kolkata','Kota','Lucknow','Mumbai','Noida','Pune','Surat','Udaipur','Vadodara'],

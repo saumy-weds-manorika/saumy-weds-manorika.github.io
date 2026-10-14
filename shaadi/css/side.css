@@ -1,0 +1,229 @@
+/* ==========================================================================
+   Save the Train, Shaadi edition · side.css
+   Only what this edition adds on top of styles.css (a copy of the friends edition's):
+   the "Which side are you from?" picker, the dance and confetti, the age field on every
+   passenger card, and the preview ribbon.
+   ========================================================================== */
+
+:root {
+  /* Saumy's side: a bright blue that reads on neel (6.1:1); Manorika's side: a pink (5.4:1) */
+  --side-a: #5AA9FF;
+  --side-a-deep: #2F6BFF;
+  --side-b: #FF6FA8;
+  --side-b-deep: #D6246E;
+}
+
+/* Preview ribbon (mock mode) ------------------------------------------ */
+
+.mock-ribbon {
+  display: table;
+  margin: 0 auto 10px;
+  padding: 6px 14px;
+  border: 1.5px dashed rgb(255 210 63 / .7);
+  border-radius: 999px;
+  color: var(--haldi);
+  font: 13px/1.2 var(--font-dm);
+  letter-spacing: .06em;
+  text-align: center;
+}
+/* On the platform the cover's jharokha rises about 26px above the ticket's top margin: clear it */
+body[data-stop="platform"] .mock-ribbon { margin-bottom: 36px; }
+
+/* Which side are you from? -------------------------------------------- */
+
+.side-pick {
+  display: grid;
+  gap: 10px;
+}
+.side-pick__title {
+  font: 30px/1.1 var(--font-display);
+  color: var(--kagaz);
+}
+.side-pick__lede {
+  margin-top: -4px;
+  color: var(--on-dark-muted);
+}
+.side-pick__cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 4px;
+}
+.side {
+  --c: var(--side-a);
+  --c-deep: var(--side-a-deep);
+  --glow: rgb(90 169 255 / .3);
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+.side--b {
+  --c: var(--side-b);
+  --c-deep: var(--side-b-deep);
+  --glow: rgb(255 111 168 / .3);
+}
+
+/* The bobblehead stands in a soft spotlight of its side's colour */
+.side__stage {
+  position: relative;
+  display: grid;
+  place-items: end center;
+  height: 196px;
+  padding-bottom: 8px;
+  border-radius: 14px 14px 50% 50% / 14px 14px 18px 18px;
+  background:
+    radial-gradient(60% 24px at 50% calc(100% - 6px), rgb(5 8 40 / .55), transparent 70%),
+    radial-gradient(70% 80% at 50% 70%, var(--glow), transparent 72%);
+}
+.side .figure { --fig-h: 180px; }
+.side .figure--a { margin-right: 0; }
+
+.side__who {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  margin-top: -2px;
+}
+.side__name {
+  font: 22px/1.1 var(--font-display);
+  color: var(--c);
+}
+.side__role {
+  font: 14px/1 var(--font-display);
+  color: var(--on-dark-muted);
+}
+
+.side__tabs {
+  display: grid;
+  gap: 8px;
+}
+.side-tab {
+  --focus: var(--haldi);
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 52px;
+  padding: 6px 10px;
+  border: 2px solid var(--c);
+  border-radius: var(--radius-ctl);
+  background: rgb(5 8 40 / .28);
+  color: var(--kagaz);
+  font: 600 15px/1.2 var(--font-body);
+  text-align: center;
+  text-wrap: balance;
+  touch-action: manipulation;
+  transition: background-color .16s, color .16s, transform .12s var(--ease-out), box-shadow .16s;
+}
+.side-tab:active { transform: scale(.97); }
+.side-tab[aria-checked="true"] {
+  border-color: var(--c);
+  background: var(--c);
+  color: var(--neel-deep);
+  box-shadow: 0 0 0 3px rgb(255 255 255 / .14), 0 6px 16px var(--glow);
+}
+/* A small tick in the corner of the chosen tab (shape, not just colour, marks the choice) */
+.side-tab[aria-checked="true"]::after {
+  content: "";
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 12px;
+  height: 12px;
+  background: currentColor;
+  -webkit-mask: var(--check) center / contain no-repeat;
+  mask: var(--check) center / contain no-repeat;
+}
+@media (hover: hover) {
+  .side-tab[aria-checked="false"]:hover { background: rgb(255 255 255 / .08); }
+}
+.side-pick__error { text-align: center; }
+.side-pick.is-invalid .side-tab[aria-checked="false"] { border-style: dashed; }
+
+@media (max-width: 359px) {
+  .side-pick__cols { gap: 8px; }
+  .side-tab { padding-inline: 6px; font-size: 14px; }
+  .side__stage { height: 176px; }
+  .side .figure { --fig-h: 162px; }
+}
+
+/* Confetti: one fixed canvas over the page while a burst is in the air (js/side-picker.js) */
+.confetti {
+  position: fixed;
+  z-index: calc(var(--z-bar) + 1);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Passenger cards: name on its own row, then age and M/F side by side -------- */
+
+.guest-card__facts {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+}
+.guest-card__age { flex: none; }
+.guest-card__gender { flex: none; }
+/* The age box, printed like the "Other date" box: the number, then YRS behind a perforation */
+.age-box { position: relative; width: 116px; }
+.input.age-box__input {
+  padding-right: 54px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .04em;
+}
+.age-box__unit {
+  position: absolute;
+  top: 1.5px;
+  right: 1.5px;
+  bottom: 1.5px;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  border-left: 2px dashed var(--line-strong);
+  border-radius: 0 10.5px 10.5px 0;
+  background: rgb(27 27 47 / .05);
+  color: var(--ink-muted);
+  font: 13px/1 var(--font-dm);
+  letter-spacing: .08em;
+  pointer-events: none;
+}
+
+/* Motion (all keyframes and movement are opt-in) ------------------------ */
+
+/* The dance: two hops with a sway each way, a little shimmy, then home. The head bobbles fast. */
+@keyframes side-dance {
+  0% { transform: none; }
+  10% { transform: translateY(-13%) rotate(-7deg); }
+  22% { transform: translateY(0) scale(1.03, .96); }
+  34% { transform: translateY(-13%) rotate(7deg); }
+  46% { transform: translateY(0) scale(1.03, .96); }
+  58% { transform: translateX(-7%) rotate(-5deg); }
+  70% { transform: translateX(7%) rotate(5deg); }
+  82% { transform: translateY(-6%) rotate(0); }
+  100% { transform: none; }
+}
+@keyframes side-head {
+  from { rotate: -13deg; }
+  to { rotate: 13deg; }
+}
+@keyframes side-bounce {
+  50% { transform: translateY(-4px); }
+}
+
+.side .figure { transform-origin: 50% 100%; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Idle: the heads wobble gently, like at the junction */
+  .side .figure__head { animation: wobble 3.2s cubic-bezier(.37, 0, .63, 1) infinite; }
+  .side--b .figure__head { animation-duration: 3.7s; animation-delay: -1.4s; }
+
+  .side .figure.is-dancing { animation: side-dance 1.05s var(--ease-inout) 2; }
+  .side .figure.is-dancing .figure__head { animation: side-head .26s ease-in-out 8 alternate; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .side .figure.is-dancing { animation: side-bounce .4s ease-out 1; }
+}

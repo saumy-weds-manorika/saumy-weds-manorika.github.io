@@ -1,5 +1,6 @@
-// Pure helpers for Save the Train. No DOM and no clock: callers pass `now` in when time matters.
-// All date maths runs on UTC midnights (Date.UTC) so results never depend on the device timezone.
+// Pure helpers for Save the Train, Shaadi edition. No DOM and no clock: callers pass `now` in when time
+// matters. All date maths runs on UTC midnights (Date.UTC) so results never depend on the device timezone.
+// The payload rules are mirrored in apps-script-shaadi/Code.gs: keep the two in step.
 
 const HOUR_MS = 3600000;
 const DAY_MS = 24 * HOUR_MS;
@@ -7,7 +8,21 @@ const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const STATUSES = ['confirmed', 'waitlisted', 'regret'];
 const GENDERS = ['M', 'F', ''];
-const GUEST_FLAGS = ['added', 'partner']; // optional booleans on a payload guest (amendments §A)
+const GUEST_FLAGS = ['added']; // optional boolean on a payload guest: typed in with "Add guest"
+/** Everyone on one ticket, the guest who fills it in included (shaadi spec). */
+export const MAX_GUESTS = 6;
+/** Ages are whole years. 0 is a baby under one. */
+export const AGE_MAX = 120;
+/** A ticket id: 's-' and 8 base36 characters (api.newTicketId). */
+export const TICKET_ID_RE = /^s-[a-z0-9]{8}$/;
+/**
+ * The "Which side are you from?" tabs, by id, in the order shown (js/config.js has their labels).
+ * Mirrored in apps-script-shaadi/Code.gs (RELATIONS).
+ */
+export const RELATION_IDS = [
+  'ladke-wale', 'mayra-ladke', 'ladke-dost', 'ladke-family-friends',
+  'ladki-wale', 'mayra-ladki', 'ladki-sakhiyaan', 'ladki-family-friends',
+];
 const MODES = ['local', 'train', 'flight', 'bus', 'car']; // 'local' = "Bhilwara is home" (amendments §L)
 const LOCAL_FROM = 'Bhilwara'; // a local guest's `from` when none is given
 const VIA_MODES = ['train', 'flight']; // modes that ask "landing at / getting off at" and "then on by" (v4 §O3)
@@ -191,6 +206,27 @@ export function overallStatus(guests) {
   return has('confirmed') ? 'confirmed' : has('waitlisted') ? 'waitlisted' : 'regret';
 }
 
+/**
+ * Reads a typed age: a whole number of years from 0 to 120, surrounding spaces and leading zeros
+ * are fine and Devanagari digits count (`' 07 '` → 7, `'४५'` → 45). Anything else gives `null`.
+ * @param {string|number} text
+ * @returns {number|null} */
+export function parseAge(text) {
+  if (typeof text === 'number') return Number.isInteger(text) && text >= 0 && text <= AGE_MAX ? text : null;
+  const t = asciiDigits(String(text ?? '').trim());
+  if (!/^\d{1,3}$/.test(t)) return null;
+  const n = Number(t);
+  return n <= AGE_MAX ? n : null;
+}
+
+/** True for an age the payload may carry: a whole number from 0 to 120. */
+const isAge = (v) => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= AGE_MAX;
+
+/** The relation tab for an id (`{id, label, side, bond}` from `relations`), or null. */
+export function relationOf(id, relations) {
+  return (Array.isArray(relations) ? relations : []).find((r) => r && r.id === id) || null;
+}
+
 /** An empty or missing date/slot reads as `'unsure'` (used for local guests, amendments §L). */
 const unsureIfEmpty = (v) => (v == null || v === '' ? 'unsure' : v);
 
@@ -243,13 +279,15 @@ function buildVia(t) {
   return { hub, onward: hub === HOME_STATION ? '' : str(v.onward) };
 }
 
-/** Validates an RSVP payload (spec §5.1, amendments §A/§C/§D/§L). Travel is required unless everyone regrets.
- * Per guest, `gender` is optional but must be `'M'`, `'F'` or `''`; `added` and `partner` are optional booleans.
+/** Validates an RSVP payload (shaadi spec, Data). Travel is required unless everyone regrets.
+ * `id` is a ticket id (`s-` and 8 base36 characters) and `relation` one of RELATION_IDS.
+ * 1 to 6 guests. Per guest, `name` and `status` are required, `age` is a whole number from 0 to 120,
+ * `gender` is optional but must be `'M'`, `'F'` or `''`, and `added` is an optional boolean.
  * `filled_by` is an optional string of up to 100 characters. `travel.mode` is `local`, `train`, `flight`, `bus`
  * or `car`; for `local` the city is optional and missing or empty dates/slots count as `'unsure'`.
  * A travel date is `'unsure'` or a real `YYYY-MM-DD` date the page can send: arriving 1–11 Dec 2026, leaving
  * 10–31 Dec 2026 (the chips, or a day typed under "Other date", v4 §Q).
- * `travel.via` (v4 §O3) is optional for old clients; when present, `hub` is `''`, `'unsure'` or a 2–5 letter
+ * `travel.via` (v4 §O3) is optional; when present, `hub` is `''`, `'unsure'` or a 2–5 letter
  * uppercase code and `onward` is `''`, `'car'`, `'train'`, `'bus'` or `'unsure'`.
  * @param {object} p
  * @returns {{ok:boolean, errors:string[]}} */
@@ -257,19 +295,20 @@ export function validatePayload(p) {
   if (!p || typeof p !== 'object') return { ok: false, errors: ['Something went wrong with your ticket. Please try again.'] };
   const errors = [];
   if (p.action !== 'rsvp') errors.push('Unknown request.');
-  const id = str(p.id);
-  if (!id || id.length > 40) errors.push('Your ticket id looks wrong. Please search for your name again.');
-  if (typeof p.unlisted !== 'boolean') errors.push('Missing guest-list flag.');
-  else if (p.unlisted && !/^u-[a-z0-9]{8}$/.test(id)) errors.push('Invalid ticket id. Please board again.');
+  if (!TICKET_ID_RE.test(str(p.id))) errors.push('Your ticket id looks wrong. Please start a new ticket.');
+  if (!RELATION_IDS.includes(p.relation)) errors.push('Pick which side you are from.');
   const label = str(p.label);
   if (!label || label.length > 100) errors.push('Missing the name on your ticket.');
   const guests = Array.isArray(p.guests) ? p.guests : [];
-  if (guests.length < 1 || guests.length > 10) errors.push(guests.length ? 'That is too many guests for one ticket (max 10).' : 'Please add at least one guest.');
-  guests.forEach((g, i) => {
+  if (guests.length < 1 || guests.length > MAX_GUESTS) {
+    errors.push(guests.length ? `That is too many guests for one ticket (max ${MAX_GUESTS}).` : 'Please add at least one guest.');
+  }
+  guests.slice(0, MAX_GUESTS + 1).forEach((g, i) => {
     const name = str(g?.name);
     if (!name) errors.push(`Guest ${i + 1} needs a name.`);
     else if (name.length > 60) errors.push(`Guest ${i + 1}'s name is too long (max 60 characters).`);
     const who = name || `guest ${i + 1}`;
+    if (!isAge(g?.age)) errors.push(`Add ${who}'s age (in years).`);
     if (!STATUSES.includes(g?.status)) errors.push(`Pick Confirmed, Waitlisted or Regret for ${who}.`);
     if (g?.gender !== undefined && !GENDERS.includes(g.gender)) errors.push(`Pick M or F for ${who}.`);
     if (GUEST_FLAGS.some((k) => g?.[k] !== undefined && typeof g[k] !== 'boolean')) errors.push(`Something is off with ${who}'s seat. Please try again.`);
@@ -286,20 +325,21 @@ export function validatePayload(p) {
 }
 
 /** Builds the POST body from app state. Trims text; travel is null when everyone regrets.
- * Each guest carries `gender` (`''` when unknown); `added: true` / `partner: true` are included only when set.
- * `filled_by` comes from `state.filledBy` (trimmed, `''` when absent), see amendments §C.
+ * Each guest carries `gender` (`''` when unknown) and `age` (parsed with parseAge, so a typed `' 07 '`
+ * becomes 7; `null` when it can't be read, which validatePayload refuses); `added: true` only when set.
+ * `relation` is `state.relation`. `filled_by` comes from `state.filledBy` (trimmed, `''` when absent).
  * For `travel.mode === 'local'` (amendments §L) an empty `from` becomes `'Bhilwara'` and empty or missing
  * dates/slots become `'unsure'`; dates or slots that are set are kept.
  * `travel.via` (v4 §O3) is always emitted: `{hub, onward}` (trimmed, `''` when missing) for train and flight,
  * with `onward` cleared when the hub is Bhilwara (`'BHL'`), and `{hub:'', onward:''}` for bus, car and local.
- * @param {{guest:{id:string,label:string,unlisted:boolean}, filledBy?:string,
- *   guests:{name:string,status:string,gender?:'M'|'F'|'',added?:boolean,partner?:boolean}[],
+ * @param {{guest:{id:string,label:string}, relation:string, filledBy?:string,
+ *   guests:{name:string,status:string,age:string|number,gender?:'M'|'F'|'',added?:boolean}[],
  *   travel:{mode:string, from:string, arrive:object, depart:object, via?:{hub?:string, onward?:string}}, note:string}} state
  * @param {{ts:string, ua:string}} client
- * @returns {object} payload as in spec §5.1 plus amendments §A/§C/§D/§L and v4 §O3 */
+ * @returns {object} payload as in the shaadi spec (Data) */
 export function buildPayload(state, client) {
   const guests = (state.guests || []).map((g) => {
-    const out = { name: str(g?.name), status: g?.status ?? '', gender: str(g?.gender) };
+    const out = { name: str(g?.name), status: g?.status ?? '', gender: str(g?.gender), age: parseAge(g?.age) };
     for (const k of GUEST_FLAGS) if (g?.[k] === true) out[k] = true;
     return out;
   });
@@ -310,7 +350,7 @@ export function buildPayload(state, client) {
   const travel = guests.length > 0 && overallStatus(guests) === 'regret' ? null
     : { mode: t.mode ?? '', from: str(t.from) || (local ? LOCAL_FROM : ''), arrive: side(t.arrive), depart: side(t.depart), via: buildVia(t) };
   const g = state.guest || {};
-  return { action: 'rsvp', id: g.id ?? '', unlisted: Boolean(g.unlisted), label: str(g.label), guests, travel,
+  return { action: 'rsvp', id: g.id ?? '', relation: state.relation ?? '', label: str(g.label), guests, travel,
     note: str(state.note), filled_by: str(state.filledBy), client: { ts: client?.ts ?? '', ua: client?.ua ?? '' } };
 }
 
@@ -430,18 +470,35 @@ export function icsText({ uid, title, startISO, minutes, details = '' }) {
   ].map(icsFold).join('\r\n') + '\r\n';
 }
 
+/**
+ * Whose wedding it is, in the guest's own words (shaadi spec, Copy), for the leave email:
+ *   family (the family and Mayra tabs)  -> "a family wedding, Saumy & Manorika's,"
+ *   friend (Dost, Sakhiyaan)            -> "the wedding of my close friend Saumy to Manorika"
+ *   family-friend                       -> "a close family friend's wedding, Saumy & Manorika's,"
+ */
+function weddingPhrase(bond, friend, partner, couple) {
+  if (bond === 'friend' && str(friend) && str(partner)) return `the wedding of my close friend ${str(friend)} to ${str(partner)}`;
+  if (bond === 'family-friend') return `a close family friend's wedding, ${couple}'s,`;
+  return `a family wedding, ${couple}'s,`;
+}
+
 /** Leave-request email, formal or honest (funny), using the guest's own dates (`unsure` → 9 / 12 Dec).
+ * `bond` ('family' | 'friend' | 'family-friend', from the relation tab) chooses how the wedding is
+ * described; for 'friend', `friend` is the person on the guest's side and `partner` the other one.
+ * An unknown bond reads as family.
  * @param {'formal'|'honest'} kind
- * @param {{name:string, arrive:string, depart:string, days:number, couple:string, city:string}} ctx
+ * @param {{name:string, arrive:string, depart:string, days:number, couple:string, city:string,
+ *   bond?:string, friend?:string, partner?:string}} ctx
  * @returns {{subject:string, body:string}} */
-export function leaveEmail(kind, { name, arrive, depart, days, couple, city }) {
+export function leaveEmail(kind, { name, arrive, depart, days, couple, city, bond = 'family', friend = '', partner = '' }) {
   const [a, d] = [formatDate(orDefault(arrive, DEFAULT_ARRIVE)), formatDate(orDefault(depart, DEFAULT_DEPART))];
   const n = plural(Number(days) || 0, 'working day');
   const sign = str(name) ? `\n${str(name)}` : '';
+  const wedding = weddingPhrase(bond, friend, partner, couple);
   if (kind === 'honest') {
     return {
       subject: `Leave request: ${a} to ${d} (a Marwadi wedding needs me)`,
-      body: `Hi,\n\nI'd like to take ${n} off, ${a} to ${d} 2026, for my friends ${couple}'s wedding in ${city}.\n\n`
+      body: `Hi,\n\nI'd like to take ${n} off, ${a} to ${d} 2026, for ${wedding} in ${city}.\n\n`
         + 'In my defence, this is not a holiday. It is a Marwadi wedding: a carnival, a sangeet, a maayra, '
         + 'a baraat where I am morally obliged to dance on the road, and the phera at 3 AM. Yes, AM.\n\n'
         + "I'll hand everything over before I go, stay reachable for real emergencies (between dances), "
@@ -452,18 +509,13 @@ export function leaveEmail(kind, { name, arrive, depart, days, couple, city }) {
   return {
     subject: `Leave request: ${a} to ${d}`,
     body: `Dear Sir/Madam,\n\nI would like to request leave from ${a} to ${d} 2026 (${n}) `
-      + `to attend the wedding of my close friends, ${couple}, in ${city}.\n\n`
+      + `to attend ${wedding} in ${city}.\n\n`
       + 'I will make sure my work is up to date and handed over before I leave, and I will be reachable for anything urgent.\n\n'
       + `Thank you for considering my request.\n\nKind regards,${sign}`,
   };
 }
 
-/* Forgiving name search (amendments \u00a7B). Mirrored in apps-script/Code.gs: keep the two in step. */
-
-/** Titles and joiners that never count as name words, on either side of a search. */
-const STOP_WORDS = new Set(['mr', 'mrs', 'ms', 'dr', 'smt', 'shri', 'and', 'the']);
-const asList = (v) => (Array.isArray(v) ? v : []);
-const splitWords = (s) => (s ? s.split(' ') : []);
+/* Names: keeps a reloaded card's per-visit key when it is the same person (app.js carryKeys). */
 
 /** Normalises a name for matching: lower-case, diacritics stripped (NFD, then every combining mark
  * removed), anything that is not a letter or whitespace turned into a space, spaces collapsed, trimmed.
@@ -475,93 +527,7 @@ export function normalizeName(s) {
     .replace(/[^\p{L}\s]+/gu, ' ').replace(/\s+/g, ' ').trim();
 }
 
-/** Optimal-string-alignment (restricted Damerau-Levenshtein) distance: insertions, deletions,
- * substitutions and swaps of two adjacent letters each cost 1. Works on code points. */
-function osaDistance(a, b) {
-  const [s, t] = [[...a], [...b]];
-  const d = Array.from({ length: s.length + 1 }, (_, i) => [i, ...Array(t.length).fill(0)]);
-  for (let j = 1; j <= t.length; j += 1) d[0][j] = j;
-  for (let i = 1; i <= s.length; i += 1) {
-    for (let j = 1; j <= t.length; j += 1) {
-      const cost = s[i - 1] === t[j - 1] ? 0 : 1;
-      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
-      if (i > 1 && j > 1 && s[i - 1] === t[j - 2] && s[i - 2] === t[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
-    }
-  }
-  return d[s.length][t.length];
-}
-
-/** Deduplicated, stop-word-free words of an entry's label, names and aliases; each alias also counts
- * as one whole word with its spaces removed (so "Annu Di" also matches "annudi"). */
-function candidateWords({ label, names, aliases } = {}) {
-  const out = new Set();
-  const add = (w) => { if (w && !STOP_WORDS.has(w)) out.add(w); };
-  [label, ...asList(names), ...asList(aliases)].forEach((s) => splitWords(normalizeName(s)).forEach(add));
-  asList(aliases).forEach((a) => add(normalizeName(a).replace(/ /g, '')));
-  return [...out];
-}
-
-/** Best score of one query word against the candidate words: exact 3, prefix 2 (query word 3+ chars),
- * fuzzy 1 (OSA distance \u2264 1 for 4\u20137 chars, \u2264 2 for 8+, never under 4 chars), else 0. */
-function wordScore(qw, candidates) {
-  const len = [...qw].length;
-  const maxEdits = len >= 8 ? 2 : len >= 4 ? 1 : 0;
-  let best = 0;
-  for (const c of candidates) {
-    if (c === qw) return 3;
-    if (len >= 3 && c.startsWith(qw)) best = 2;
-    else if (best < 1 && maxEdits > 0 && Math.abs([...c].length - len) <= maxEdits && osaDistance(qw, c) <= maxEdits) best = 1;
-  }
-  return best;
-}
-
-/** How well a search query matches one guest-list entry; 0 means no match.
- * Query words are the normalised words of 2+ chars that are not stop words (`mr mrs ms dr smt shri and the`);
- * a query with fewer than 3 letters, or no such words, scores 0. A query with no spaces that equals all of
- * one name's words run together (`rahulsharma`) scores 6. Otherwise each query word scores its best of
- * exact 3 / prefix 2 / fuzzy 1 / 0; the entry matches when at least one word scored and the sum reaches
- * 1 (single-word query) or 2 (longer query), and the result is `sum + 0.1 \u00d7 words matched`.
- * So unexpected middle names and extra words still match, while fuller matches rank higher.
- * @param {string} query
- * @param {{label?:string, names?:string[], aliases?:string[]}} entry
- * @returns {number} */
-export function matchScore(query, entry) {
-  const q = normalizeName(query);
-  if (q.replace(/ /g, '').length < 3) return 0;
-  const queryWords = splitWords(q).filter((w) => w.length >= 2 && !STOP_WORDS.has(w));
-  if (queryWords.length === 0) return 0;
-  const e = entry && typeof entry === 'object' ? entry : {};
-  if (!q.includes(' ') && asList(e.names).some((n) => normalizeName(n).replace(/ /g, '') === q)) return 6;
-  const candidates = candidateWords(e);
-  const scores = queryWords.map((w) => wordScore(w, candidates));
-  const matched = scores.filter((s) => s > 0).length;
-  const sum = scores.reduce((a, b) => a + b, 0);
-  if (matched < 1 || sum < (queryWords.length === 1 ? 1 : 2)) return 0;
-  return Math.round((sum + matched * 0.1) * 10) / 10; // every part is a multiple of 0.1; rounding keeps ties exact
-}
-
-/** Ranks guest-list entries for a query: score descending, then label ascending; only scores above 0.
- * @param {string} query
- * @param {{id:string, label:string, names?:string[], aliases?:string[]}[]} entries
- * @param {number} [limit=5]
- * @returns {{id:string, label:string, score:number}[]} */
-export function searchGuests(query, entries, limit = 5) {
-  return asList(entries)
-    .filter((e) => e && typeof e === 'object')
-    .map((e) => ({ id: e.id, label: e.label, score: matchScore(query, e) }))
-    .filter((r) => r.score > 0)
-    .sort((a, b) => b.score - a.score || String(a.label ?? '').localeCompare(String(b.label ?? ''), 'en'))
-    .slice(0, Math.max(0, Number(limit) || 0));
-}
-
-/** v1-compatible yes/no search: `matchScore(q, {label, names, aliases: []}) > 0`.
- * @param {string} q
- * @param {string} label
- * @param {string[]} [names]
- * @returns {boolean} */
-export function matchesQuery(q, label, names = []) {
-  return matchScore(q, { label, names: asList(names), aliases: [] }) > 0;
-}
+const asList = (v) => (Array.isArray(v) ? v : []);
 
 /** Who rides on the journey-track vehicle (amendments \u00a7D): the first two guests whose status is not
  * `regret` (before any status is chosen, that is simply the first two). An unknown gender becomes

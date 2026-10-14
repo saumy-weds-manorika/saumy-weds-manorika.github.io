@@ -62,7 +62,7 @@ const Y = {
 /**
  * Render the boarding pass.
  * @param {{
- *   config: object, label: string, passId: string,
+ *   config: object, label: string, passId: string, quota?: string,
  *   guests: {name:string, status:'confirmed'|'waitlisted'|'regret'}[],
  *   travel: {mode:string, from:string, arrive:{date:string,slot:string}, depart:{date:string,slot:string},
  *     via?:{hub?:string, onward?:string}} | null,
@@ -71,7 +71,8 @@ const Y = {
  * }} data  `travel.mode === 'local'` prints the home-platform variant (amendments §L). For train and
  *   flight, a `via.hub` other than Bhilwara itself is printed under FROM, e.g. "BY FLIGHT · VIA UDAIPUR
  *   (UDR) · CAR" (v4 §O3). `heads` are the couple's bobblehead busts (assets/bobble/*-bust.webp,
- *   preloaded by app.js); without them a BHILWARA JN postmark is printed instead.
+ *   preloaded by app.js); without them a BHILWARA JN postmark is printed instead. `quota` is the
+ *   relation tab's label (shaadi edition), printed as "QUOTA: <LABEL>"; without it, "QUOTA: DOSTI".
  * @returns {Promise<HTMLCanvasElement>} a 1080×1350 canvas
  */
 export async function renderPass(data) {
@@ -224,6 +225,7 @@ function normalise(data = {}) {
     local: !allRegret && !!travel && travel.mode === 'local',
     label: label || guests[0].name,
     passId: String(data.passId ?? '').trim().toUpperCase() || 'SHAADI',
+    quota: String(data.quota ?? '').trim(),
     heads: data.heads || {},
   };
 }
@@ -681,8 +683,14 @@ function drawHeader(ctx, d) {
   text(ctx, f.text, tx, Y.strip + 58, { size: f.size, color: C.kagaz, ls: 2 });
   text(ctx, 'शुभ विवाह', R, Y.strip + 58, { size: 34, fam: F.display, color: C.haldi, align: 'right' });
 
-  text(ctx, 'SHAADI-CUM-RESERVATION TICKET', L, Y.micro, { size: 21, color: MUTED, ls: 1.5 });
-  text(ctx, 'QUOTA: DOSTI', R, Y.micro, { size: 21, color: C.rani, align: 'right', ls: 1.5 });
+  const kind = 'SHAADI-CUM-RESERVATION TICKET';
+  text(ctx, kind, L, Y.micro, { size: 21, color: MUTED, ls: 1.5 });
+  // Shaadi edition: the quota is the side the guest picked, e.g. "QUOTA: LADKI KI SAKHIYAAN",
+  // shrunk (then clipped) to fit beside the ticket kind.
+  font(ctx, 21, F.dot, 400, 1.5);
+  const room = R - L - ctx.measureText(kind).width - 28;
+  const quota = fit(ctx, `QUOTA: ${(d.quota || 'DOSTI').toUpperCase()}`, { fam: F.dot, max: 21, min: 14, width: room, ls: 1.5 });
+  text(ctx, quota.text, R, Y.micro, { size: quota.size, color: C.rani, align: 'right', ls: 1.5 });
 
   // "Saumy weds Manorika": names in Yatra One, a smaller rani "weds" between them.
   const couple = cfg.couple || {};

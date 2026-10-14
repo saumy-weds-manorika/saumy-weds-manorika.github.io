@@ -101,7 +101,7 @@ function normKey(key) {
  * dodge count, so one card's joke never uses up another's.
  *
  * @param {object} opts
- * @param {string[]} [opts.messages]      the three dodge messages, in order
+ * @param {string[]|(()=>string[])} [opts.messages]  the three dodge messages, in order (or a function returning them)
  * @param {string}   [opts.finalMessage]  shown when Regret finally selects
  * @param {(text:string)=>void} [opts.announce] aria-live writer provided by the app
  * @param {()=>({top:number,bottom:number})} [opts.getInsets] px covered by the sticky bar (top) and bottom CTA
@@ -124,7 +124,14 @@ export function createRegretController({
   getInsets,
   reducedMotion = false,
 } = {}) {
-  const msgs = Array.isArray(messages) && messages.length ? messages.slice() : DEFAULT_MESSAGES.slice();
+  // Shaadi edition: `messages` may also be a function, read on every dodge, so the first line can
+  // follow the side the guest picked ("Do you not love Saumy?" / "...Manorika?").
+  const fixed = Array.isArray(messages) && messages.length ? messages.slice() : DEFAULT_MESSAGES.slice();
+  const current = () => {
+    if (typeof messages !== 'function') return fixed;
+    const list = messages();
+    return Array.isArray(list) && list.length ? list : DEFAULT_MESSAGES;
+  };
   const finalText = finalMessage || DEFAULT_FINAL;
   const say = typeof announce === 'function' ? announce : null;
 
@@ -582,6 +589,7 @@ export function createRegretController({
       return 'selected';
     }
 
+    const msgs = current();
     if (joke.dodges < msgs.length) {
       const now = Date.now();
       if (moved && moved.btn === btn && now - lastDodgeAt < REPEAT_GUARD_MS) return 'ignored';
