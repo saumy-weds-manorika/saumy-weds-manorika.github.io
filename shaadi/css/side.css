@@ -169,6 +169,11 @@ body[data-stop="platform"] .mock-ribbon { margin-bottom: 36px; }
 }
 .guest-card__age { flex: none; }
 .guest-card__gender { flex: none; }
+/* M/F not picked when Next was tapped: the same red ring as an empty field */
+.gender[aria-invalid="true"] {
+  border-color: var(--sindoor);
+  box-shadow: 0 0 0 3px rgb(198 40 40 / .18);
+}
 /* The age box, printed like the "Other date" box: the number, then YRS behind a perforation */
 .age-box { position: relative; width: 116px; }
 .input.age-box__input {
@@ -196,36 +201,53 @@ body[data-stop="platform"] .mock-ribbon { margin-bottom: 36px; }
 
 /* Motion (all keyframes and movement are opt-in) ------------------------ */
 
-/* The dance: two hops with a sway each way, a little shimmy, then home. The head bobbles fast. */
-@keyframes side-dance {
-  0% { transform: none; }
-  10% { transform: translateY(-13%) rotate(-7deg); }
-  22% { transform: translateY(0) scale(1.03, .96); }
-  34% { transform: translateY(-13%) rotate(7deg); }
-  46% { transform: translateY(0) scale(1.03, .96); }
-  58% { transform: translateX(-7%) rotate(-5deg); }
-  70% { transform: translateX(7%) rotate(5deg); }
-  82% { transform: translateY(-6%) rotate(0); }
-  100% { transform: none; }
+/*
+ * The dance, slow and smooth: the body sways from side to side (side-sway, 1.5s) with a soft hop at
+ * each lean (side-hop, twice per sway), and the head bobbles a beat behind (side-bobble). Every
+ * curve eases in and out, so nothing snaps.
+ * - Only rotate, translate and transform change, which the compositor animates off the main thread.
+ * - The body uses the individual rotate/translate properties. The head's dance uses transform, which
+ *   adds to the idle wobble's rotate, so the wobble keeps running underneath without a jump.
+ * - js/side-picker.js lets the dance run and stops it at the end of a sway, when every part is back
+ *   at rest. Another tap just keeps it going.
+ */
+@keyframes side-sway {
+  0%, 100% { rotate: 0deg; }
+  25% { rotate: -6deg; }
+  75% { rotate: 6deg; }
 }
-@keyframes side-head {
-  from { rotate: -13deg; }
-  to { rotate: 13deg; }
+@keyframes side-hop {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -6%; }
+}
+@keyframes side-bobble {
+  0%, 100% { transform: rotate(0deg); }
+  32% { transform: rotate(-7deg); }
+  82% { transform: rotate(7deg); }
 }
 @keyframes side-bounce {
-  50% { transform: translateY(-4px); }
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -4px; }
 }
 
-.side .figure { transform-origin: 50% 100%; }
+/* Promoted to their own layers up front, so the first frame of the dance doesn't stall. The ground
+   shadow is the stage's; the figure's own blurred shadow would float up with every hop. */
+.side .figure { transform-origin: 50% 100%; will-change: translate, rotate; }
+.side .figure__head { will-change: transform, rotate; }
+.side .figure::after { display: none; }
 
 @media (prefers-reduced-motion: no-preference) {
   /* Idle: the heads wobble gently, like at the junction */
   .side .figure__head { animation: wobble 3.2s cubic-bezier(.37, 0, .63, 1) infinite; }
   .side--b .figure__head { animation-duration: 3.7s; animation-delay: -1.4s; }
 
-  .side .figure.is-dancing { animation: side-dance 1.05s var(--ease-inout) 2; }
-  .side .figure.is-dancing .figure__head { animation: side-head .26s ease-in-out 8 alternate; }
+  .side .figure.is-dancing { animation: side-sway 1.5s ease-in-out infinite, side-hop .75s ease-in-out infinite; }
+  /* The wobble stays first in the list, so it carries on from where it was */
+  .side .figure.is-dancing .figure__head {
+    animation: wobble 3.2s cubic-bezier(.37, 0, .63, 1) infinite, side-bobble 1.5s ease-in-out infinite;
+  }
+  .side--b .figure.is-dancing .figure__head { animation-duration: 3.7s, 1.5s; animation-delay: -1.4s, 0s; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .side .figure.is-dancing { animation: side-bounce .4s ease-out 1; }
+  .side .figure.is-dancing { animation: side-bounce .5s ease-in-out 1; }
 }

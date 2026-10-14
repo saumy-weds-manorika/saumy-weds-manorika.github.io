@@ -13,7 +13,7 @@
  *   GET  ?action=ping (or no action)  -> {ok, service, version, time}
  *   POST text/plain JSON RSVP         -> {ok:true, id, updated_at} or {ok:false, error, code}
  *        { action:'rsvp', id:'s-xxxxxxxx', relation:'ladke-dost', label, guests:[{name, status,
- *          gender, age, added?}] (1 to 6), travel | null, note, filled_by, client }
+ *          gender:'M'|'F', age, added?}] (1 to 6), travel | null, note, filled_by, client }
  *        Arrival and departure dates are 'unsure' or a YYYY-MM-DD date, arriving 1–11 Dec and leaving
  *        10–31 Dec 2026, exactly as in the friends edition.
  *
@@ -36,7 +36,7 @@
  */
 const SPREADSHEET_ID = '';
 /** Shown by ?action=ping, so you can tell that the newest version of this script is the one that's live. */
-const API_VERSION = 'shaadi-v1';
+const API_VERSION = 'shaadi-v2';
 
 const SHEET = { responses: 'Responses', people: 'People', summary: 'Summary' };
 const HEADERS = {
@@ -53,11 +53,11 @@ const SIDES = { a: 'Ladke Wale side (Saumy)', b: 'Ladki Wale side (Manorika)' };
  */
 const RELATIONS = [
   { id: 'ladke-wale', label: 'Ladke Wale', side: 'a' },
-  { id: 'mayra-ladke', label: 'Mayra (Ladke Wale)', side: 'a' },
+  { id: 'mayra-ladke', label: 'Maayra (Ladke Wale)', side: 'a' },
   { id: 'ladke-dost', label: 'Ladke Ke Dost', side: 'a' },
   { id: 'ladke-family-friends', label: 'Ladke Ke Family Friends', side: 'a' },
   { id: 'ladki-wale', label: 'Ladki Wale', side: 'b' },
-  { id: 'mayra-ladki', label: 'Mayra (Ladki Wale)', side: 'b' },
+  { id: 'mayra-ladki', label: 'Maayra (Ladki Wale)', side: 'b' },
   { id: 'ladki-sakhiyaan', label: 'Ladki Ki Sakhiyaan', side: 'b' },
   { id: 'ladki-family-friends', label: 'Ladki Ke Family Friends', side: 'b' },
 ];
@@ -77,7 +77,7 @@ const AGE_BANDS = [
 const TICKET_ID_RE = /^s-[a-z0-9]{8}$/;
 
 const STATUSES = ['confirmed', 'waitlisted', 'regret'];
-const GENDERS = ['M', 'F', ''];
+const GENDERS = ['M', 'F']; // required for every guest in this edition
 const GUEST_FLAGS = ['added']; // optional boolean on a payload guest
 const MODES = ['local', 'train', 'flight', 'bus', 'car'];
 const LOCAL_FROM = 'Bhilwara';
@@ -211,8 +211,9 @@ function setup() {
   const removed = removeBlankStarterTabs_(ss);
 
   let rebuilt = -1;
-  if (!headerMatches_(people, HEADERS.People)) {
-    // People from an older layout: rewrite it from Responses (which always has everything).
+  if (!headerMatches_(people, HEADERS.People) || hasOldRelationLabels_(people)) {
+    // People from an older layout, or with a relation spelt the old way ("Mayra (...)" before shaadi-v2):
+    // rewrite it from Responses, which always has everything, so the Summary counts every guest.
     rebuilt = withLock_(function () { return rebuildPeople_(ss, people); });
   }
 
@@ -296,6 +297,17 @@ function saveRsvp_(p) {
   else replacePeopleRows_(people, p.id, peopleRows_(p, now));
   SpreadsheetApp.flush();
   return { ok: true, id: p.id, updated_at: now.toISOString() };
+}
+
+/** True when a People row's relation isn't one of today's labels (e.g. written before a spelling change). */
+function hasOldRelationLabels_(people) {
+  if (!headerMatches_(people, HEADERS.People) || people.getLastRow() < 2) return false;
+  const col = HEADERS.People.indexOf('relation') + 1;
+  const labels = RELATIONS.map(function (r) { return r.label; });
+  return people.getRange(2, col, people.getLastRow() - 1, 1).getValues().some(function (row) {
+    const v = cell_(row[0]);
+    return v !== '' && labels.indexOf(v) < 0;
+  });
 }
 
 /** The relation tab for an id ({id, label, side}), or null. */
@@ -437,7 +449,7 @@ function validatePayload_(p) {
     const who = name || 'guest ' + (i + 1);
     if (!isAge_(g && g.age)) errors.push('Add ' + who + "'s age (in years).");
     if (STATUSES.indexOf(g && g.status) < 0) errors.push('Pick Confirmed, Waitlisted or Regret for ' + who + '.');
-    if (g && g.gender !== undefined && GENDERS.indexOf(g.gender) < 0) errors.push('Pick M or F for ' + who + '.');
+    if (GENDERS.indexOf(g && g.gender) < 0) errors.push('Pick M or F for ' + who + '.');
     const badFlag = GUEST_FLAGS.some(function (k) { return !!g && g[k] !== undefined && typeof g[k] !== 'boolean'; });
     if (badFlag) errors.push('Something is off with ' + who + "'s seat. Please try again.");
   });

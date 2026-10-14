@@ -7,7 +7,7 @@ const DAY_MS = 24 * HOUR_MS;
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const STATUSES = ['confirmed', 'waitlisted', 'regret'];
-const GENDERS = ['M', 'F', ''];
+const GENDERS = ['M', 'F']; // required for every guest in this edition
 const GUEST_FLAGS = ['added']; // optional boolean on a payload guest: typed in with "Add guest"
 /** Everyone on one ticket, the guest who fills it in included (shaadi spec). */
 export const MAX_GUESTS = 6;
@@ -282,7 +282,7 @@ function buildVia(t) {
 /** Validates an RSVP payload (shaadi spec, Data). Travel is required unless everyone regrets.
  * `id` is a ticket id (`s-` and 8 base36 characters) and `relation` one of RELATION_IDS.
  * 1 to 6 guests. Per guest, `name` and `status` are required, `age` is a whole number from 0 to 120,
- * `gender` is optional but must be `'M'`, `'F'` or `''`, and `added` is an optional boolean.
+ * `gender` is required, `'M'` or `'F'`, and `added` is an optional boolean.
  * `filled_by` is an optional string of up to 100 characters. `travel.mode` is `local`, `train`, `flight`, `bus`
  * or `car`; for `local` the city is optional and missing or empty dates/slots count as `'unsure'`.
  * A travel date is `'unsure'` or a real `YYYY-MM-DD` date the page can send: arriving 1–11 Dec 2026, leaving
@@ -310,7 +310,7 @@ export function validatePayload(p) {
     const who = name || `guest ${i + 1}`;
     if (!isAge(g?.age)) errors.push(`Add ${who}'s age (in years).`);
     if (!STATUSES.includes(g?.status)) errors.push(`Pick Confirmed, Waitlisted or Regret for ${who}.`);
-    if (g?.gender !== undefined && !GENDERS.includes(g.gender)) errors.push(`Pick M or F for ${who}.`);
+    if (!GENDERS.includes(g?.gender)) errors.push(`Pick M or F for ${who}.`);
     if (GUEST_FLAGS.some((k) => g?.[k] !== undefined && typeof g[k] !== 'boolean')) errors.push(`Something is off with ${who}'s seat. Please try again.`);
   });
   const allRegret = guests.length > 0 && guests.every((g) => g?.status === 'regret');
@@ -325,7 +325,7 @@ export function validatePayload(p) {
 }
 
 /** Builds the POST body from app state. Trims text; travel is null when everyone regrets.
- * Each guest carries `gender` (`''` when unknown) and `age` (parsed with parseAge, so a typed `' 07 '`
+ * Each guest carries `gender` (`''` when not picked yet, which validatePayload refuses) and `age` (parsed with parseAge, so a typed `' 07 '`
  * becomes 7; `null` when it can't be read, which validatePayload refuses); `added: true` only when set.
  * `relation` is `state.relation`. `filled_by` comes from `state.filledBy` (trimmed, `''` when absent).
  * For `travel.mode === 'local'` (amendments §L) an empty `from` becomes `'Bhilwara'` and empty or missing
@@ -472,7 +472,7 @@ export function icsText({ uid, title, startISO, minutes, details = '' }) {
 
 /**
  * Whose wedding it is, in the guest's own words (shaadi spec, Copy), for the leave email:
- *   family (the family and Mayra tabs)  -> "a family wedding, Saumy & Manorika's,"
+ *   family (the family and Maayra tabs)  -> "a family wedding, Saumy & Manorika's,"
  *   friend (Dost, Sakhiyaan)            -> "the wedding of my close friend Saumy to Manorika"
  *   family-friend                       -> "a close family friend's wedding, Saumy & Manorika's,"
  */

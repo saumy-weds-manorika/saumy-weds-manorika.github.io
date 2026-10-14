@@ -18,8 +18,8 @@ const payload = (extra = {}) => ({
 test('relations: eight tabs, four per side, the same ids in logic, config and index.html', () => {
   assert.deepEqual(CONFIG.relations.map((r) => r.id), logic.RELATION_IDS);
   assert.deepEqual(CONFIG.relations.map((r) => r.label), [
-    'Ladke Wale', 'Mayra (Ladke Wale)', 'Ladke Ke Dost', 'Ladke Ke Family Friends',
-    'Ladki Wale', 'Mayra (Ladki Wale)', 'Ladki Ki Sakhiyaan', 'Ladki Ke Family Friends',
+    'Ladke Wale', 'Maayra (Ladke Wale)', 'Ladke Ke Dost', 'Ladke Ke Family Friends',
+    'Ladki Wale', 'Maayra (Ladki Wale)', 'Ladki Ki Sakhiyaan', 'Ladki Ke Family Friends',
   ]);
   assert.deepEqual(CONFIG.relations.map((r) => r.side), ['a', 'a', 'a', 'a', 'b', 'b', 'b', 'b']);
   for (const r of CONFIG.relations) assert.ok(['family', 'friend', 'family-friend'].includes(r.bond), r.id);
@@ -67,7 +67,14 @@ test('buildPayload: relation, typed ages as numbers, added flags, no guest-list 
     { name: 'Nani', status: 'regret', gender: 'F', age: null, added: true },
   ]);
   assert.equal(p.note, 'Hi!');
-  assert.deepEqual(logic.validatePayload(p).errors, ["Add Nani's age (in years)."]);
+  assert.deepEqual(logic.validatePayload(p).errors, ['Pick M or F for Baby Rao.', "Add Nani's age (in years)."]);
+});
+
+test('validatePayload: M or F is required for every guest', () => {
+  for (const gender of ['', undefined, null, 'X', 'm', 'Male']) {
+    assert.deepEqual(logic.validatePayload(payload({ guests: [guest('Asha Rao', { gender })] })).errors, ['Pick M or F for Asha Rao.'], String(gender));
+  }
+  for (const gender of ['M', 'F']) assert.equal(logic.validatePayload(payload({ guests: [guest('Asha Rao', { gender })] })).ok, true, gender);
 });
 
 test('validatePayload: a good ticket passes; ids, relations, ages and the 6-guest cap are checked', () => {

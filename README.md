@@ -9,7 +9,7 @@ There are two editions. Each has its own link, its own Google Sheet and its own 
 | Edition | Link | For | Final release |
 |---|---|---|---|
 | **Friends** | https://saumy-weds-manorika.github.io/ | Saumy's friends. Guests find their name on a private guest list (forgiving search, personal links). | [`friends-v1.0`](https://github.com/saumy-weds-manorika/saumy-weds-manorika.github.io/releases/tag/friends-v1.0) |
-| **Shaadi (family)** | https://saumy-weds-manorika.github.io/shaadi/ | Sent by the family to relatives and family friends on both sides. Guests pick their side (Ladke Wale, Mayra, Dost, Sakhiyaan, family friends…), add up to 6 people with their ages, no guest list. | [`shaadi-v1.1`](https://github.com/saumy-weds-manorika/saumy-weds-manorika.github.io/releases/tag/shaadi-v1.1) |
+| **Shaadi (family)** | https://saumy-weds-manorika.github.io/shaadi/ | Sent by the family to relatives and family friends on both sides. Guests pick their side (Ladke Wale, Maayra, Dost, Sakhiyaan, family friends…), add up to 6 people with their ages, no guest list. | [`shaadi-v1.2`](https://github.com/saumy-weds-manorika/saumy-weds-manorika.github.io/releases/tag/shaadi-v1.2) |
 
 ## Friends edition (site root)
 

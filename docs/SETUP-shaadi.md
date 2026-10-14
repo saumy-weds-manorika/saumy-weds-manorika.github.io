@@ -9,8 +9,8 @@ You don't need to write any code. It takes about 15 minutes.
 
 **What's different from the friends edition**
 
-- **No guest list and no name search.** Guests first tap **which side they're from** (Ladke Wale, Mayra (Ladke Wale), Ladke Ke Dost, Ladke Ke Family Friends under Saumy; Ladki Wale, Mayra (Ladki Wale), Ladki Ki Sakhiyaan, Ladki Ke Family Friends under Manorika). The tapped side's bobblehead dances with confetti.
-- **Everyone types their own names and ages.** A ticket starts with one passenger, and **Add guest** goes up to **6**. Age is required for everyone (0 for a baby); M/F is optional.
+- **No guest list and no name search.** Guests first tap **which side they're from** (Ladke Wale, Maayra (Ladke Wale), Ladke Ke Dost, Ladke Ke Family Friends under Saumy; Ladki Wale, Maayra (Ladki Wale), Ladki Ki Sakhiyaan, Ladki Ke Family Friends under Manorika). The tapped side's bobblehead dances with confetti.
+- **Everyone types their own names and ages.** A ticket starts with one passenger, and **Add guest** goes up to **6**. Age (0 for a baby) and M/F are required for everyone.
 - **No personal links.** Everybody gets the same link. A phone remembers its own ticket, so the guest can come back and edit it from the same phone.
 - **Third person copy:** "Saumy & Manorika are getting married". The **Send on WhatsApp** button has no number in it, so the guest picks the chat (for example, the family member who invited them).
 
@@ -40,18 +40,22 @@ Until Part 4 is done, the page runs in **preview mode**: a small ribbon says "Pr
 
 1. In Apps Script click **Deploy → New deployment**. Click the gear next to "Select type" and choose **Web app**.
 2. Set **Execute as: Me** and **Who has access: Anyone**. Click **Deploy** and copy the **Web app URL** (it ends in `/exec`).
-3. Check it: open that URL with `?action=ping` added to the end. You should see `"version":"shaadi-v1"`.
+3. Check it: open that URL with `?action=ping` added to the end. You should see `"version":"shaadi-v2"` (or newer).
    If you see "Page not found", remove any `/u/1/` (or other number) from the address: that happens when several Google accounts are signed in.
 4. Send the URL to Claude (or put it in `shaadi/js/config.js` as `apiUrl`, commit and push). The preview ribbon disappears once it's live.
-5. Optional but recommended: in the Sheet, run **Save the Train → Keep replies fast**, so the first reply of the day doesn't wait for Google to wake the script up.
+5. **Recommended:** in the Sheet, run **Save the Train → Keep replies fast**, so the first reply of the day doesn't wait 10–20 seconds for Google to wake the script up.
 
 ### Test it once
 
 Open the link on your phone, pick a side, fill one ticket and confirm. Within a few seconds the **Responses** and **People** tabs show it, and **Summary** counts it. To clear the test afterwards, delete its rows in **Responses** (row 2 onwards), then run **Save the Train → Rebuild People from Responses**. Your phone still remembers the test ticket: open the link again and tap **Someone else? Start a new ticket** to forget it.
 
+### If a guest sees "The ticket counter is taking too long to answer"
+
+Google sometimes takes a while to wake the script, or to send its answer back. The page now waits longer, tells the guest it's still printing, and quietly tries once more before showing this message. A second try never duplicates people: the same ticket replaces its own rows in **People** (Responses just logs it twice). If it keeps happening, check that **Keep replies fast** is on.
+
 ## After any change to Code.gs
 
-Paste the new Code.gs, save, then **Deploy → Manage deployments → ✏️ (edit) → Version: New version → Deploy**. The `/exec` URL stays the same. Then run **Save the Train → Set up / repair tabs**.
+Paste the new Code.gs, save, then **Deploy → Manage deployments → ✏️ (edit) → Version: New version → Deploy**. The `/exec` URL stays the same. Then run **Save the Train → Set up / repair tabs**. It also rewrites People from Responses whenever it finds an older spelling (for example "Mayra" before "Maayra"), so every reply keeps being counted.
 
 ---
 

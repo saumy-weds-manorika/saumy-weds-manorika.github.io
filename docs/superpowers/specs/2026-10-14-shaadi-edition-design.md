@@ -17,16 +17,16 @@ from. The friends edition, its Sheet and its Apps Script stay exactly as they ar
 - On-device storage uses its own keys (`stt.shaadi.*`), because both editions share one origin.
 - Its own backend: `apps-script-shaadi/Code.gs`, pasted into a new, empty Google Sheet. No guest list,
   no search, no personal links.
-- GitHub: tag + Release `friends-v1.0` on 7c73d45 (the final friends edition) and `shaadi-v1.1` on the
+- GitHub: tag + Release `friends-v1.0` on 7c73d45 (the final friends edition) and `shaadi-v1.2` on the
   final commit of this edition. A root README links both.
 
 ## Flow
 
 1. **Platform.** The cover ticket and timetable as before. Below it, "Which side are you from?":
    - Left: Saumy's bobblehead (body + wobbling head), with four blue-outlined tabs under it:
-     Ladke Wale · Mayra (Ladke Wale) · Ladke Ke Dost · Ladke Ke Family Friends.
+     Ladke Wale · Maayra (Ladke Wale) · Ladke Ke Dost · Ladke Ke Family Friends.
    - Right: Manorika's bobblehead with four pink-outlined tabs:
-     Ladki Wale · Mayra (Ladki Wale) · Ladki Ki Sakhiyaan · Ladki Ke Family Friends.
+     Ladki Wale · Maayra (Ladki Wale) · Ladki Ki Sakhiyaan · Ladki Ke Family Friends.
    - The eight tabs are one radio group (arrow keys move across both columns).
    - Tapping a tab selects it (filled), makes that side's bobblehead dance (hop, sway, faster head
      wobble, about 2 s) and bursts confetti from it in that side's colours plus marigold.
@@ -35,7 +35,7 @@ from. The friends edition, its Sheet and its Apps Script stay exactly as they ar
    - A returning phone shows "Welcome back" (View my pass / Edit my ticket / Start a new ticket)
      instead of the picker. Going Back to the platform shows the picker with the saved choice.
 2. **Passenger chart.** Starts with one card; Add guest up to 6. Every card: Name (card 1: "Your
-   name"), Age (required whole number 0–120), M/F (optional; card 2 guesses the opposite of card 1),
+   name"), Age (required whole number 0–120), M/F (required, never pre-filled),
    and status Confirmed / Waitlisted / Regret. Card 1 can't be removed. The Regret joke stays, per card;
    its first line follows the side: "Do you not love Saumy?" or "Do you not love Manorika?".
    At most 2 guests ride the vehicle (unchanged).
@@ -49,7 +49,7 @@ from. The friends edition, its Sheet and its Apps Script stay exactly as they ar
 - Picker lede: "Saumy & Manorika are getting married! Tap your side to board."
 - Boarding pass quota: the relation in capitals (e.g. "QUOTA: LADKI KI SAKHIYAAN"), shrunk to fit.
 - WhatsApp: no host number. The fallback link is `https://wa.me/?text=…` so the guest picks the chat.
-- Leave email by relation: family and Mayra tabs say "a family wedding"; Dost and Sakhiyaan say
+- Leave email by relation: family and Maayra tabs say "a family wedding"; Dost and Sakhiyaan say
   "my close friend <Saumy|Manorika>'s wedding"; family friends say "a close family friend's wedding".
 - "Ticket counter is closed" errors point to "the family member who sent you this invite".
 - Mock mode (no Apps Script URL yet, or `?mock=1`) shows a small "Preview: replies aren't saved yet"
@@ -61,7 +61,7 @@ Payload (validated identically in `shaadi/js/logic.js` and `apps-script-shaadi/C
 
 ```
 { action:'rsvp', id:'s-xxxxxxxx', relation:'ladke-dost', label:'<passenger 1>',
-  guests:[{ name, status, gender:'M'|'F'|'', age:0..120, added?:true }],   // 1 to 6
+  guests:[{ name, status, gender:'M'|'F', age:0..120, added?:true }],   // 1 to 6
   travel:{ mode, from, arrive:{date,slot}, depart:{date,slot}, via:{hub,onward} } | null (everyone regrets),
   note, filled_by, client:{ts,ua} }
 ```

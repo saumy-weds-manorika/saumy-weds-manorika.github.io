@@ -134,7 +134,7 @@ test('doPost refuses bad requests with the codes the website understands', () =>
   assert.equal(post(gs, payload({ guests: seven })).code, 'too_many');
   const busy = fresh({ lockBusy: true });
   assert.equal(post(busy.gs, payload()).code, 'busy');
-  assert.equal(JSON.parse(gs.doGet({ parameter: {} }).getContent()).version, 'shaadi-v1');
+  assert.equal(JSON.parse(gs.doGet({ parameter: {} }).getContent()).version, 'shaadi-v2');
   assert.equal(JSON.parse(gs.doGet({ parameter: { action: 'find', q: 'asha' } }).getContent()).code, 'bad_request');
 });
 
@@ -159,4 +159,17 @@ test('setup builds the three tabs, removes the empty starter tab and writes the 
   gs.setup();
   assert.equal(ss.getSheetByName('Responses').getLastRow(), 2);
   assert.equal(ss.getSheetByName('People').getLastRow(), 3);
+});
+
+test('setup relabels People rows saved with an older relation spelling, so the Summary counts them', () => {
+  const { ss, gs } = fresh();
+  gs.setup();
+  post(gs, payload({ relation: 'mayra-ladke' }));
+  const people = ss.getSheetByName('People');
+  people.set(2, 3, 'Mayra (Ladke Wale)'); // as shaadi-v1 wrote it
+  people.set(3, 3, 'Mayra (Ladke Wale)');
+  assert.equal(gs.hasOldRelationLabels_(people), true);
+  gs.setup();
+  assert.deepEqual(ss.getSheetByName('People').rows().slice(1).map((r) => r[2]), ['Maayra (Ladke Wale)', 'Maayra (Ladke Wale)']);
+  assert.equal(gs.hasOldRelationLabels_(ss.getSheetByName('People')), false);
 });

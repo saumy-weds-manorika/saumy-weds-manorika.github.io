@@ -21,8 +21,19 @@ const keyRecord = () => (isMock() ? 'stt.shaadi.mock.v1' : 'stt.shaadi.v1');
 const keyDraft = () => (isMock() ? 'stt.shaadi.mock.draft.v1' : 'stt.shaadi.draft.v1');
 const KEY_MOCK = 'stt.shaadi.mock.responses';
 const TIMEOUT_MS = 30000;        // GET (ping): Apps Script cold starts can take ~20s
-const WARM_EVERY_MS = 4 * 60 * 1000; // re-wake the script at most this often
-const POST_TIMEOUT_MS = 25000;   // POST waits longer than the server's 10s lock wait plus a cold start
+const WARM_EVERY_MS = 2 * 60 * 1000; // re-wake the script at most this often (app.js asks at every stop)
+/*
+ * Saving is tried up to 3 times, quietly, when the answer simply didn't come back. A save normally
+ * answers in 1.5 to 3 seconds (up to about 10 on a cold start). But on 14 Oct 2026 the family's
+ * deployment sometimes hung for over 30 seconds, even on a ping, and so did Google's redirect to the
+ * echo address, while the friends deployment never did. So a stuck attempt is dropped after 15 seconds
+ * and tried again. Retrying is safe: the same ticket id replaces the same People rows, and Responses
+ * just logs it again.
+ */
+const POST_TIMEOUT_MS = 15000;   // per attempt
+const POST_RETRIES = 2;          // after the first attempt
+const POST_RETRY_WAIT_MS = { busy: 1500, other: 600 };
+const RETRYABLE_POST = /^(timeout|network|busy|bad_json|http_(408|429|5\d\d))$/;
 const MOCK_DELAY_MS = 600;
 const MOCK_LOG_MAX = 50;
 const BASE36 = '0123456789abcdefghijklmnopqrstuvwxyz';
@@ -172,12 +183,15 @@ export function isMock() {
 }
 
 /**
- * Saves an RSVP. The latest submission per ticket id wins on the server.
+ * Saves an RSVP. The latest submission per ticket id wins on the server. A timeout, dropped connection,
+ * busy lock or Google error page is retried up to twice (see RETRYABLE_POST); `onRetry(code, n)` is called
+ * before retry n.
  * @param {object} payload built by logic.buildPayload
+ * @param {{onRetry?:(code:string, n:number)=>void}} [opts]
  * @returns {Promise<{ok:true,id:string,updated_at:string}>}
  * @throws {Error} with a guest-facing message on any failure
  */
-export async function submitRsvp(payload) {
+export async function submitRsvp(payload, { onRetry } = {}) {
   const mock = isMock();
   if (mock && pageParams().get('mockfail') === '1') {
     await wait(MOCK_DELAY_MS);
@@ -199,17 +213,29 @@ export async function submitRsvp(payload) {
     return { ok: true, id: String(payload.id), updated_at };
   }
 
-  const data = await request(apiUrl(), {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(payload),
-  }, POST_TIMEOUT_MS);
-  if (!data.ok) throw errorFrom(data);
-  return {
-    ok: true,
-    id: String(data.id || payload.id),
-    updated_at: String(data.updated_at || new Date().toISOString()),
-  };
+  const body = JSON.stringify(payload);
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const data = await request(apiUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body,
+      }, POST_TIMEOUT_MS);
+      if (!data.ok) throw errorFrom(data);
+      return {
+        ok: true,
+        id: String(data.id || payload.id),
+        updated_at: String(data.updated_at || new Date().toISOString()),
+      };
+    } catch (err) {
+      const code = String((err && err.code) || '');
+      if (attempt >= POST_RETRIES || !RETRYABLE_POST.test(code)) throw err;
+      if (typeof onRetry === 'function') {
+        try { onRetry(code, attempt + 1); } catch { /* a progress label must never stop the save */ }
+      }
+      await wait(code === 'busy' ? POST_RETRY_WAIT_MS.busy : POST_RETRY_WAIT_MS.other);
+    }
+  }
 }
 
 /**

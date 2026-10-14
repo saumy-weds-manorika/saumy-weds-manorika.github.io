@@ -31,11 +31,11 @@ export const CONFIG = {
   },
   relations: [
     { id: 'ladke-wale', label: 'Ladke Wale', side: 'a', bond: 'family' },
-    { id: 'mayra-ladke', label: 'Mayra (Ladke Wale)', side: 'a', bond: 'family' },
+    { id: 'mayra-ladke', label: 'Maayra (Ladke Wale)', side: 'a', bond: 'family' },
     { id: 'ladke-dost', label: 'Ladke Ke Dost', side: 'a', bond: 'friend' },
     { id: 'ladke-family-friends', label: 'Ladke Ke Family Friends', side: 'a', bond: 'family-friend' },
     { id: 'ladki-wale', label: 'Ladki Wale', side: 'b', bond: 'family' },
-    { id: 'mayra-ladki', label: 'Mayra (Ladki Wale)', side: 'b', bond: 'family' },
+    { id: 'mayra-ladki', label: 'Maayra (Ladki Wale)', side: 'b', bond: 'family' },
     { id: 'ladki-sakhiyaan', label: 'Ladki Ki Sakhiyaan', side: 'b', bond: 'friend' },
     { id: 'ladki-family-friends', label: 'Ladki Ke Family Friends', side: 'b', bond: 'family-friend' },
   ],

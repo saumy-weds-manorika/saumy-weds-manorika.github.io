@@ -146,7 +146,6 @@ let keySeq = 0;
 /** A stable per-guest key for this visit (regret joke counters, render bookkeeping). Never saved. */
 const newKey = () => `p${++keySeq}`;
 const genderOf = (v) => (GENDER_IDS.includes(v) ? v : '');
-const otherGender = (v) => (v === 'M' ? 'F' : v === 'F' ? 'M' : '');
 
 /**
  * relation: the "Which side are you from?" tab id ('' until one is picked)
@@ -545,7 +544,12 @@ function go(stop, { dir = 'forward', focus = true, say = true, nav } = {}) {
   const body = document.body;
   lastGoAt = performance.now();
   writeHistory(nav || (dir === 'forward' && stop !== leaving ? 'push' : 'replace'), stop, leaving);
-  if (stop !== 'platform') hideBaajaNudge(false);
+  if (stop !== 'platform') {
+    hideBaajaNudge(false);
+    if (picker) picker.rest(); // so the platform comes back with the couple at rest, not mid-dance
+  }
+  // Keep the ticket counter awake while the guest fills the form, so "Confirm my seat" is quick
+  if (FORM_STOPS.includes(stop)) warmUp();
   body.dataset.dir = dir;
   for (const s of $$('main > .stop')) s.classList.toggle('is-active', s.dataset.stop === stop);
   body.dataset.stop = stop;
@@ -833,9 +837,11 @@ function buildCard(g, i) {
   group.setAttribute('aria-label', statusGroupLabel(g, n));
   group.setAttribute('aria-describedby', err.id);
 
-  // M/F toggle (amendments §D): optional, for the riders and the Sheet
+  // M/F toggle: required for everyone (the riders and the Sheet use it)
   const gender = slot(card, 'gender');
   gender.setAttribute('aria-label', genderGroupLabel(g, n));
+  gender.setAttribute('aria-required', 'true');
+  gender.setAttribute('aria-describedby', err.id);
   for (const opt of $$('[role="radio"]', gender)) {
     opt.setAttribute('aria-checked', String(opt.dataset.value === g.gender));
     opt.addEventListener('click', () => setGender(g, opt.dataset.value));
@@ -923,7 +929,10 @@ function setGender(g, value) {
   if (i < 0 || !GENDER_IDS.includes(value)) return;
   g.gender = value;
   const ref = cards[i];
-  if (ref) checkChip(ref.gender, value);
+  if (ref) {
+    checkChip(ref.gender, value);
+    if (ref.card.classList.contains('is-invalid')) recheckCard(g);
+  }
   renderRiders();
   markDirty();
 }
@@ -953,9 +962,8 @@ function setStatus(g, value) {
 
 function addGuest() {
   if (!state.guest || state.guests.length >= MAX_GUESTS) return;
-  // Passenger 2 is often the other half of a pair: guess the opposite of passenger 1. Nobody else.
-  const gender = state.guests.length === 1 ? otherGender(state.guests[0].gender) : '';
-  state.guests.push(blankGuest(true, gender));
+  // M/F is required, so nobody's is guessed: each guest picks their own
+  state.guests.push(blankGuest(true));
   renderGuests();
   updateParty(); // the newcomer has no status yet, so "Send my regrets" no longer fits
   updateCta();
@@ -984,7 +992,9 @@ function removeGuest(g) {
 
 /** Errors for one guest: {name, age, status}, each true when that answer is missing or wrong. */
 function guestProblems(g) {
-  return { name: !g.name.trim(), age: parseAge(g.age) === null, status: !STATUS_IDS.includes(g.status) };
+  return {
+    name: !g.name.trim(), age: parseAge(g.age) === null, gender: !GENDER_IDS.includes(g.gender), status: !STATUS_IDS.includes(g.status),
+  };
 }
 
 function setCardError(i, msg, p) {
@@ -993,7 +1003,7 @@ function setCardError(i, msg, p) {
   ref.card.classList.toggle('is-invalid', !!msg);
   ref.err.textContent = msg;
   ref.err.hidden = !msg;
-  for (const [input, bad] of [[ref.input, p.name], [ref.age, p.age]]) {
+  for (const [input, bad] of [[ref.input, p.name], [ref.age, p.age], [ref.gender, p.gender]]) {
     if (bad) input.setAttribute('aria-invalid', 'true');
     else input.removeAttribute('aria-invalid');
   }
@@ -1004,6 +1014,7 @@ function cardMessage(g, p) {
   return [
     p.name ? 'Add a name for this passenger.' : '',
     p.age ? (age ? 'Type the age as a whole number of years, 0 to 120.' : 'Add their age in years (0 for a baby).') : '',
+    p.gender ? 'Pick M or F.' : '',
     p.status ? 'Pick Confirmed, Waitlisted or Regret.' : '',
   ].filter(Boolean).join(' ');
 }
@@ -1017,28 +1028,29 @@ function recheckCard(g) {
   if (!cards.some((c) => c && c.card.classList.contains('is-invalid'))) el('passengers-error').hidden = true;
 }
 
-/** '"a name", "an age" and "a status"' style list for the chart's summary error. */
+/** '"a name", "an age", "M or F" and "a status"' style list for the chart's summary error. */
 const listOf = (parts) => (parts.length < 2 ? parts.join('') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`);
 
 function checkPassengers(show) {
   let firstBad = -1;
-  const missing = { name: false, age: false, status: false };
+  const missing = { name: false, age: false, gender: false, status: false };
   state.guests.forEach((g, i) => {
     const p = guestProblems(g);
     for (const k of Object.keys(missing)) if (p[k]) missing[k] = true;
-    if ((p.name || p.age || p.status) && firstBad < 0) firstBad = i;
+    if ((p.name || p.age || p.gender || p.status) && firstBad < 0) firstBad = i;
     if (show) setCardError(i, cardMessage(g, p), p);
   });
   const ok = state.guests.length > 0 && firstBad < 0;
   if (show) {
     const pe = el('passengers-error');
-    const parts = [missing.name && 'a name', missing.age && 'an age', missing.status && 'a status'].filter(Boolean);
+    const parts = [missing.name && 'a name', missing.age && 'an age', missing.gender && 'M or F', missing.status && 'a status']
+      .filter(Boolean);
     pe.textContent = `Add ${listOf(parts)} for every passenger.`;
     pe.hidden = ok;
     if (!ok && firstBad >= 0 && cards[firstBad]) {
       const ref = cards[firstBad];
       const p = guestProblems(state.guests[firstBad]);
-      const target = p.name ? ref.input : p.age ? ref.age : $('[role="radio"]', ref.group);
+      const target = p.name ? ref.input : p.age ? ref.age : p.gender ? $('[role="radio"]', ref.gender) : $('[role="radio"]', ref.group);
       if (target) target.focus();
     }
   }
@@ -1557,8 +1569,30 @@ function firstInvalidStop() {
 
 const client = () => ({ ts: new Date().toISOString(), ua: (typeof navigator !== 'undefined' && navigator.userAgent) || '' });
 
+/*
+ * While a save is in flight the button says what's happening, so a slow save never looks stuck:
+ * after a few seconds "Still printing…", and new words each time api.js tries again.
+ */
+let busyTimers = [];
+function busyLabels(regretOnly) {
+  busyTimers.forEach(clearTimeout);
+  const say = (text) => { if (busy) el('cta-label').textContent = text; };
+  busyTimers = [
+    setTimeout(() => say(regretOnly ? 'Still sending your regrets…' : 'Still printing your ticket…'), 6000),
+  ];
+  return (code, n) => {
+    busyTimers.forEach(clearTimeout);
+    busyTimers = [];
+    say(n > 1 ? 'One more try… almost there' : 'The ticket counter is slow today. Trying again…');
+  };
+}
+
 function setBusy(on, label = '') {
   busy = on;
+  if (!on) {
+    busyTimers.forEach(clearTimeout);
+    busyTimers = [];
+  }
   const btn = el('cta-next');
   if (on) btn.setAttribute('aria-busy', 'true');
   else btn.removeAttribute('aria-busy');
@@ -1601,10 +1635,12 @@ async function submit() {
     return;
   }
   const regretOnly = payload.travel === null;
-  setBusy(true, regretOnly ? 'Sending your regrets…' : 'Printing your ticket…');
+  const label = regretOnly ? 'Sending your regrets…' : 'Printing your ticket…';
+  setBusy(true, label);
+  const onRetry = busyLabels(regretOnly);
   let res;
   try {
-    res = await submitRsvp(payload);
+    res = await submitRsvp(payload, { onRetry });
   } catch (err) {
     setBusy(false);
     handleSubmitError(err);
@@ -1970,6 +2006,15 @@ async function saveRegretNote() {
   const payload = buildPayload(state, client());
   const check = validatePayload(payload);
   if (!check.ok) {
+    if (state.guests.some((g) => Object.values(guestProblems(g)).some(Boolean))) {
+      // A ticket saved before M/F was required: pick it on the chart. The note stays in state and is
+      // sent with the regrets from there.
+      startEdit();
+      markDirty();
+      checkPassengers(true);
+      toast('Pick M or F for everyone, then send your regrets with the note.', 4000);
+      return;
+    }
     state.note = before;
     fail(check.errors[0] || 'Some details need another look.');
     return;
@@ -1977,6 +2022,10 @@ async function saveRegretNote() {
   const label = btn.textContent;
   btn.setAttribute('aria-busy', 'true');
   btn.textContent = 'Sending…';
+  // The whole page waits for the note: a save can be retried after a stall (api.js), and an edit
+  // saved meanwhile must not be overwritten by this older answer arriving later.
+  busy = true;
+  el('regret-edit').disabled = true;
   try {
     const res = await submitRsvp(payload);
     saveRecord(payload, res.updated_at);
@@ -1988,12 +2037,15 @@ async function saveRegretNote() {
     btn.textContent = label;
     fail((e && e.message) || "Couldn't reach the ticket counter. Try again.");
   } finally {
+    busy = false;
+    el('regret-edit').disabled = false;
     btn.removeAttribute('aria-busy');
   }
 }
 
 /** "Edit my ticket" from the junction, the regret ending or the welcome panel. */
 function startEdit() {
+  if (busy) return; // a save is in flight (see saveRegretNote)
   dirty = false;
   hideWelcome();
   syncForm();

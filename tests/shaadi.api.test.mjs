@@ -102,3 +102,26 @@ test('live submit: posts plain-text JSON and maps server error codes to guest-fa
     await assert.rejects(api.submitRsvp(payload()), (err) => err.code === code && want.test(err.message), code);
   }
 });
+
+test('live submit: retries up to twice, quietly, when the answer never came back; never for bad input', async () => {
+  CONFIG.apiUrl = 'https://script.google.com/macros/s/x/exec';
+  let calls = 0;
+  const ok = { ok: true, status: 200, text: async () => JSON.stringify({ ok: true, id: 's-k7m2ab9z', updated_at: '2026-10-14T10:00:00.000Z' }) };
+  // A dropped connection, then success: one retry, announced through onRetry
+  globalThis.fetch = async () => { calls += 1; if (calls === 1) throw new TypeError('Failed to fetch'); return ok; };
+  const retried = [];
+  const res = await api.submitRsvp(payload(), { onRetry: (code, n) => retried.push(`${code}:${n}`) });
+  assert.equal(res.ok, true);
+  assert.equal(calls, 2);
+  assert.deepEqual(retried, ['network:1']);
+  // Google's error page every time: two retries, then the error reaches the guest
+  calls = 0;
+  globalThis.fetch = async () => { calls += 1; return { ok: false, status: 503, text: async () => '' }; };
+  await assert.rejects(api.submitRsvp(payload()), (err) => err.code === 'http_503');
+  assert.equal(calls, 3);
+  // Bad input is not retried
+  calls = 0;
+  globalThis.fetch = async () => { calls += 1; return { ok: true, status: 200, text: async () => JSON.stringify({ ok: false, code: 'invalid', error: 'Pick M or F for Dev Shah.' }) }; };
+  await assert.rejects(api.submitRsvp(payload()), (err) => err.code === 'invalid');
+  assert.equal(calls, 1);
+});
